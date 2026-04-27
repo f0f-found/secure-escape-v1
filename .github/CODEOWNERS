@@ -1,0 +1,5 @@
+# Backend must approve backend changes
+/SecureEscape.Api/ @f0f-found/backend
+
+# Frontend must approve mobile changes
+/secure-escape-mobile/ @f0f-found/frontend
