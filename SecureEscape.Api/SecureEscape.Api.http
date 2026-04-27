@@ -1,0 +1,6 @@
+@SecureEscape.Api_HostAddress = http://localhost:5116
+
+GET {{SecureEscape.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
