@@ -1,0 +1,5 @@
+# Backend must approve backend changes
+/api/ @f0f-found/backend
+
+# Frontend must approve mobile changes
+/mobile/ @f0f-found/frontend
