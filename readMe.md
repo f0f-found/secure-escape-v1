@@ -1,8 +1,3 @@
-Read Me
-
----
-
-```markdown
 # 🚀 Secure Escape
 
 Secure Escape is a full-stack application built with:
@@ -13,9 +8,7 @@ Secure Escape is a full-stack application built with:
 
 ---
 
-# 📁 Project Structure
-
-```
+## 📁 Project Structure
 
 secure-escape-v1/
 │
@@ -23,11 +16,9 @@ secure-escape-v1/
 ├── mobile/ # Expo React Native App
 └── README.md
 
-```
-
 ---
 
-# ⚙️ Prerequisites
+## ⚙️ Prerequisites
 
 Install the following before starting:
 
@@ -39,127 +30,68 @@ Install the following before starting:
 
 ---
 
-# 📥 Getting Started
+## 📥 Getting Started
 
-## 1. Clone the repository
+### 1. Clone the repository
 
 ```bash
 cd /Users/roriputu/Documents/Web-Dev/secure-escape
 
 git clone https://github.com/f0f-found/secure-escape-v1.git
 cd secure-escape-v1
-```
-
----
-
-# 🧠 Backend Setup (.NET 8)
-
-```bash
+🧠 Backend Setup (.NET 8)
 cd secureescape.api
 
 dotnet restore
 dotnet run
-```
 
-👉 The API will run locally (check terminal for port, usually `http://localhost:5000`)
+👉 The API will run locally (usually at http://localhost:5000
+)
 
----
-
-# 📱 Mobile Setup (Expo)
+📱 Mobile Setup (Expo)
 
 Open a new terminal:
 
-```bash
 cd mobile
 
 npm install
 npx expo start
-```
 
-👉 Scan the QR code using **Expo Go**
+👉 Scan the QR code using Expo Go
 
----
+🔄 Git Workflow (MANDATORY)
 
-# 🔄 Git Workflow (MANDATORY)
+We use a protected main branch.
+You cannot commit directly to main.
 
-We use a **protected `main` branch**.
-You cannot commit directly to `main`.
-
----
-
-## 🧩 Workflow Steps
-
-### 1. Start from updated `main`
-
-```bash
+🧩 Workflow Steps
+1. Start from updated main
 git checkout main
 git pull origin main
-```
-
----
-
-### 2. Create a feature branch
-
-```bash
+2. Create a feature branch
 git checkout -b feature/your-feature-name
-```
-
----
-
-### 3. Make changes and commit
-
-```bash
+3. Make changes and commit
 git add .
 git commit -m "Describe your change"
-```
-
----
-
-### 4. Push your branch
-
-```bash
+4. Push your branch
 git push origin feature/your-feature-name
-```
-
----
-
-### 5. Create a Pull Request (PR)
+5. Create a Pull Request (PR)
 
 Go to GitHub and create a PR:
 
-```
 feature/your-feature-name → main
-```
-
----
-
-### 6. Get approval
-
-- Your PR must be reviewed and approved
-- You cannot merge without approval
-
----
-
-### 7. Merge into `main`
+6. Get approval
+Your PR must be reviewed and approved
+You cannot merge without approval
+7. Merge into main
 
 Once approved:
 
-- Merge the PR
-
----
-
-### 8. Update your local `main`
-
-```bash
+Merge the PR
+8. Update your local main
 git checkout main
 git pull origin main
-```
-
----
-
-# 🔁 Example Workflow
-
-```bash
+🔁 Example Workflow
 git checkout main
 git pull origin main
 
@@ -171,68 +103,33 @@ git add .
 git commit -m "Add login API"
 
 git push origin feature/login-api
-```
 
 👉 Then:
 
-- Open PR
-- Get approval
-- Merge
-
----
-
-# 📌 Team Rules
-
-## ❌ NEVER:
-
-- Commit directly to `main`
-- Push directly to `main`
-- Merge your own PR without review
-
----
-
-## ✅ ALWAYS:
-
-- Create a new branch
-- Use clear commit messages
-- Open a Pull Request
-- Get approval before merging
-
----
-
-# 🧠 Helpful Commands
-
-```bash
+Open PR
+Get approval
+Merge
+📌 Team Rules
+❌ NEVER:
+Commit directly to main
+Push directly to main
+Merge your own PR without review
+✅ ALWAYS:
+Create a new branch
+Use clear commit messages
+Open a Pull Request
+Get approval before merging
+🧠 Helpful Commands
 git status     # See current changes
 git branch     # See current branch
 git log        # View commit history
-```
-
----
-
-# ⚠️ Important Notes
-
-- `main` is **protected**
-- All work must go through **Pull Requests**
-- Always **pull latest changes before starting work**
-
----
-
-# 🔥 Summary
-
-```
+⚠️ Important Notes
+main is protected
+All work must go through Pull Requests
+Always pull latest changes before starting work
+🔥 Summary
 main → pull → create branch → code → commit → push → PR → review → merge → pull
-```
-
----
-
-# 👥 Team
+👥 Team
 
 Built by the Secure Escape team 🚀
-
-```
-
----
-
-
 ```
