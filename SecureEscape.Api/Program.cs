@@ -1,7 +1,5 @@
 using SecureEscape.Api.Data;
-using SecureEscape.Api.Interfaces;
-using SecureEscape.Api.Repositories;
-using SecureEscape.Api.Services;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,9 +7,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddSingleton<UserSeedData>();
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IAuthService, AuthService>();
+
 
 builder.Services.AddCors(options =>
 {
