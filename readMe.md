@@ -1,7 +1,3 @@
-Here’s a **clean, professional README.md** you can drop straight into your repo. It’s written for your exact setup (Expo + .NET 8 + your local path + your workflow).
-
----
-
 ```markdown
 # 🚀 Secure Escape
 
