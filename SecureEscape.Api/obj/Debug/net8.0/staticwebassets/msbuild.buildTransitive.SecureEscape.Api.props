@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="../buildMultiTargeting/SecureEscape.Api.props" />
-</Project>
