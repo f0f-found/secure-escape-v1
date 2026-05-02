@@ -1,3 +1,5 @@
+---
+
 ```markdown
 # 🚀 Secure Escape
 
@@ -10,6 +12,7 @@ Secure Escape is a full-stack application built with:
 ---
 
 # 📁 Project Structure
+
 ```
 
 secure-escape-v1/
@@ -18,7 +21,7 @@ secure-escape-v1/
 ├── mobile/ # Expo React Native App
 └── README.md
 
-````
+```
 
 ---
 
@@ -43,7 +46,7 @@ cd /Users/roriputu/Documents/Web-Dev/secure-escape
 
 git clone https://github.com/f0f-found/secure-escape-v1.git
 cd secure-escape-v1
-````
+```
 
 ---
 
@@ -226,6 +229,8 @@ main → pull → create branch → code → commit → push → PR → review �
 Built by the Secure Escape team 🚀
 
 ```
+
+---
 
 
 ```
