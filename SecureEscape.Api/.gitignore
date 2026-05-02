@@ -1,5 +1,4 @@
 bin/
 obj/
-node_modules/
-.env
-.bin
+**/bin/
+**/obj/
