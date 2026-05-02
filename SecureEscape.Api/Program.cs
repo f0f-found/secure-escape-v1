@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using SecureEscape.Api.Data;
+using SecureEscape.Api.Interfaces;
+using SecureEscape.Api.Repositories;
+using SecureEscape.Api.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +20,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 
 
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddCors(options =>
 {
