@@ -13,11 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SecureEscape.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-<<<<<<< HEAD
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+442a446f8f260678fcc480712653f04e6441cb7d")]
-=======
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b9b3d5ac124e8671463abc129e21d3d5e676bc1c")]
->>>>>>> c12241b (Backup local changes before syncing with main)
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+866851638ed29f7c502d1c3277000aea2bd76cf9")]
 [assembly: System.Reflection.AssemblyProductAttribute("SecureEscape.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SecureEscape.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
