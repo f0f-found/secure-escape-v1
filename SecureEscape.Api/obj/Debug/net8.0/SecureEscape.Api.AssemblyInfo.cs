@@ -14,10 +14,14 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
 <<<<<<< HEAD
+<<<<<<< HEAD
 [assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+866851638ed29f7c502d1c3277000aea2bd76cf9")]
 =======
 [assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9c408b7c5ae6dab5c385c6624f4d907e1d1013b7")]
 >>>>>>> fcdf301 (Update AssemblyInformationalVersion and cache inputs for SecureEscape.Api)
+=======
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9c408b7c5ae6dab5c385c6624f4d907e1d1013b7")]
+>>>>>>> ca787babb38a3074e30f30e74d5eeac929d5cc46
 [assembly: System.Reflection.AssemblyProductAttribute("SecureEscape.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SecureEscape.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
