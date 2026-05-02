@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SecureEscape.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c12241b85311e75f4efc75491fe8982edf64bae8")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9c408b7c5ae6dab5c385c6624f4d907e1d1013b7")]
 [assembly: System.Reflection.AssemblyProductAttribute("SecureEscape.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SecureEscape.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
