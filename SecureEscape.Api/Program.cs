@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using SecureEscape.Api.Data;
 
 
@@ -6,6 +7,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+var connString = builder.Configuration.GetConnectionString("default");
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseMySql(
+        builder.Configuration.GetConnectionString("default"),
+        new MySqlServerVersion(new Version(8, 0, 21))
+    ));
+
 
 
 
