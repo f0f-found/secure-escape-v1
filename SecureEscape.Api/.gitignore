@@ -1,4 +1,19 @@
+# .NET build output
 bin/
 obj/
-node_modules/
+**/bin/
+**/obj/
+
+# User-specific IDE files
+.vs/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local environment files
 .env
+*.env
