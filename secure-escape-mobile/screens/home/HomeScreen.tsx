@@ -12,6 +12,8 @@ import {
   FlatList,
   Dimensions,
 } from "react-native";
+import { getProfileMe } from "@/services/profileService";
+import { ProfileMeResponse } from "@/types/profile";
 
 const { width } = Dimensions.get("window");
 
@@ -121,6 +123,7 @@ export default function HomeScreen({ onActionPress }: HomeScreenProps) {
   const [expandedAccount, setExpandedAccount] = useState<string | null>(
     accounts[0].id,
   );
+  const [profile, setProfile] = useState<ProfileMeResponse | null>(null);
   const router = useRouter();
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const slideAnim = React.useRef(new Animated.Value(20)).current;
@@ -138,6 +141,19 @@ export default function HomeScreen({ onActionPress }: HomeScreenProps) {
         useNativeDriver: true,
       }),
     ]).start();
+  }, []);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const profileData = await getProfileMe();
+        setProfile(profileData);
+      } catch (error) {
+        console.log("Failed to load profile:", error);
+      }
+    };
+
+    loadProfile();
   }, []);
 
   const handleActionPress = (actionId: string) => {
@@ -218,10 +234,17 @@ export default function HomeScreen({ onActionPress }: HomeScreenProps) {
         >
           <View>
             <Text style={styles.greeting}>Good morning</Text>
-            <Text style={styles.greetingName}>Rorisang 👋</Text>
+            <Text style={styles.greetingName}>
+              {profile?.fullName ?? "Secure Escape User"}
+            </Text>
+            <Text style={styles.greetingEmail}>
+              {profile?.email ?? "Loading profile..."}
+            </Text>
           </View>
           <TouchableOpacity style={styles.profileButton}>
-            <Text style={styles.profileInitial}>R</Text>
+            <Text style={styles.profileInitial}>
+              {(profile?.fullName ?? "S").charAt(0).toUpperCase()}
+            </Text>
           </TouchableOpacity>
         </Animated.View>
 
@@ -354,6 +377,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 40,
+  },
+  greetingEmail: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 4,
   },
 
   // Header

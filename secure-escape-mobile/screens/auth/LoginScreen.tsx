@@ -1,3 +1,5 @@
+import { login } from "@/services/authService";
+import { setAuthToken } from "@/services/tokenStore";
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -34,6 +36,7 @@ interface LoginScreenProps {
 export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [pin, setPin] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -41,9 +44,9 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   // Animations
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const slideAnim = React.useRef(new Animated.Value(30)).current;
-  const [focusedInput, setFocusedInput] = useState<"email" | "password" | null>(
-    null,
-  );
+  const [focusedInput, setFocusedInput] = useState<
+    "email" | "password" | "pin" | null
+  >(null);
 
   useEffect(() => {
     Animated.parallel([
@@ -83,18 +86,46 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       return false;
     }
 
+    if (!pin) {
+      setError("PIN is required");
+      return false;
+    }
+
+    if (pin.length < 4 || pin.length > 6) {
+      setError("PIN must be 4 to 6 digits");
+      return false;
+    }
+
     return true;
   };
 
   const handleLogin = async () => {
     if (!validateForm()) return;
 
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      setLoading(true);
+
+      const response = await login({
+        email,
+        password,
+        pin,
+      });
+
+      await setAuthToken(response.token);
+
+      console.log("Login successful:", response);
+
       setLoading(false);
       onLoginSuccess?.();
-    }, 1500);
+    } catch (error) {
+      setLoading(false);
+
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("Login failed. Please try again.");
+      }
+    }
   };
 
   return (
@@ -210,6 +241,36 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                     {showPassword ? "👁️" : "👁️‍🗨️"}
                   </Text>
                 </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Pin Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>PIN</Text>
+              <View
+                style={[
+                  styles.inputContainer,
+                  focusedInput === "pin" && styles.inputContainerFocused,
+                  error && focusedInput !== "pin" && styles.inputContainerError,
+                ]}
+              >
+                <Text style={styles.inputIcon}>#</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your PIN"
+                  placeholderTextColor={colors.textSecondary}
+                  value={pin}
+                  onChangeText={(text) => {
+                    setPin(text);
+                    setError("");
+                  }}
+                  onFocus={() => setFocusedInput("pin")}
+                  onBlur={() => setFocusedInput(null)}
+                  secureTextEntry
+                  editable={!loading}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                />
               </View>
             </View>
 

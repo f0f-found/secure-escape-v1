@@ -66,13 +66,6 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="accounts/[id]"
-        options={{
-          tabBarButton: () => null,
-          headerShown: false,
-        }}
-      />
     </Tabs>
   );
 }
