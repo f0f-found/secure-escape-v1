@@ -1,35 +1,90 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import { Tabs } from "expo-router";
+import React from "react";
+import { StyleSheet } from "react-native";
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { HapticTab } from "@/components/haptic-tab";
+import { TabIcon } from "@/components/TabIcon";
+import { Colors } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-
+  const tintColor = "#3B82F6";
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: tintColor,
+        tabBarInactiveTintColor: "#A0AEC0",
         headerShown: false,
         tabBarButton: HapticTab,
-      }}>
+        tabBarStyle: styles.tabBar,
+        tabBarLabelStyle: styles.tabBarLabel,
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: "Home",
+          tabBarIcon: ({ color }) => (
+            <TabIcon name="home" color={color} size={24} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="cards"
+        options={{
+          title: "Cards",
+          tabBarIcon: ({ color }) => (
+            <TabIcon name="cards" color={color} size={24} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="transact"
+        options={{
+          title: "Transact",
+          tabBarIcon: ({ color }) => (
+            <TabIcon name="transact" color={color} size={24} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="messages"
+        options={{
+          title: "Messages",
+          tabBarIcon: ({ color }) => (
+            <TabIcon name="messages" color={color} size={24} />
+          ),
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: "Explore",
+          tabBarIcon: ({ color }) => (
+            <TabIcon name="explore" color={color} size={24} />
+          ),
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBar: {
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 0,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    paddingBottom: 8,
+    paddingTop: 8,
+  },
+  tabBarLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    marginTop: 4,
+  },
+});
