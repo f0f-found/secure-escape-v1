@@ -4,7 +4,6 @@ import { StyleSheet } from "react-native";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { TabIcon } from "@/components/TabIcon";
-import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export default function TabLayout() {
@@ -58,11 +57,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="settings"
         options={{
-          title: "Explore",
+          title: "Settings",
           tabBarIcon: ({ color }) => (
-            <TabIcon name="explore" color={color} size={24} />
+            <TabIcon name="settings" color={color} size={24} />
           ),
         }}
       />

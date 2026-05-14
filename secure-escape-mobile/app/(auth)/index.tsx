@@ -22,10 +22,7 @@ export default function AuthIndex() {
   return (
     <View style={{ flex: 1 }}>
       {/* Splash Screen */}
-      <SplashScreen
-        onServiceSelect={handleServiceSelect}
-        onLoginPress={() => setShowLoginModal(true)}
-      />
+      <SplashScreen onLoginPress={() => setShowLoginModal(true)} />
 
       {/* Login Modal */}
       <Modal
