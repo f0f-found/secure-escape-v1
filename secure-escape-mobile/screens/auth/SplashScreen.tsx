@@ -1,323 +1,224 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   Animated,
-  StatusBar,
-  ScrollView,
   Dimensions,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import * as Haptics from "expo-haptics";
+import { Ionicons } from "@expo/vector-icons";
+import { colors } from "@/utils/theme";
 
-const { width } = Dimensions.get("window");
-
-const colors = {
-  primary: "#5856D6",
-  background: "#FAFBFC",
-  surface: "#FFFFFF",
-  text: "#1A202C",
-  textSecondary: "#718096",
-  border: "#E2E8F0",
-};
-
-const services = [
-  {
-    id: "transfers",
-    name: "Transfers",
-    icon: "💰",
-    color: "#FF6B6B",
-  },
-  {
-    id: "cards",
-    name: "Cards",
-    icon: "💳",
-    color: "#10B981",
-  },
-  {
-    id: "notifications",
-    name: "Notifications",
-    icon: "🔔",
-    color: "#F59E0B",
-  },
-  {
-    id: "settings",
-    name: "Settings",
-    icon: "⚙️",
-    color: "#5856D6",
-  },
-  {
-    id: "analytics",
-    name: "Analytics",
-    icon: "📊",
-    color: "#00D4FF",
-  },
-  {
-    id: "profile",
-    name: "Profile",
-    icon: "👤",
-    color: "#FF9500",
-  },
-];
+const { height } = Dimensions.get("window");
 
 interface SplashScreenProps {
-  onServiceSelect?: (serviceId: string) => void;
-  onLoginPress: () => void;
+  onLoginPress?: () => void;
 }
 
-export default function SplashScreen({
-  onServiceSelect,
-  onLoginPress,
-}: SplashScreenProps) {
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const slideAnim = React.useRef(new Animated.Value(30)).current;
+export default function SplashScreen({ onLoginPress }: SplashScreenProps) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(42)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 600,
+        duration: 900,
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 600,
+        duration: 750,
         useNativeDriver: true,
       }),
     ]).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.06,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
   }, []);
 
-  const handleServicePress = (serviceId: string) => {
-    onServiceSelect?.(serviceId);
-    onLoginPress(); // Open login modal
+  const handleLoginPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onLoginPress?.();
   };
 
+  const circles = [
+    { size: 120, top: 70, left: -40, opacity: 0.1 },
+    { size: 190, top: 190, right: -70, opacity: 0.08 },
+    { size: 90, bottom: 190, left: 34, opacity: 0.12 },
+    { size: 150, bottom: 55, right: -25, opacity: 0.08 },
+  ];
+
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+    <LinearGradient
+      colors={["#5B8DEF", "#6C63FF", "#00BFA6"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.container}
+    >
+      {circles.map((circle, index) => (
+        <Animated.View
+          key={index}
+          style={[
+            styles.floatingCircle,
+            {
+              width: circle.size,
+              height: circle.size,
+              borderRadius: circle.size / 2,
+              opacity: circle.opacity,
+              top: circle.top,
+              left: circle.left,
+              right: circle.right,
+              bottom: circle.bottom,
+            },
+          ]}
+        />
+      ))}
+
+      <Animated.View
+        style={[styles.iconWrapper, { transform: [{ scale: pulseAnim }] }]}
       >
-        {/* Header */}
-        <Animated.View
-          style={[
-            styles.header,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
+        <LinearGradient
+          colors={["#FFFFFF", "#EEF6FF"]}
+          style={styles.bankCircle}
         >
-          <View style={styles.brandBox}>
-            <Text style={styles.brandIcon}>🏦</Text>
-          </View>
-          <Text style={styles.title}>Hello</Text>
-          <Text style={styles.subtitle}>Welcome to your banking hub</Text>
-        </Animated.View>
+          <Ionicons name="card" size={76} color={colors.primary} />
+        </LinearGradient>
+      </Animated.View>
 
-        {/* Services Grid */}
-        <Animated.View
-          style={[
-            styles.servicesContainer,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
-        >
-          <View style={styles.servicesGrid}>
-            {services.map((service) => (
-              <TouchableOpacity
-                key={service.id}
-                style={styles.serviceCard}
-                onPress={() => handleServicePress(service.id)}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={[
-                    styles.serviceIconBox,
-                    { backgroundColor: service.color + "20" },
-                  ]}
-                >
-                  <Text style={styles.serviceIcon}>{service.icon}</Text>
-                </View>
-                <Text style={styles.serviceName}>{service.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </Animated.View>
+      <Animated.View
+        style={[
+          styles.content,
+          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+        ]}
+      >
+        <Text style={styles.eyebrow}>GlobalOne Banking</Text>
+        <Text style={styles.title}>Bank securely, wherever you are</Text>
+        <Text style={styles.description}>
+          View balances, manage payments, and access your everyday banking tools
+          in one protected place.
+        </Text>
 
-        {/* Login Button */}
-        <Animated.View
-          style={[
-            styles.loginButtonContainer,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={handleLoginPress}
+          activeOpacity={0.85}
         >
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={onLoginPress}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.loginButtonText}>Sign In</Text>
-          </TouchableOpacity>
-        </Animated.View>
+          <Text style={styles.primaryButtonText}>Sign in</Text>
+          <Ionicons name="arrow-forward" size={20} color={colors.primary} />
+        </TouchableOpacity>
 
-        {/* Bottom Navigation */}
-        {/* <Animated.View
-          style={[
-            styles.bottomNav,
-            {
-              opacity: fadeAnim,
-            },
-          ]}
-        >
-          <TouchableOpacity style={styles.navItem}>
-            <Text style={styles.navIcon}>💬</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem}>
-            <Text style={styles.navIcon}>❤️</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem}>
-            <Text style={styles.navIcon}>🔗</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem}>
-            <Text style={styles.navIcon}>👥</Text>
-          </TouchableOpacity>
-        </Animated.View> */}
-      </ScrollView>
-    </SafeAreaView>
+        <TouchableOpacity style={styles.secondaryButton} activeOpacity={0.75}>
+          <Text style={styles.secondaryButtonText}>Open app settings</Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-
-  // Header
-  header: {
+    justifyContent: "flex-end",
     alignItems: "center",
-    marginBottom: 40,
   },
-  brandBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    backgroundColor: colors.primary + "15",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
+  floatingCircle: {
+    position: "absolute",
+    backgroundColor: "#FFFFFF",
   },
-  brandIcon: {
-    fontSize: 32,
+  iconWrapper: {
+    position: "absolute",
+    top: height * 0.17,
+    alignSelf: "center",
   },
-  title: {
-    fontSize: 40,
-    fontWeight: "700",
-    color: colors.text,
-    marginBottom: 8,
-    letterSpacing: -1,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    textAlign: "center",
-    lineHeight: 24,
-  },
-
-  // Services Grid
-  servicesContainer: {
-    marginBottom: 30,
-  },
-  servicesGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  serviceCard: {
-    width: "48%",
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 16,
+  bankCircle: {
+    width: 148,
+    height: 148,
+    borderRadius: 74,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-    minHeight: 140,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    elevation: 10,
   },
-  serviceIconBox: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
-    justifyContent: "center",
+  content: {
+    width: "100%",
+    paddingHorizontal: 28,
+    paddingBottom: 44,
     alignItems: "center",
+  },
+  eyebrow: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "rgba(255,255,255,0.9)",
+    textTransform: "uppercase",
+    letterSpacing: 1.4,
     marginBottom: 12,
   },
-  serviceIcon: {
-    fontSize: 28,
-  },
-  serviceName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.text,
+  title: {
+    fontSize: 38,
+    fontWeight: "800",
+    color: colors.white,
+    marginBottom: 14,
     textAlign: "center",
+    lineHeight: 44,
   },
-
-  // Login Button
-  loginButtonContainer: {
-    marginBottom: 30,
+  description: {
+    fontSize: 15,
+    color: "rgba(255,255,255,0.9)",
+    marginBottom: 26,
+    lineHeight: 22,
+    textAlign: "center",
+    maxWidth: "92%",
   },
-  loginButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    borderRadius: 12,
+  primaryButton: {
+    width: "100%",
+    borderRadius: 50,
+    backgroundColor: colors.white,
+    paddingVertical: 16,
+    paddingHorizontal: 22,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: colors.primary,
+    gap: 8,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
     elevation: 5,
   },
-  loginButtonText: {
-    color: colors.surface,
+  primaryButtonText: {
+    color: colors.primary,
     fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.3,
+    fontWeight: "800",
   },
-
-  // Bottom Navigation
-  bottomNav: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    marginHorizontal: -20,
-    paddingHorizontal: 20,
-  },
-  navItem: {
-    paddingVertical: 8,
+  secondaryButton: {
+    marginTop: 16,
+    paddingVertical: 10,
     paddingHorizontal: 16,
   },
-  navIcon: {
-    fontSize: 20,
+  secondaryButtonText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: "700",
+    textDecorationLine: "underline",
   },
 });
