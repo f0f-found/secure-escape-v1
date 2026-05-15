@@ -5,7 +5,6 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SecureEscape.Api.Data;
 using SecureEscape.Api.Interfaces;
-using SecureEscape.Api.Repositories;
 using SecureEscape.Api.Services;
 
 
@@ -51,10 +50,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 
 
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IAuthService, AuthService>();
+
 builder.Services.AddScoped<ITokenService, TokenService>();
-builder.Services.AddScoped<ISecurityEventRepository, SecurityEventRepository>();
+
 
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
