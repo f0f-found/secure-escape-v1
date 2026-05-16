@@ -1,3 +1,4 @@
+// app/secure-escape/emergency-budget.tsx
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -24,54 +25,26 @@ export default function EmergencyBudgetScreen() {
   const [agreed, setAgreed] = useState(false);
   const fadeAnim = useState(new Animated.Value(0))[0];
 
-  // Animation for the icon
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
-
-    // Continuous pulse animation loop
+    Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ]),
+        Animated.timing(pulseAnim, { toValue: 1.1, duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+      ])
     ).start();
-
-    // Gentle rotation
     Animated.loop(
       Animated.sequence([
-        Animated.timing(rotateAnim, {
-          toValue: 0.05,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(rotateAnim, {
-          toValue: -0.05,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-      ]),
+        Animated.timing(rotateAnim, { toValue: 0.05, duration: 1500, useNativeDriver: true }),
+        Animated.timing(rotateAnim, { toValue: -0.05, duration: 1500, useNativeDriver: true }),
+      ])
     ).start();
   }, []);
 
-  const handleSliderChange = (
-    value: number,
-    type: "low" | "tier1" | "tier2",
-  ) => {
+  const handleSliderChange = (value: number, type: "low" | "tier1" | "tier2") => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (type === "low") setLowAmount(value);
     if (type === "tier1") setTier1(value);
@@ -89,7 +62,6 @@ export default function EmergencyBudgetScreen() {
   };
 
   const formatCurrency = (value: number) => `R ${value.toLocaleString()}`;
-
   const rotateInterpolate = rotateAnim.interpolate({
     inputRange: [-0.05, 0.05],
     outputRange: ["-5deg", "5deg"],
@@ -100,11 +72,11 @@ export default function EmergencyBudgetScreen() {
     content = (
       <Animated.View style={{ opacity: fadeAnim }}>
         <Text style={styles.label}>
-          Emergency Budget <Text style={styles.range}>(R0 – R1,000)</Text>
+          Emergency Budget <Text style={styles.range}>(R200 – R1,000)</Text>
         </Text>
         <Slider
           style={styles.slider}
-          minimumValue={0}
+          minimumValue={200}
           maximumValue={1000}
           step={10}
           value={lowAmount}
@@ -127,8 +99,7 @@ export default function EmergencyBudgetScreen() {
     content = (
       <Animated.View style={{ opacity: fadeAnim }}>
         <Text style={styles.label}>
-          Tier 1 – Instant transfer{" "}
-          <Text style={styles.range}>(R500 – R5,000)</Text>
+          Tier 1 – Instant transfer <Text style={styles.range}>(R500 – R5,000)</Text>
         </Text>
         <Slider
           style={styles.slider}
@@ -145,10 +116,8 @@ export default function EmergencyBudgetScreen() {
           <Text style={styles.valueLabel}>Instant transfer amount</Text>
           <Text style={styles.value}>{formatCurrency(tier1)}</Text>
         </View>
-
         <Text style={[styles.label, { marginTop: 20 }]}>
-          Tier 2 – 24‑hour delayed{" "}
-          <Text style={styles.range}>(up to R50,000)</Text>
+          Tier 2 – 24‑hour delayed <Text style={styles.range}>(up to R50,000)</Text>
         </Text>
         <Slider
           style={styles.slider}
@@ -179,13 +148,8 @@ export default function EmergencyBudgetScreen() {
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      <LinearGradient
-        colors={["#5B8DEF", "#6C63FF"]}
-        style={styles.gradientHeader}
-      >
-        <Text style={styles.backArrow} onPress={() => router.back()}>
-          ‹
-        </Text>
+      <LinearGradient colors={["#5B8DEF", "#6C63FF"]} style={styles.gradientHeader}>
+        <Text style={styles.backArrow} onPress={() => router.back()}>‹</Text>
         <Text style={styles.headerTitle}>Set Emergency Budget</Text>
       </LinearGradient>
 
@@ -198,32 +162,28 @@ export default function EmergencyBudgetScreen() {
           <Text style={styles.link}>what is the emergency budget?</Text>
         </TouchableOpacity>
 
-        {/* Animated money/security icon */}
         <Animated.View
           style={[
             styles.iconContainer,
-            {
-              transform: [{ scale: pulseAnim }, { rotate: rotateInterpolate }],
-            },
+            { transform: [{ scale: pulseAnim }, { rotate: rotateInterpolate }] },
           ]}
         >
-          <LinearGradient
-            colors={["#EDE9FE", "#DBEAFE"]}
-            style={styles.iconCircle}
-          >
+          <LinearGradient colors={["#EDE9FE", "#DBEAFE"]} style={styles.iconCircle}>
             <Ionicons name="cash-outline" size={48} color={colors.primary} />
           </LinearGradient>
         </Animated.View>
 
         {content}
 
-        {/* Checkbox with terms */}
+        {/* Checkbox with visible checkmark */}
         <TouchableOpacity
           style={styles.checkRow}
           onPress={() => setAgreed(!agreed)}
           activeOpacity={0.7}
         >
-          <View style={[styles.checkbox, agreed && styles.checked]} />
+          <View style={[styles.checkboxBase, agreed && styles.checkboxChecked]}>
+            {agreed && <Ionicons name="checkmark" size={18} color="#fff" />}
+          </View>
           <Text style={styles.checkText}>
             By setting an Emergency Budget you agree to our{" "}
             <Text
@@ -253,11 +213,9 @@ export default function EmergencyBudgetScreen() {
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingBottom: 40,
-  },
+  scrollContent: { paddingBottom: 40 },
   gradientHeader: {
-    paddingTop: 65, // increased to push title down
+    paddingTop: 65,
     paddingHorizontal: 20,
     paddingBottom: 30,
     flexDirection: "row",
@@ -274,12 +232,7 @@ const styles = StyleSheet.create({
     padding: 24,
     marginTop: -20,
   },
-  mainTitle: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: colors.primary,
-    marginBottom: 6,
-  },
+  mainTitle: { fontSize: 28, fontWeight: "800", color: colors.primary, marginBottom: 6 },
   sub: { fontSize: 14, color: colors.textSub, marginBottom: 4, lineHeight: 20 },
   link: {
     fontSize: 13,
@@ -287,12 +240,7 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
     marginBottom: 20,
   },
-
-  // Animated icon
-  iconContainer: {
-    alignItems: "center",
-    marginVertical: 24,
-  },
+  iconContainer: { alignItems: "center", marginVertical: 24 },
   iconCircle: {
     width: 90,
     height: 90,
@@ -305,14 +253,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 5,
   },
-
-  // Sliders and budget content
-  label: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: colors.navy,
-    marginBottom: 8,
-  },
+  label: { fontSize: 15, fontWeight: "600", color: colors.navy, marginBottom: 8 },
   range: { fontWeight: "400", color: colors.textSub, fontSize: 12 },
   slider: { width: "100%", height: 40, marginBottom: 8 },
   valueContainer: {
@@ -332,8 +273,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     lineHeight: 18,
   },
-
-  // Checkbox
   checkRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -341,42 +280,24 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 12,
   },
-  checkbox: {
-    width: 22,
-    height: 22,
+  checkboxBase: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
     borderWidth: 2,
     borderColor: colors.greyLine,
-    borderRadius: 6,
     backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  checked: {
+  checkboxChecked: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
-  checkText: {
-    fontSize: 13,
-    color: colors.textSub,
-    flex: 1,
-    lineHeight: 18,
-  },
-  linkText: {
-    color: colors.primary,
-    textDecorationLine: "underline",
-  },
-
-  // Continue button
-  continueButton: {
-    marginTop: 12,
-    borderRadius: 50,
-    overflow: "hidden",
-    marginBottom: 20,
-  },
+  checkText: { fontSize: 13, color: colors.textSub, flex: 1, lineHeight: 18 },
+  linkText: { color: colors.primary, textDecorationLine: "underline" },
+  continueButton: { marginTop: 12, borderRadius: 50, overflow: "hidden", marginBottom: 20 },
   disabledButton: { opacity: 0.6 },
   gradientButton: { paddingVertical: 16, alignItems: "center" },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
+  buttonText: { color: "#fff", fontSize: 16, fontWeight: "700", letterSpacing: 0.5 },
 });
