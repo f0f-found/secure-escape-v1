@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SecureEscape.Api.Data;
 using SecureEscape.Api.Interfaces;
+using SecureEscape.Api.Repositories;
 using SecureEscape.Api.Services;
 
 
@@ -49,11 +50,18 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     ));
 
 
+//Repos
+builder.Services.AddScoped<IBankAccountRepository, BankAccountRepository>();
+builder.Services.AddScoped<IDecoyProfileRepository, DecoyProfileRepository>();
 
-
+//Services
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
-
-
+builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IProfileService, ProfileService>();
+builder.Services.AddScoped<IHashingService, BCryptHashingService>();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSettings["SigningKey"];
