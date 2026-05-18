@@ -9,5 +9,5 @@ namespace SecureEscape.Api.Interfaces;
 
 public interface ITokenService
 {
-    string CreateToken(User user);
+    string CreateToken(User user, UserSession session);
 }
