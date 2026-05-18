@@ -120,55 +120,55 @@ namespace SecureEscape.Api.Data
             };
 
             await context.Users.AddRangeAsync(user1, user2, user3, user4, user5);
-
+            static string Hash(string value) => BCrypt.Net.BCrypt.HashPassword(value);
             // ── AUTH CREDENTIALS ───────────────────────────────────────────
             await context.AuthCredentials.AddRangeAsync(
-                new AuthCredential
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = user1.Id,
-                    PasswordHash = "Password@123",
-                    NormalPinHash = "1234",
-                    DuressPinHash = "9999",
-                    CreatedAt = DateTime.UtcNow
-                },
-                new AuthCredential
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = user2.Id,
-                    PasswordHash = "Password@123",
-                    NormalPinHash = "2222",
-                    DuressPinHash = "8888",
-                    CreatedAt = DateTime.UtcNow
-                },
-                new AuthCredential
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = user3.Id,
-                    PasswordHash = "Password@123",
-                    NormalPinHash = "3333",
-                    DuressPinHash = "7777",
-                    CreatedAt = DateTime.UtcNow
-                },
-                new AuthCredential
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = user4.Id,
-                    PasswordHash = "Password@123",
-                    NormalPinHash = "4444",
-                    DuressPinHash = "6666",
-                    CreatedAt = DateTime.UtcNow
-                },
-                new AuthCredential
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = user5.Id,
-                    PasswordHash = "Password@123",
-                    NormalPinHash = "5555",
-                    DuressPinHash = "0000",
-                    CreatedAt = DateTime.UtcNow
-                }
-            );
+    new AuthCredential
+    {
+        Id = Guid.NewGuid(),
+        UserId = user1.Id,
+        PasswordHash = Hash("Password@123"),
+        NormalPinHash = Hash("1234"),
+        DuressPinHash = Hash("9999"),
+        CreatedAt = DateTime.UtcNow
+    },
+    new AuthCredential
+    {
+        Id = Guid.NewGuid(),
+        UserId = user2.Id,
+        PasswordHash = Hash("Password@123"),
+        NormalPinHash = Hash("2222"),
+        DuressPinHash = Hash("8888"),
+        CreatedAt = DateTime.UtcNow
+    },
+    new AuthCredential
+    {
+        Id = Guid.NewGuid(),
+        UserId = user3.Id,
+        PasswordHash = Hash("Password@123"),
+        NormalPinHash = Hash("3333"),
+        DuressPinHash = Hash("7777"),
+        CreatedAt = DateTime.UtcNow
+    },
+    new AuthCredential
+    {
+        Id = Guid.NewGuid(),
+        UserId = user4.Id,
+        PasswordHash = Hash("Password@123"),
+        NormalPinHash = Hash("4444"),
+        DuressPinHash = Hash("6666"),
+        CreatedAt = DateTime.UtcNow
+    },
+    new AuthCredential
+    {
+        Id = Guid.NewGuid(),
+        UserId = user5.Id,
+        PasswordHash = Hash("Password@123"),
+        NormalPinHash = Hash("5555"),
+        DuressPinHash = Hash("0000"),
+        CreatedAt = DateTime.UtcNow
+    }
+);
 
             // ── BANK ACCOUNTS ──────────────────────────────────────────────
             await context.BankAccounts.AddRangeAsync(
