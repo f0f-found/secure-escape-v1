@@ -96,26 +96,11 @@ public class AuthService : IAuthService
 
         await _context.UserSessions.AddAsync(session);
 
-        if (request.Latitude.HasValue && request.Longitude.HasValue)
-        {
-            var locationEvent = new LocationEvent
-            {
-                Id = Guid.NewGuid(),
-                UserSessionId = session.Id,
-                Latitude = request.Latitude.Value,
-                Longitude = request.Longitude.Value,
-                AccuracyMeters = request.AccuracyMeters ?? 0,
-                LocationSource = LocationSource.Gps,
-                CapturedAt = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            await _context.LocationEvents.AddAsync(locationEvent);
-        }
+        Alert? alert = null;
 
         if (duressPinValid)
         {
-            var alert = new Alert
+            alert = new Alert
             {
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
@@ -153,6 +138,24 @@ public class AuthService : IAuthService
             };
 
             await _context.NotificationAttempts.AddAsync(notificationAttempt);
+        }
+
+        if (request.Latitude.HasValue && request.Longitude.HasValue)
+        {
+            var locationEvent = new LocationEvent
+            {
+                Id = Guid.NewGuid(),
+                UserSessionId = session.Id,
+                AlertId = alert?.Id,
+                Latitude = request.Latitude.Value,
+                Longitude = request.Longitude.Value,
+                AccuracyMeters = request.AccuracyMeters ?? 0,
+                LocationSource = LocationSource.Gps,
+                CapturedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _context.LocationEvents.AddAsync(locationEvent);
         }
 
         await _context.SaveChangesAsync();
