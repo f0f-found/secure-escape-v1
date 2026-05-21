@@ -6,23 +6,59 @@ import {
   TouchableOpacity,
   StyleSheet,
   Switch,
+  Alert,
 } from "react-native";
 import { colors } from "@/utils/theme";
-import { useRouter } from "expo-router";
+import { login } from "@/services/authService";
+import { saveAuthSession } from "@/services/tokenStore";
 
 interface LoginScreenProps {
   onLoginSuccess?: () => void;
 }
 
 export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
-  const router = useRouter();
+  const [email, setEmail] = useState("thabo.nkosi@email.co.za");
+  const [password, setPassword] = useState("Password@123");
   const [pin, setPin] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [biometricsEnabled, setBiometricsEnabled] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
-  const handleSubmit = () => {
-    if (pin.length === 6) {
+  const handleSubmit = async () => {
+    if (!email || !password || pin.length < 4) {
+      Alert.alert(
+        "Missing details",
+        "Please enter your email, password, and PIN.",
+      );
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      const response = await login({
+        email,
+        password,
+        pin,
+        deviceInfo: "Expo mobile app",
+        ipAddress: "127.0.0.1",
+      });
+
+      await saveAuthSession({
+        token: response.token,
+        sessionMode: response.sessionMode,
+        userSessionId: response.userSessionId,
+        userId: response.userId,
+      });
+
       onLoginSuccess?.();
+    } catch (error) {
+      Alert.alert(
+        "Login failed",
+        error instanceof Error ? error.message : "Please try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -41,17 +77,27 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
       <View style={styles.pinArea}>
         <View style={styles.pinLabelRow}>
-          <Text>Username</Text>
+          <Text>Email</Text>
         </View>
 
         <TextInput
-          style={styles.pinInput}
-          secureTextEntry
-          maxLength={6}
-          keyboardType="numeric"
-          value={pin}
-          onChangeText={setPin}
+          style={styles.textInput}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
         />
+        <View style={styles.pinLabelRow}>
+          <Text>Password</Text>
+        </View>
+
+        <TextInput
+          style={styles.textInput}
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+
         <View style={styles.pinLabelRow}>
           <Text>Enter app PIN</Text>
           <Text style={styles.forgotPin}>Forgot PIN</Text>
@@ -66,8 +112,14 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           onChangeText={setPin}
         />
 
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <Text style={styles.submitText}>Submit</Text>
+        <TouchableOpacity
+          style={[styles.submitButton, isSubmitting && styles.disabledButton]}
+          onPress={handleSubmit}
+          disabled={isSubmitting}
+        >
+          <Text style={styles.submitText}>
+            {isSubmitting ? "Signing in..." : "Submit"}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -159,4 +211,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   dontShowRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  textInput: {
+    borderWidth: 1.5,
+    borderColor: colors.greyLine,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
 });

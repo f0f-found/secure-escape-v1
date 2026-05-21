@@ -13,15 +13,20 @@ import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/utils/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { upsertDecoyProfile } from "@/services/secureEscapeService";
 
 export default function EmergencyBudgetScreen() {
   const router = useRouter();
-  const { mode = "low" } = useLocalSearchParams<{ mode?: string }>();
-
+  const { profileType } = useLocalSearchParams<{
+    profileType?: "LowProfile" | "Custom";
+  }>();
+  const mode = profileType;
   const [lowAmount, setLowAmount] = useState(200);
+  const [displayBalance, setDisplayBalance] = useState(500);
   const [tier1, setTier1] = useState(2000);
   const [tier2, setTier2] = useState(20000);
   const [agreed, setAgreed] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const fadeAnim = useState(new Animated.Value(0))[0];
 
   // Animation for the icon
@@ -78,14 +83,37 @@ export default function EmergencyBudgetScreen() {
     if (type === "tier2") setTier2(value);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!agreed) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       alert("Please agree to the Terms and Conditions");
       return;
     }
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    router.push("/secure-escape/duress-pin");
+
+    try {
+      setIsSaving(true);
+
+      await upsertDecoyProfile({
+        profileType: profileType ?? "LowProfile",
+        displayBalance: displayBalance,
+        emergencyBudget: mode === "LowProfile" ? lowAmount : tier1,
+        tier1Limit: mode === "LowProfile" ? lowAmount : tier1,
+        tier2Limit: mode === "LowProfile" ? lowAmount : tier2,
+        tier2DelayHours: 24,
+      });
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.push("/secure-escape/duress-pin");
+    } catch (error) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to save Secure Escape setup",
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const formatCurrency = (value: number) => `R ${value.toLocaleString()}`;
@@ -96,9 +124,30 @@ export default function EmergencyBudgetScreen() {
   });
 
   let content;
-  if (mode === "low") {
+  if (profileType === "LowProfile") {
     content = (
       <Animated.View style={{ opacity: fadeAnim }}>
+        <Text style={styles.label}>
+          Display Balance <Text style={styles.range}>(R0 – R2,000)</Text>
+        </Text>
+        <Slider
+          style={styles.slider}
+          minimumValue={0}
+          maximumValue={2000}
+          step={50}
+          value={displayBalance}
+          onValueChange={(v: number) => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setDisplayBalance(v);
+          }}
+          minimumTrackTintColor={colors.primary}
+          maximumTrackTintColor={colors.greyLine}
+          thumbTintColor={colors.primary}
+        />
+        <View style={styles.valueContainer}>
+          <Text style={styles.valueLabel}>What attacker sees</Text>
+          <Text style={styles.value}>{formatCurrency(displayBalance)}</Text>
+        </View>
         <Text style={styles.label}>
           Emergency Budget <Text style={styles.range}>(R0 – R1,000)</Text>
         </Text>
@@ -126,6 +175,27 @@ export default function EmergencyBudgetScreen() {
   } else {
     content = (
       <Animated.View style={{ opacity: fadeAnim }}>
+        <Text style={styles.label}>
+          Display Balance <Text style={styles.range}>(R1,000 – R20,000)</Text>
+        </Text>
+        <Slider
+          style={styles.slider}
+          minimumValue={1000}
+          maximumValue={20000}
+          step={500}
+          value={displayBalance}
+          onValueChange={(v: number) => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setDisplayBalance(v);
+          }}
+          minimumTrackTintColor={colors.primary}
+          maximumTrackTintColor={colors.greyLine}
+          thumbTintColor={colors.primary}
+        />
+        <View style={styles.valueContainer}>
+          <Text style={styles.valueLabel}>What attacker sees</Text>
+          <Text style={styles.value}>{formatCurrency(displayBalance)}</Text>
+        </View>
         <Text style={styles.label}>
           Tier 1 – Instant transfer{" "}
           <Text style={styles.range}>(R500 – R5,000)</Text>
@@ -236,15 +306,20 @@ export default function EmergencyBudgetScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.continueButton, !agreed && styles.disabledButton]}
+          style={[
+            styles.continueButton,
+            (!agreed || isSaving) && styles.disabledButton,
+          ]}
           onPress={handleContinue}
-          disabled={!agreed}
+          disabled={!agreed || isSaving}
         >
           <LinearGradient
             colors={agreed ? ["#7C6EF7", "#4A6CF7"] : ["#ccc", "#ccc"]}
             style={styles.gradientButton}
           >
-            <Text style={styles.buttonText}>Continue</Text>
+            <Text style={styles.buttonText}>
+              {isSaving ? "Saving..." : "Continue"}
+            </Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>

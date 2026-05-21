@@ -63,7 +63,7 @@ export default function SecureEscapeSplashPage() {
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push("/secure-escape/emergency-budget");
+    router.push("/secure-escape/mode-selection");
   };
 
   // Floating circles (decorative)
@@ -81,6 +81,12 @@ export default function SecureEscapeSplashPage() {
       end={{ x: 1, y: 1 }}
       style={styles.container}
     >
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => router.push("/(tabs)/settings")}
+      >
+        <Ionicons name="arrow-back" size={24} color="#fff" />
+      </TouchableOpacity>
       {/* Floating decorative circles */}
       {circles.map((circle, idx) => (
         <Animated.View
@@ -101,7 +107,7 @@ export default function SecureEscapeSplashPage() {
           ]}
         />
       ))}
-      
+
       {/* Animated shield icon */}
       <Animated.View
         style={[styles.iconWrapper, { transform: [{ scale: pulseAnim }] }]}
@@ -186,6 +192,12 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textAlign: "center",
   },
+  backButton: {
+    position: "absolute",
+    top: 60,
+    left: 24,
+    zIndex: 10,
+  },
   tagline: {
     fontSize: 18,
     fontWeight: "700",
@@ -209,7 +221,7 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
     marginTop: 8,
   },
- 
+
   arrowButton: {
     position: "absolute",
     bottom: 36,

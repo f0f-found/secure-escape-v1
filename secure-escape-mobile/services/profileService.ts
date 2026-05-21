@@ -9,7 +9,7 @@ export async function getProfileMe(): Promise<ProfileMeResponse> {
     throw new Error("No auth token found. Please log in again.");
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/Profile/me`, {
+  const response = await fetch(`${API_BASE_URL}/api/v1/profile/me`, {
     method: "GET",
     headers: {
       Accept: "application/json",

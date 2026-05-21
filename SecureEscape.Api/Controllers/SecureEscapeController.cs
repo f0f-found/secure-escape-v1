@@ -36,7 +36,7 @@ public class SecureEscapeController : ControllerBase
 
     [HttpPut("decoy-profile")]
     public async Task<ActionResult<DecoyProfileResponseDto>> UpsertDecoyProfile(
-        UpsertDecoyProfileRequestDto request)
+    [FromBody] UpsertDecoyProfileRequestDto request)
     {
         var decoyProfile = await _secureEscapeService.UpsertDecoyProfileAsync(request);
 
@@ -44,7 +44,7 @@ public class SecureEscapeController : ControllerBase
     }
 
     [HttpPost("duress-pin")]
-    public async Task<IActionResult> SetDuressPin(SetDuressPinRequestDto request)
+    public async Task<IActionResult> SetDuressPin([FromBody] SetDuressPinRequestDto request)
     {
         var updated = await _secureEscapeService.SetDuressPinAsync(request);
 
