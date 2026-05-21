@@ -51,8 +51,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 
 //Repos
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IAlertRepository, AlertRepository>();
 builder.Services.AddScoped<IBankAccountRepository, BankAccountRepository>();
 builder.Services.AddScoped<IDecoyProfileRepository, DecoyProfileRepository>();
+
 
 //Services
 builder.Services.AddHttpContextAccessor();
@@ -60,8 +63,10 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
+builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IHashingService, BCryptHashingService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<ISecureEscapeService, SecureEscapeService>();
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSettings["SigningKey"];

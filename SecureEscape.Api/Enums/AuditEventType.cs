@@ -14,6 +14,7 @@ namespace SecureEscape.Api.Enums
         NotificationSent = 10,
         NotificationFailed = 11,
         DecoyProfileUpdated = 12,
-        AccountFrozen = 13
+        AccountFrozen = 13,
+        DuressPinUpdated = 14
     }
 }
