@@ -39,6 +39,7 @@ namespace SecureEscape.Api.Models
         public AuthCredential? AuthCredential { get; set; }
 
         public ICollection<BankAccount> BankAccounts { get; set; } = new List<BankAccount>();
+        public ICollection<EmergencyContact> EmergencyContacts { get; set; } = new List<EmergencyContact>();
 
         public ICollection<Card> Cards { get; set; } = new List<Card>();
 

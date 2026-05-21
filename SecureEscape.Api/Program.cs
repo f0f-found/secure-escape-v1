@@ -7,11 +7,16 @@ using SecureEscape.Api.Data;
 using SecureEscape.Api.Interfaces;
 using SecureEscape.Api.Repositories;
 using SecureEscape.Api.Services;
+using System.Text.Json.Serialization;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -55,7 +60,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAlertRepository, AlertRepository>();
 builder.Services.AddScoped<IBankAccountRepository, BankAccountRepository>();
 builder.Services.AddScoped<IDecoyProfileRepository, DecoyProfileRepository>();
-
+builder.Services.AddScoped<IEmergencyContactRepository, EmergencyContactRepository>();
 
 //Services
 builder.Services.AddHttpContextAccessor();
@@ -67,6 +72,7 @@ builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IHashingService, BCryptHashingService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<ISecureEscapeService, SecureEscapeService>();
+builder.Services.AddScoped<IEmergencyContactService, EmergencyContactService>();
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSettings["SigningKey"];

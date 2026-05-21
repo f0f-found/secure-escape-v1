@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,29 +8,70 @@ import {
   Dimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-
+import { getAccounts } from "@/services/accountService";
+import { AccountResponse } from "@/types/account";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, commonStyles, shadows } from "@/utils/theme";
+import { colors, shadows } from "@/utils/theme";
+import { getProfileMe } from "@/services/profileService";
+import { ProfileMeResponse } from "@/types/profile";
 
 const { width } = Dimensions.get("window");
 
 export default function HomeScreen() {
-  const accountCards = [
-    {
-      name: "Main Account",
-      balance: 28840,
-      icon: "wallet",
-      gradient: ["#9F8FEF", "#7C6EF7"] as const,
-      iconBg: "#9F8FEF20",
-    },
-    {
-      name: "Savings Plans",
-      balance: 3789,
-      icon: "trending-up",
-      gradient: ["#93C5FD", "#60A5FA"] as const,
-      iconBg: "#60A5FA20",
-    },
-  ];
+  const [accounts, setAccounts] = useState<AccountResponse[]>([]);
+  const [profile, setProfile] = useState<ProfileMeResponse>();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadAccounts();
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const user = await getProfileMe();
+
+      setProfile(user);
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Failed to load profile.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadAccounts = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const data = await getAccounts();
+
+      setAccounts(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load accounts.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const accountCards = accounts.map((account, index) => ({
+    id: account.id,
+    name: account.accountName,
+    balance: account.availableBalance,
+    isDecoyView: account.isDecoyView,
+    icon: index === 0 ? "wallet" : "trending-up",
+    gradient:
+      index === 0
+        ? (["#9F8FEF", "#7C6EF7"] as const)
+        : (["#93C5FD", "#60A5FA"] as const),
+    iconBg: index === 0 ? "#9F8FEF20" : "#60A5FA20",
+  }));
 
   const favourites = [
     { label: "Pay Beneficiary", icon: "people", bg: "#EEEEFF" },
@@ -50,14 +91,21 @@ export default function HomeScreen() {
     >
       <View style={styles.header}>
         <Text style={styles.title}>My Dashboard</Text>
-        <Text style={styles.greeting}>Good afternoon, Naomie</Text>
+        <Text style={styles.greeting}>Good afternoon, {profile?.fullName}</Text>
       </View>
 
+      {isLoading && <Text style={styles.stateText}>Loading accounts...</Text>}
+
+      {error && (
+        <TouchableOpacity onPress={loadAccounts}>
+          <Text style={styles.errorText}>{error}</Text>
+        </TouchableOpacity>
+      )}
       {/* Account Cards with gradient background */}
       <View style={styles.cardsRow}>
         {accountCards.map((card, idx) => (
           <TouchableOpacity
-            key={idx}
+            key={card.id}
             activeOpacity={0.9}
             style={styles.cardWrapper}
           >
@@ -80,6 +128,9 @@ export default function HomeScreen() {
               <Text style={styles.accBalance}>
                 R {card.balance.toLocaleString()}
               </Text>
+              {card.isDecoyView && (
+                <Text style={styles.decoyBadge}>⚠ Decoy View</Text>
+              )}
             </LinearGradient>
           </TouchableOpacity>
         ))}
@@ -149,6 +200,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 12,
   },
+  decoyBadge: {
+    fontSize: 10,
+    color: "rgba(255,255,255,0.7)",
+    marginTop: 4,
+    fontWeight: "600",
+  },
   accName: {
     fontSize: 14,
     fontWeight: "600",
@@ -206,5 +263,19 @@ const styles = StyleSheet.create({
     color: colors.textMain,
     textAlign: "center",
     paddingHorizontal: 4,
+  },
+  stateText: {
+    paddingHorizontal: 20,
+    marginBottom: 12,
+    color: colors.textSub,
+    fontSize: 13,
+  },
+
+  errorText: {
+    paddingHorizontal: 20,
+    marginBottom: 12,
+    color: "#DC2626",
+    fontSize: 13,
+    fontWeight: "600",
   },
 });

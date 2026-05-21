@@ -1,4 +1,6 @@
-import React from "react";
+import { useEffect, useState } from "react";
+import { getProfileMe } from "@/services/profileService";
+import { ProfileMeResponse } from "@/types/profile";
 import {
   View,
   Text,
@@ -9,10 +11,15 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/utils/theme";
 import { useRouter } from "expo-router";
+import { getActiveDecoyProfile } from "@/services/secureEscapeService";
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const [profile, setProfile] = useState<ProfileMeResponse | null>(null);
 
+  useEffect(() => {
+    getProfileMe().then(setProfile).catch(console.error);
+  }, []);
   const menuItems = [
     { title: "My information", subtitle: "view and update information" },
     {
@@ -45,7 +52,7 @@ export default function SettingsScreen() {
         <View style={styles.avatar}>
           <Ionicons name="person-circle" size={70} color={colors.primary} />
         </View>
-        <Text style={styles.name}>Hello Naomie...</Text>
+        <Text style={styles.name}>Hello {profile?.fullName ?? "..."} !</Text>
       </View>
 
       <View style={styles.menu}>
@@ -53,9 +60,14 @@ export default function SettingsScreen() {
           <TouchableOpacity
             key={idx}
             style={styles.menuRow}
-            onPress={() => {
+            onPress={async () => {
               if (item.isSecureEscape) {
-                router.push("/secure-escape/intro");
+                const profile = await getActiveDecoyProfile();
+                if (profile) {
+                  router.push("/secure-escape/manage-secure-escape");
+                } else {
+                  router.push("/secure-escape/intro");
+                }
               }
               // other actions later
             }}

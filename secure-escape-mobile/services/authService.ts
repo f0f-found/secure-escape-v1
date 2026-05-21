@@ -1,8 +1,9 @@
 import { API_BASE_URL } from "@/constants/api";
 import { LoginRequest, LoginResponse } from "@/types/auth";
+import { setLastActivityNow } from "./tokenStore";
 
 export async function login(request: LoginRequest): Promise<LoginResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/Auth/login`, {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -18,6 +19,6 @@ export async function login(request: LoginRequest): Promise<LoginResponse> {
       errorText || "Login failed. Please check your details and try again.",
     );
   }
-
+  await setLastActivityNow();
   return response.json();
 }

@@ -21,6 +21,7 @@ namespace SecureEscape.Api.Data
         public DbSet<Beneficiary> Beneficiaries { get; set; }
         public DbSet<Card> Cards { get; set; }
         public DbSet<DecoyProfile> DecoyProfiles { get; set; }
+        public DbSet<EmergencyContact> EmergencyContacts { get; set; }
         public DbSet<LocationEvent> LocationEvents { get; set; }
         public DbSet<NotificationAttempt> NotificationAttempts { get; set; }
         public DbSet<RiskEvaluation> RiskEvaluations { get; set; }
@@ -109,6 +110,8 @@ namespace SecureEscape.Api.Data
             modelBuilder.Entity<DecoyProfile>()
                 .Property(x => x.ProfileType)
                 .HasConversion<string>();
+
+
 
             modelBuilder.Entity<LocationEvent>()
                 .Property(x => x.LocationSource)
@@ -240,6 +243,12 @@ namespace SecureEscape.Api.Data
                 .WithOne(x => x.User)
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<User>()
+                .HasMany(x => x.EmergencyContacts)
+                .WithOne(x => x.User)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<BankAccount>()
                 .HasMany(x => x.Cards)
