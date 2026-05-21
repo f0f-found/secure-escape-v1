@@ -3,8 +3,7 @@ using SecureEscape.Api.DTOs.Response;
 
 namespace SecureEscape.Api.Interfaces;
 
-public interface IAuthService
+public interface IAdminAuthService
 {
-    Task<LoginResponseDto?> LoginAsync(LoginRequestDto request);
-    Task LogoutAsync();
+    Task<AdminLoginResponseDto?> LoginAsync(AdminLoginRequestDto request);
 }

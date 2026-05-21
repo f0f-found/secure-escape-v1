@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "@/constants/api";
 import { LoginRequest, LoginResponse } from "@/types/auth";
-import { setLastActivityNow } from "./tokenStore";
+import { getAuthToken, setLastActivityNow } from "./tokenStore";
 
 export async function login(request: LoginRequest): Promise<LoginResponse> {
   const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
@@ -21,4 +21,16 @@ export async function login(request: LoginRequest): Promise<LoginResponse> {
   }
   await setLastActivityNow();
   return response.json();
+}
+
+export async function logout(): Promise<void> {
+  const token = await getAuthToken();
+  if (!token) return;
+
+  await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 }

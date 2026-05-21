@@ -58,7 +58,7 @@ export default function ModeSelection() {
     ).start();
   }, []);
 
-  const animateTap = (anim) => {
+  const animateTap = (anim: Animated.Value) => {
     Animated.sequence([
       Animated.timing(anim, {
         toValue: 0.97,

@@ -14,17 +14,19 @@ public class AuthService : IAuthService
     private readonly IHashingService _hashingService;
     private readonly ITokenService _tokenService;
     private readonly IAuditService _auditService;
+    private readonly ICurrentUserService _currentUserService;
 
     public AuthService(
         AppDbContext context,
         IHashingService hashingService,
         ITokenService tokenService,
-        IAuditService auditService)
+        IAuditService auditService, ICurrentUserService currentUserService)
     {
         _context = context;
         _hashingService = hashingService;
         _tokenService = tokenService;
         _auditService = auditService;
+        _currentUserService = currentUserService;
     }
 
     public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto request)
@@ -186,5 +188,28 @@ public class AuthService : IAuthService
             SessionMode = session.Mode.ToString(),
             IsDuress = session.Mode == SessionMode.Duress
         };
+    }
+
+    public async Task LogoutAsync()
+    {
+        var currentUser = _currentUserService.GetCurrentUser();
+
+        var session = await _context.UserSessions
+            .FirstOrDefaultAsync(x => x.Id == currentUser.UserSessionId);
+
+        if (session != null)
+        {
+            session.Status = SessionStatus.Terminated;
+            session.EndedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
+
+        await _auditService.LogAsync(
+            AuditEventType.SessionCreated,
+            entityType: "UserSession",
+            entityId: currentUser.UserSessionId,
+            userId: currentUser.UserId,
+            userSessionId: currentUser.UserSessionId,
+            metadataJson: "{\"action\":\"logout\"}");
     }
 }

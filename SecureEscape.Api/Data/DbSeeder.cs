@@ -276,6 +276,32 @@ namespace SecureEscape.Api.Data
                 }
             );
 
+            // ── ADMIN USERS ────────────────────────────────────────────────
+            await context.AdminUsers.AddRangeAsync(
+                new AdminUser
+                {
+                    Id = Guid.NewGuid(),
+                    BankIntegrationId = zenithBank.Id,
+                    FullName = "Kagiso Moyo",
+                    Email = "kagiso.moyo@zenithbank.co.za",
+                    PasswordHash = Hash("Admin@123"),
+                    AdminRole = AdminRole.FraudManager,
+                    ActivityStatus = AdminUserStatus.Active,
+                    CreatedAt = DateTime.UtcNow
+                },
+                new AdminUser
+                {
+                    Id = Guid.NewGuid(),
+                    BankIntegrationId = savannaBank.Id,
+                    FullName = "Zanele Dube",
+                    Email = "zanele.dube@savannabank.co.za",
+                    PasswordHash = Hash("Admin@123"),
+                    AdminRole = AdminRole.FraudAnalyst,
+                    ActivityStatus = AdminUserStatus.Active,
+                    CreatedAt = DateTime.UtcNow
+                }
+            );
+
             await context.SaveChangesAsync();
         }
     }
