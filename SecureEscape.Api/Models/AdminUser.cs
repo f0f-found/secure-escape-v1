@@ -23,6 +23,10 @@ namespace SecureEscape.Api.Models
         [MaxLength(150)]
         public string Email { get; set; } = string.Empty;
 
+        [Required]
+        [MaxLength(255)]
+        public string PasswordHash { get; set; } = string.Empty;
+
         public AdminRole AdminRole { get; set; } = AdminRole.FraudAnalyst;
 
         public AdminUserStatus ActivityStatus { get; set; } = AdminUserStatus.Active;
