@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "@/constants/api";
 import { LoginRequest, LoginResponse } from "@/types/auth";
-import { getAuthToken, setLastActivityNow } from "./tokenStore";
+import { clearAuthToken, getAuthToken, setLastActivityNow } from "./tokenStore";
 
 export async function login(request: LoginRequest): Promise<LoginResponse> {
   const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
@@ -25,12 +25,15 @@ export async function login(request: LoginRequest): Promise<LoginResponse> {
 
 export async function logout(): Promise<void> {
   const token = await getAuthToken();
-  if (!token) return;
 
-  await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  if (token) {
+    await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }).catch(() => {}); // silent fail — we clear locally regardless
+  }
+
+  await clearAuthToken();
 }

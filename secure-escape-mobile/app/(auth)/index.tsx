@@ -22,17 +22,8 @@ export default function AuthIndex() {
   return (
     <View style={{ flex: 1 }}>
       {/* Splash Screen */}
-      <SplashScreen onLoginPress={() => setShowLoginModal(true)} />
 
-      {/* Login Modal */}
-      <Modal
-        visible={showLoginModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowLoginModal(false)}
-      >
-        <LoginScreen onLoginSuccess={handleLoginSuccess} />
-      </Modal>
+      <LoginScreen onLoginSuccess={handleLoginSuccess} />
     </View>
   );
 }
