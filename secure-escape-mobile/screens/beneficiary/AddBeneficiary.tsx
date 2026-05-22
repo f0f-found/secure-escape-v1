@@ -4,18 +4,28 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/utils/theme";
-import { useRouter } from "expo-router";
+import { useRouter, Href } from "expo-router";
 
 export default function AddBeneficiaryOptions() {
   const router = useRouter();
-  const options = [
+  type BeneficiaryOption = {
+    title: string;
+    desc: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    action: "navigate" | "alert";
+    route?: Href;
+    message?: string;
+  };
+
+  const options: BeneficiaryOption[] = [
     {
       title: "Capitec cellphone",
       desc: "Pay to Capitec client’s cellphone number",
       icon: "call-outline",
       action: "navigate",
-      route: "/AddBeneficiaryForm",
+      route: "/beneficiaries/beneficiary-list",
     },
+
     {
       title: "Capitec Registered",
       desc: "Dstv, Telkom, Mr Price, credit card, etc.",
@@ -24,23 +34,15 @@ export default function AddBeneficiaryOptions() {
       message:
         "Capitec Registered payments will be available in the next sprint.",
     },
+
     {
       title: "Bank Account",
       desc: "Enter beneficiary’s details",
       icon: "business-outline",
       action: "navigate",
-      route: "/addBankAccount",
+      route: "/beneficiaries/beneficiary-list",
     },
   ];
-
-  type BeneficiaryOption = {
-    title: string;
-    desc: string;
-    icon: keyof typeof Ionicons.glyphMap;
-    action: "navigate" | "alert";
-    route?: string;
-    message?: string;
-  };
 
   const handlePress = (opt: BeneficiaryOption) => {
     if (opt.action === "navigate" && opt.route) {
