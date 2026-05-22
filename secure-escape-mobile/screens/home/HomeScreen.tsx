@@ -14,10 +14,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors, shadows } from "@/utils/theme";
 import { getProfileMe } from "@/services/profileService";
 import { ProfileMeResponse } from "@/types/profile";
+import { useRouter } from "expo-router";
+import { logout } from "@/services/authService";
 
 const { width } = Dimensions.get("window");
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [accounts, setAccounts] = useState<AccountResponse[]>([]);
   const [profile, setProfile] = useState<ProfileMeResponse>();
   const [isLoading, setIsLoading] = useState(true);
@@ -44,6 +47,7 @@ export default function HomeScreen() {
       setIsLoading(false);
     }
   };
+  
 
   const loadAccounts = async () => {
     try {
@@ -57,6 +61,16 @@ export default function HomeScreen() {
       setError(err instanceof Error ? err.message : "Failed to load accounts.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const logoutButton = async () => {
+    try {
+      await logout();
+
+      router.replace("/(auth)");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to Logout");
     }
   };
 
@@ -74,8 +88,18 @@ export default function HomeScreen() {
   }));
 
   const favourites = [
-    { label: "Pay Beneficiary", icon: "people", bg: "#EEEEFF" },
-    { label: "Transfer", icon: "swap-horizontal", bg: "#FFF0F5" },
+    {
+      label: "Pay Beneficiary",
+      icon: "people",
+      bg: "#EEEEFF",
+      link: "/beneficiaries/beneficiary-list",
+    },
+    {
+      label: "Transfer",
+      icon: "swap-horizontal",
+      bg: "#FFF0F5",
+      link: "/transfers/",
+    },
     { label: "Send Cash", icon: "cash", bg: "#E6FAF8" },
     { label: "Buy Prepaid", icon: "phone-portrait", bg: "#FFFBEB" },
     { label: "Pay the bill", icon: "document-text", bg: "#F0FDF4" },
@@ -89,9 +113,22 @@ export default function HomeScreen() {
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.scrollContent}
     >
-      <View style={styles.header}>
-        <Text style={styles.title}>My Dashboard</Text>
-        <Text style={styles.greeting}>Good afternoon, {profile?.fullName}</Text>
+      <View style={styles.headerComponent}>
+        <View style={styles.header}>
+          <Text style={styles.title}>My Dashboard</Text>
+          <Text style={styles.greeting}>
+            Good afternoon, {profile?.fullName}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          activeOpacity={0.8}
+          onPress={logoutButton}
+        >
+          <Ionicons name="log-out-outline" size={18} color={colors.white} />
+
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
       </View>
 
       {isLoading && <Text style={styles.stateText}>Loading accounts...</Text>}
@@ -150,6 +187,7 @@ export default function HomeScreen() {
               key={idx}
               style={styles.favTile}
               activeOpacity={0.7}
+              onPress={() => router.push("/beneficiaries/beneficiary-list")}
             >
               <View style={[styles.favIcon, { backgroundColor: item.bg }]}>
                 <Ionicons
@@ -172,9 +210,39 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40, // extra space at bottom
   },
+  headerComponent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+
+    backgroundColor: colors.danger,
+
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+
+    borderRadius: 14,
+
+    marginTop: 20,
+    marginRight: 20,
+
+    gap: 6,
+
+    ...shadows.medium,
+  },
+
+  logoutText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: "700",
+  },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 80, // was 20 → now 48 (moves title down)
+    paddingTop: 20, // was 20 → now 48 (moves title down)
     paddingBottom: 16,
   },
   title: { fontSize: 28, fontWeight: "800", color: colors.navy },

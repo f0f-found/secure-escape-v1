@@ -12,29 +12,62 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/utils/theme";
 import { useRouter } from "expo-router";
 import { getActiveDecoyProfile } from "@/services/secureEscapeService";
+import { logout } from "@/services/authService";
 
 export default function SettingsScreen() {
   const router = useRouter();
   const [profile, setProfile] = useState<ProfileMeResponse | null>(null);
 
+  const [error, setError] = useState<string>("");
+
+  const logoutButton = async () => {
+    try {
+      await logout();
+
+      setTimeout(() => {
+        router.replace("/(auth)");
+      }, 100);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to Logout");
+    }
+  };
   useEffect(() => {
     getProfileMe().then(setProfile).catch(console.error);
   }, []);
+  const isDuress = profile?.sessionMode === "Duress";
   const menuItems = [
     { title: "My information", subtitle: "view and update information" },
+
     {
       title: "My app settings",
       subtitle: "update personal and security settings",
     },
+
     {
       title: "Personalise my app",
       subtitle: "Display what matters most to you",
     },
-    { title: "My Security center", subtitle: "view and update information" },
+
     {
-      title: "Secure Escape",
-      subtitle: "Set Duress Pin",
-      isSecureEscape: true,
+      title: "My Security center",
+      subtitle: "view and update information",
+    },
+
+    // ONLY show if NOT in duress mode
+    ...(isDuress
+      ? []
+      : [
+          {
+            title: "Secure Escape",
+            subtitle: "Setup your Duress Pin",
+            isSecureEscape: true,
+          },
+        ]),
+
+    {
+      title: "Logout",
+      subtitle: "Logout",
+      isLogout: true,
     },
   ];
 
@@ -68,6 +101,8 @@ export default function SettingsScreen() {
                 } else {
                   router.push("/secure-escape/intro");
                 }
+              } else if (item.isLogout) {
+                await logoutButton();
               }
               // other actions later
             }}
@@ -92,7 +127,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 80, // increased from 52 → 48 (more natural)
+    paddingTop: 20, // increased from 52 → 48 (more natural)
     paddingHorizontal: 24,
     gap: 12,
   },

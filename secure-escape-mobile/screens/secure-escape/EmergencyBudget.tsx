@@ -95,7 +95,7 @@ export default function EmergencyBudgetScreen() {
 
       await upsertDecoyProfile({
         profileType: profileType ?? "LowProfile",
-        displayBalance: displayBalance,
+        displayBalance: lowAmount,
         emergencyBudget: mode === "LowProfile" ? lowAmount : tier1,
         tier1Limit: mode === "LowProfile" ? lowAmount : tier1,
         tier2Limit: mode === "LowProfile" ? lowAmount : tier2,
@@ -130,7 +130,7 @@ export default function EmergencyBudgetScreen() {
         <Text style={styles.label}>
           Display Balance <Text style={styles.range}>(R0 – R2,000)</Text>
         </Text>
-        <Slider
+        {/* <Slider
           style={styles.slider}
           minimumValue={0}
           maximumValue={2000}
@@ -147,7 +147,7 @@ export default function EmergencyBudgetScreen() {
         <View style={styles.valueContainer}>
           <Text style={styles.valueLabel}>What attacker sees</Text>
           <Text style={styles.value}>{formatCurrency(displayBalance)}</Text>
-        </View>
+        </View> */}
         <Text style={styles.label}>
           Emergency Budget <Text style={styles.range}>(R0 – R1,000)</Text>
         </Text>
