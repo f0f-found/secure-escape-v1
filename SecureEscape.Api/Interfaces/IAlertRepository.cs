@@ -14,4 +14,6 @@ public interface IAlertRepository
     Task AddActionAsync(AlertAction alertAction);
 
     Task UpdateAsync(Alert alert);
+
+    Task AddAsync(Alert alert);
 }

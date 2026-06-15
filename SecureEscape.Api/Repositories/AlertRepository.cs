@@ -64,4 +64,10 @@ public class AlertRepository : IAlertRepository
         _context.Alerts.Update(alert);
         await _context.SaveChangesAsync();
     }
+
+    public async Task AddAsync(Alert alert)
+    {
+        await _context.Alerts.AddAsync(alert);
+        await _context.SaveChangesAsync();
+    }
 }

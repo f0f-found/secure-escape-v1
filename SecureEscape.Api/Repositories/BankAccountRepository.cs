@@ -26,7 +26,14 @@ public class BankAccountRepository : IBankAccountRepository
     public async Task<BankAccount?> GetByIdForUserAsync(Guid accountId, Guid userId)
     {
         return await _context.BankAccounts
-            .AsNoTracking()
+            //.AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == accountId && x.UserId == userId);
+    }
+
+    public Task UpdateAsync(BankAccount account)
+    {
+        _context.BankAccounts.Update(account);
+        return Task.CompletedTask;
+
     }
 }

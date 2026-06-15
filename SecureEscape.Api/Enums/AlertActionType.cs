@@ -8,6 +8,7 @@ namespace SecureEscape.Api.Enums
         FrozeAccount = 4,
         ContactedAuthorities = 5,
         MarkedFalseAlarm = 6,
-        Resolved = 7
+        Resolved = 7,
+        VoucherInvalidated = 8
     }
 }

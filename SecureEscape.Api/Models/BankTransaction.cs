@@ -47,7 +47,12 @@ namespace SecureEscape.Api.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }
-
+        public string? VoucherCode { get; set; }
+        public DateTime? VoucherExpiresAt { get; set; }
+        public bool VoucherRedeemed { get; set; } = false;
+        public bool FraudReported { get; set; } = false;
+        public DateTime? FraudReportedAt { get; set; }
+        public string? FraudReportReference { get; set; }
         public User? User { get; set; }
 
         public UserSession? UserSession { get; set; }

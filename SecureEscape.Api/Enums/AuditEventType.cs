@@ -15,6 +15,11 @@ namespace SecureEscape.Api.Enums
         NotificationFailed = 11,
         DecoyProfileUpdated = 12,
         AccountFrozen = 13,
-        DuressPinUpdated = 14
+        DuressPinUpdated = 14,
+        FraudReported = 15,
+        VoucherInvalidated = 16,
+        EntityCreated = 17,
+        EntityUpdated = 18,
+        EntityDeleted = 19
     }
 }
