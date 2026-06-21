@@ -5,7 +5,8 @@ namespace SecureEscape.Api.Interfaces;
 
 public interface IAlertRepository
 {
-    Task<List<Alert>> GetAllAsync(AlertStatus? status = null);
+    Task<List<Alert>> GetAllAsync(AlertStatus? status, Guid? bankIntegrationId);
+
 
     Task<Alert?> GetDetailByIdAsync(Guid alertId);
 

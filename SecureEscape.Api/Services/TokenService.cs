@@ -59,14 +59,18 @@ public class TokenService : ITokenService
         var expiresInHours = Convert.ToDouble(jwtSettings["TokenExpirationInHours"]);
 
         var claims = new List<Claim>
-    {
-        new Claim(ClaimTypes.NameIdentifier, adminUser.Id.ToString()),
-        new Claim(ClaimTypes.Name, adminUser.FullName),
-        new Claim(ClaimTypes.Email, adminUser.Email),
-        new Claim("bankIntegrationId", adminUser.BankIntegrationId.ToString()),
-        new Claim("adminRole", adminUser.AdminRole.ToString()),
-        new Claim(ClaimTypes.Role, adminUser.AdminRole.ToString())
-    };
+        {
+            new Claim(ClaimTypes.NameIdentifier, adminUser.Id.ToString()),
+            new Claim(ClaimTypes.Name, adminUser.FullName),
+            new Claim(ClaimTypes.Email, adminUser.Email),
+            new Claim("adminRole", adminUser.AdminRole.ToString()),
+            new Claim(ClaimTypes.Role, adminUser.AdminRole.ToString())
+        };
+
+        if (adminUser.BankIntegrationId.HasValue)
+        {
+            claims.Add(new Claim("bankIntegrationId", adminUser.BankIntegrationId.Value.ToString()));
+        }
 
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key!));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);

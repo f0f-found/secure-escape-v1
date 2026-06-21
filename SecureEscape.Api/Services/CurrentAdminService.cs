@@ -30,7 +30,10 @@ public class CurrentAdminService : ICurrentAdminService
         }
 
         var adminUserId = GetGuidClaim(user, ClaimTypes.NameIdentifier);
-        var bankIntegrationId = GetGuidClaim(user, "bankIntegrationId");
+        var bankIntegrationIdValue = user.FindFirstValue("bankIntegrationId");
+        Guid? bankIntegrationId = Guid.TryParse(bankIntegrationIdValue, out var parsedBankId)
+            ? parsedBankId
+            : null;
 
         return new CurrentAdminContext
         {

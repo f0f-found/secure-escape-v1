@@ -15,7 +15,7 @@ public class AlertRepository : IAlertRepository
         _context = context;
     }
 
-    public async Task<List<Alert>> GetAllAsync(AlertStatus? status = null)
+   public async Task<List<Alert>> GetAllAsync(AlertStatus? status, Guid? bankIntegrationId)
     {
         var query = _context.Alerts
             .AsNoTracking()
@@ -24,12 +24,14 @@ public class AlertRepository : IAlertRepository
             .AsQueryable();
 
         if (status.HasValue)
-        {
             query = query.Where(x => x.Status == status.Value);
-        }
+
+        if (bankIntegrationId.HasValue)
+            query = query.Where(x => x.User!.BankIntegrationId == bankIntegrationId.Value);
 
         return await query
             .OrderByDescending(x => x.CreatedAt)
+            //.where(x = x.Transactions)
             .ToListAsync();
     }
 

@@ -13,23 +13,25 @@ namespace SecureEscape.Api.Controllers;
 public class AdminAlertsController : ControllerBase
 {
     private readonly IAdminAlertService _adminAlertService;
-    private readonly IAdminAuthService _adminAuthService;
+    private readonly ICurrentAdminService _currentAdminService;
 
-    public AdminAlertsController(IAdminAlertService adminAlertService, IAdminAuthService adminAuthService)
+    public AdminAlertsController(
+    IAdminAlertService adminAlertService,
+    ICurrentAdminService currentAdminService)
     {
         _adminAlertService = adminAlertService;
-        _adminAuthService = adminAuthService;
+        _currentAdminService = currentAdminService;
     }
 
     [HttpGet]
     public async Task<ActionResult<List<AlertSummaryResponseDto>>> GetAlerts(
         [FromQuery] AlertStatus? status = null)
     {
-        var alerts = await _adminAlertService.GetAlertsAsync(status);
-
+        var currentAdmin = _currentAdminService.GetCurrentAdmin();
+        var alerts = await _adminAlertService.GetAlertsAsync(status, currentAdmin.BankIntegrationId);
         return Ok(alerts);
     }
-
+    
     [HttpGet("{alertId:guid}")]
     public async Task<ActionResult<AlertDetailResponseDto>> GetAlertById(Guid alertId)
     {

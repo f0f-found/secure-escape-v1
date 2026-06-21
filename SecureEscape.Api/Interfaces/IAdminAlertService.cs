@@ -6,7 +6,7 @@ namespace SecureEscape.Api.Interfaces;
 
 public interface IAdminAlertService
 {
-    Task<List<AlertSummaryResponseDto>> GetAlertsAsync(AlertStatus? status = null);
+    Task<List<AlertSummaryResponseDto>> GetAlertsAsync(AlertStatus? status, Guid? bankIntegrationId);
 
     Task<AlertDetailResponseDto?> GetAlertByIdAsync(Guid alertId);
 

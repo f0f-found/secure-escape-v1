@@ -74,7 +74,8 @@ builder.Services.AddScoped<IEmergencyContactRepository, EmergencyContactReposito
 
 builder.Services.AddScoped<INotificationAttemptRepository, NotificationAttemptRepository>();
 
-
+builder.Services.AddScoped<IUserSessionRepository, UserSessionRepository>();
+builder.Services.AddScoped<IAdminSessionService, AdminSessionService>();
 
 //Services
 builder.Services.AddHttpContextAccessor();

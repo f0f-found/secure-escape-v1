@@ -19,10 +19,9 @@ public class AdminAlertService : IAdminAlertService
         _auditService = auditService;
     }
 
-    public async Task<List<AlertSummaryResponseDto>> GetAlertsAsync(AlertStatus? status = null)
+    public async Task<List<AlertSummaryResponseDto>> GetAlertsAsync(AlertStatus? status, Guid? bankIntegrationId)
     {
-        var alerts = await _alertRepository.GetAllAsync(status);
-
+        var alerts = await _alertRepository.GetAllAsync(status, bankIntegrationId);
         return alerts.Select(MapToSummary).ToList();
     }
 
