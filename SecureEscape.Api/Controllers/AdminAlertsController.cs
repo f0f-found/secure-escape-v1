@@ -8,15 +8,17 @@ using SecureEscape.Api.Interfaces;
 namespace SecureEscape.Api.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Roles = "FraudAnalyst,FraudManager,SystemAdmin")]
 [Route("api/v1/admin/alerts")]
 public class AdminAlertsController : ControllerBase
 {
     private readonly IAdminAlertService _adminAlertService;
+    private readonly IAdminAuthService _adminAuthService;
 
-    public AdminAlertsController(IAdminAlertService adminAlertService)
+    public AdminAlertsController(IAdminAlertService adminAlertService, IAdminAuthService adminAuthService)
     {
         _adminAlertService = adminAlertService;
+        _adminAuthService = adminAuthService;
     }
 
     [HttpGet]

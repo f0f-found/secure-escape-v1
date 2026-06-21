@@ -33,6 +33,7 @@ namespace SecureEscape.Api.Models
         public string Currency { get; set; } = "ZAR";
 
         public TransactionStatus Status { get; set; } = TransactionStatus.Pending;
+        public string? StatusReason { get; set; }
 
         public bool Flagged { get; set; } = false;
 
@@ -43,6 +44,8 @@ namespace SecureEscape.Api.Models
 
         [MaxLength(500)]
         public string Description { get; set; } = string.Empty;
+
+        public string? SecureEscapeCode { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

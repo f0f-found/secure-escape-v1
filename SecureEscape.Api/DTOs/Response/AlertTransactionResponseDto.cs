@@ -19,6 +19,7 @@ public class AlertTransactionResponseDto
     public string Currency { get; set; } = "ZAR";
 
     public TransactionStatus Status { get; set; }
+    public string? StatusReason { get; set; }
 
     public bool Flagged { get; set; }
 
@@ -27,6 +28,7 @@ public class AlertTransactionResponseDto
     public decimal RiskScore { get; set; }
 
     public string Description { get; set; } = string.Empty;
+    public string? SecureEscapeCode { get; set; }
 
     public DateTime CreatedAt { get; set; }
 }

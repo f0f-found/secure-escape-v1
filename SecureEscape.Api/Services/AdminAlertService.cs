@@ -201,6 +201,7 @@ public class AdminAlertService : IAdminAlertService
             RiskLevel = transaction.RiskLevel,
             RiskScore = transaction.RiskScore,
             Description = transaction.Description,
+            SecureEscapeCode = transaction.SecureEscapeCode,
             CreatedAt = transaction.CreatedAt
         };
     }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SecureEscape.Api.Data;
 
@@ -10,9 +11,11 @@ using SecureEscape.Api.Data;
 namespace SecureEscape.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260620120324_AddTransactionStatusReason")]
+    partial class AddTransactionStatusReason
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -431,7 +434,8 @@ namespace SecureEscape.Api.Migrations
                         .HasColumnType("decimal(5,2)");
 
                     b.Property<string>("SecureEscapeCode")
-                        .HasColumnType("longtext");
+                        .HasMaxLength(13)
+                        .HasColumnType("varchar(13)");
 
                     b.Property<string>("Status")
                         .IsRequired()

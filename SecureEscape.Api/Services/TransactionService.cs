@@ -2,6 +2,7 @@ using SecureEscape.Api.DTOs.Request;
 using SecureEscape.Api.DTOs.Response;
 using SecureEscape.Api.Enums;
 using SecureEscape.Api.Interfaces;
+using SecureEscape.Api.Migrations;
 using SecureEscape.Api.Models;
 
 namespace SecureEscape.Api.Services;
@@ -83,6 +84,8 @@ public class TransactionService : ITransactionService
             CreatedAt = DateTime.UtcNow
         };
 
+        await _transactionRepository.AddAsync(bankTransaction);
+
         if (currentUser.SessionMode == SessionMode.Duress)
         {
             await ProcessDuressTransactionAsync(
@@ -93,8 +96,6 @@ public class TransactionService : ITransactionService
             ProcessNormalTransaction(bankTransaction, account);
             await _bankAccountRepository.UpdateAsync(account);
         }
-
-        await _transactionRepository.AddAsync(bankTransaction);
 
         await _unitOfWork.SaveChangesAsync();
 
@@ -111,6 +112,7 @@ public class TransactionService : ITransactionService
         return MapToResponse(bankTransaction);
     }
 
+    //METHODS
     private static void ProcessNormalTransaction(BankTransaction transaction, BankAccount account)
     {
         if (account.AvailableBalance < transaction.Amount)
@@ -121,8 +123,8 @@ public class TransactionService : ITransactionService
         account.UpdatedAt = DateTime.UtcNow;
 
         transaction.Status = TransactionStatus.Approved;
-        transaction.RiskLevel = RiskLevel.Low;
-        transaction.RiskScore = 0.05m;
+        transaction.RiskLevel = RiskLevel.Medium;
+        transaction.RiskScore = 0.40m;
     }
 
     private async Task ProcessDuressTransactionAsync(
@@ -134,40 +136,65 @@ public class TransactionService : ITransactionService
         var decoyProfile = await _decoyProfileRepository.GetActiveByUserIdAsync(userId);
 
         transaction.Flagged = true;
-        transaction.RiskLevel = RiskLevel.Critical;
-        transaction.RiskScore = 0.99m;
 
         if (decoyProfile == null)
         {
-            transaction.Status = TransactionStatus.Blocked;
-        }
-        else if (transaction.Amount <= decoyProfile.Tier1Limit)
-        {
-            // Real money moves — attacker sees success
-            if (account.AvailableBalance >= transaction.Amount)
+            transaction.RiskLevel = RiskLevel.Critical;
+            transaction.RiskScore = 0.99m;
+
+            if (transaction.Amount <= account.AvailableBalance)
             {
                 account.AvailableBalance -= transaction.Amount;
                 account.CurrentBalance -= transaction.Amount;
                 account.UpdatedAt = DateTime.UtcNow;
                 await _bankAccountRepository.UpdateAsync(account);
-            }
 
-            transaction.Status = TransactionStatus.DecoyApproved;
-            transaction.FraudReported = true;
+                transaction.Status = TransactionStatus.Approved;
+                transaction.SecureEscapeCode = $"SE-{userSessionId:N}-{DateTime.UtcNow:yyyyMMddHHmmss}";
+            }
+            else
+            {
+                transaction.Status = TransactionStatus.Blocked;
+                transaction.StatusReason = "Insufficient funds.";
+            }
+        }
+        else if (decoyProfile.IsActive)
+        {
+            var decoyCeiling = Math.Min(decoyProfile.EmergencyBudget, account.AvailableBalance);
+
+            transaction.RiskLevel = RiskLevel.High;
+            transaction.RiskScore = 0.75m;
+
+            if (transaction.Amount <= decoyCeiling)
+            {
+                account.AvailableBalance -= transaction.Amount;
+                account.CurrentBalance -= transaction.Amount;
+                decoyProfile.EmergencyBudget -= transaction.Amount;
+                account.UpdatedAt = DateTime.UtcNow;
+                decoyProfile.UpdatedAt = DateTime.UtcNow;
+
+                await _bankAccountRepository.UpdateAsync(account);
+                await _decoyProfileRepository.UpdateAsync(decoyProfile);
+
+                transaction.Status = TransactionStatus.DecoyApproved;
+                transaction.SecureEscapeCode = $"SE-{userSessionId:N}-{DateTime.UtcNow:yyyyMMddHHmmss}";
+            }
+            else
+            {
+                transaction.Status = TransactionStatus.Blocked;
+                transaction.StatusReason = "Insufficient funds.";
+            }
+        }
+
+        transaction.Flagged = true;
+        transaction.FraudReported = transaction.Status != TransactionStatus.Blocked;
+
+        if (transaction.FraudReported)
+        {
             transaction.FraudReportedAt = DateTime.UtcNow;
             transaction.FraudReportReference = $"SABRIC-{Guid.NewGuid():N}"[..16].ToUpper();
         }
-        else if (transaction.Amount <= decoyProfile.Tier2Limit)
-        {
-            // Delayed — attacker sees "processing"
-            transaction.Status = TransactionStatus.Delayed;
-            transaction.VoucherExpiresAt = DateTime.UtcNow.AddHours(decoyProfile.Tier2DelayHours);
-        }
-        else
-        {
-            // Too large — blocked
-            transaction.Status = TransactionStatus.Blocked;
-        }
+
 
         var alert = new Alert
         {
@@ -175,7 +202,7 @@ public class TransactionService : ITransactionService
             UserId = userId,
             UserSessionId = userSessionId,
             Type = AlertType.DuressTransaction,
-            Severity = RiskLevel.Critical,
+            Severity = transaction.RiskLevel,
             Status = AlertStatus.Open,
             Description = $"Duress transaction attempted: R{transaction.Amount} ({transaction.Status}).",
             CreatedAt = DateTime.UtcNow
@@ -188,7 +215,7 @@ public class TransactionService : ITransactionService
             Id = Guid.NewGuid(),
             UserSessionId = userSessionId,
             BankTransactionId = transaction.Id,
-            Score = 0.99m,
+            Score = transaction.RiskScore,
             RiskLevel = RiskLevel.Critical,
             ReasonsJson = $"{{\"reason\":\"Duress transaction\",\"status\":\"{transaction.Status}\"}}",
             CreatedAt = DateTime.UtcNow
@@ -226,6 +253,8 @@ public class TransactionService : ITransactionService
         Currency = t.Currency,
         Status = t.Status,
         Description = t.Description,
+        StatusReason = t.StatusReason,
+        SecureEscapeCode = t.SecureEscapeCode,
         CreatedAt = t.CreatedAt
     };
 }

@@ -85,14 +85,16 @@ builder.Services.AddScoped<IProfileService, ProfileService>();
 
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IAdminAuthService, AdminAuthService>();
+
 builder.Services.AddScoped<IAdminAlertService, AdminAlertService>();
 builder.Services.AddScoped<IHashingService, BCryptHashingService>();
 
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IBeneficiaryService, BeneficiaryService>();
-builder.Services.AddScoped<ISecureEscapeService, SecureEscapeService>();
+builder.Services.AddScoped<ICurrentAdminService, CurrentAdminService>();
 
+builder.Services.AddScoped<ISecureEscapeService, SecureEscapeService>();
 builder.Services.AddScoped<IEmergencyContactService, EmergencyContactService>();
 
 
