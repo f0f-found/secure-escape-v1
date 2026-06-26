@@ -115,6 +115,9 @@ public class TransactionService : ITransactionService
     //METHODS
     private static void ProcessNormalTransaction(BankTransaction transaction, BankAccount account)
     {
+        if (account.Status == AccountStatus.Frozen)
+        throw new InvalidOperationException("Transaction could not be processed.");
+
         if (account.AvailableBalance < transaction.Amount)
             throw new InvalidOperationException("Insufficient funds.");
 
@@ -133,6 +136,13 @@ public class TransactionService : ITransactionService
         Guid userId,
         Guid userSessionId)
     {
+        if (account.Status == AccountStatus.Frozen)
+        {
+            transaction.Status = TransactionStatus.Blocked;
+            transaction.StatusReason = "Account unavailable.";
+            return;
+        }
+        
         var decoyProfile = await _decoyProfileRepository.GetActiveByUserIdAsync(userId);
 
         transaction.Flagged = true;
@@ -154,7 +164,7 @@ public class TransactionService : ITransactionService
             }
             else
             {
-                transaction.Status = TransactionStatus.Blocked;
+                transaction.Status = TransactionStatus.Failed;
                 transaction.StatusReason = "Insufficient funds.";
             }
         }
@@ -181,7 +191,7 @@ public class TransactionService : ITransactionService
             }
             else
             {
-                transaction.Status = TransactionStatus.Blocked;
+                transaction.Status = TransactionStatus.Failed;
                 transaction.StatusReason = "Insufficient funds.";
             }
         }

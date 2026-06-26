@@ -40,12 +40,28 @@ public class UserSessionRepository : IUserSessionRepository
             .AsNoTracking()
             .Include(x => x.User)
             .Include(x => x.Alerts)
-                .ThenInclude(x => x.AlertActions)
-                    .ThenInclude(x => x.AdminUser)
-            .Include(x => x.Alerts)
                 .ThenInclude(x => x.NotificationAttempts)
+            .Include(x => x.AlertActions)
+                .ThenInclude(x => x.AdminUser)
             .Include(x => x.Transactions)
             .Include(x => x.LocationEvents)
             .FirstOrDefaultAsync(x => x.Id == sessionId && x.Mode == SessionMode.Duress);
+    }
+
+    public async Task<UserSession?> GetByIdAsync(Guid sessionId)
+    {
+        return await _context.UserSessions
+            .FirstOrDefaultAsync(x => x.Id == sessionId);
+    }
+
+    public async Task AddActionAsync(AlertAction alertAction)
+    {
+        await _context.AlertActions.AddAsync(alertAction);
+    }
+
+    public async Task UpdateAsync(UserSession session)
+    {
+        _context.UserSessions.Update(session);
+        await Task.CompletedTask;
     }
 }

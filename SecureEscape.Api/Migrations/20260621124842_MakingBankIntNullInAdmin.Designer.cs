@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SecureEscape.Api.Data;
 
@@ -10,9 +11,11 @@ using SecureEscape.Api.Data;
 namespace SecureEscape.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260621124842_MakingBankIntNullInAdmin")]
+    partial class MakingBankIntNullInAdmin
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -123,6 +126,9 @@ namespace SecureEscape.Api.Migrations
                     b.Property<Guid?>("AdminUserId")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid>("AlertId")
+                        .HasColumnType("char(36)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
@@ -131,14 +137,11 @@ namespace SecureEscape.Api.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("varchar(1000)");
 
-                    b.Property<Guid>("UserSessionId")
-                        .HasColumnType("char(36)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("AdminUserId");
 
-                    b.HasIndex("UserSessionId");
+                    b.HasIndex("AlertId");
 
                     b.ToTable("AlertActions");
                 });
@@ -733,14 +736,6 @@ namespace SecureEscape.Api.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("varchar(1000)");
 
-                    b.Property<string>("ResponseMessage")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("varchar(1000)");
-
-                    b.Property<DateTime?>("SentAt")
-                        .HasColumnType("datetime(6)");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -850,12 +845,6 @@ namespace SecureEscape.Api.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
-                    b.Property<DateTime?>("CaseResolvedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int>("CaseStatus")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
@@ -933,15 +922,15 @@ namespace SecureEscape.Api.Migrations
                         .HasForeignKey("AdminUserId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("SecureEscape.Api.Models.UserSession", "UserSession")
+                    b.HasOne("SecureEscape.Api.Models.Alert", "Alert")
                         .WithMany("AlertActions")
-                        .HasForeignKey("UserSessionId")
+                        .HasForeignKey("AlertId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("AdminUser");
 
-                    b.Navigation("UserSession");
+                    b.Navigation("Alert");
                 });
 
             modelBuilder.Entity("SecureEscape.Api.Models.ApiClient", b =>
@@ -1165,6 +1154,8 @@ namespace SecureEscape.Api.Migrations
 
             modelBuilder.Entity("SecureEscape.Api.Models.Alert", b =>
                 {
+                    b.Navigation("AlertActions");
+
                     b.Navigation("LocationEvents");
 
                     b.Navigation("NotificationAttempts");
@@ -1217,8 +1208,6 @@ namespace SecureEscape.Api.Migrations
 
             modelBuilder.Entity("SecureEscape.Api.Models.UserSession", b =>
                 {
-                    b.Navigation("AlertActions");
-
                     b.Navigation("Alerts");
 
                     b.Navigation("AuditLogs");

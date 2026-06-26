@@ -33,8 +33,10 @@ public class AuthService : IAuthService
     {
         var user = await _context.Users
             .Include(x => x.AuthCredential)
+            .Include(x => x.BankIntegration)
             .FirstOrDefaultAsync(x => x.Email == request.Email);
 
+        
         if (user == null || user.AuthCredential == null)
         {
             await _auditService.LogAsync(
@@ -45,10 +47,42 @@ public class AuthService : IAuthService
             return null;
         }
 
+        if (user.Status != UserStatus.Active)
+        {
+            await _auditService.LogAsync(
+                AuditEventType.LoginFailed,
+                entityType: "User",
+                entityId: user.Id,
+                userId: user.Id,
+                metadataJson:
+                    $"{{\"reason\":\"User account is not active\",\"status\":\"{user.Status}\"}}");
+
+            return null;
+        }
+
+        /*
+            User must belong to an active bank integration 
+            before password/PIN login can complete
+        */
+        if (user.BankIntegration == null ||
+            user.BankIntegration.Status != BankIntegrationStatus.Active)
+        {
+            await _auditService.LogAsync(
+                AuditEventType.LoginFailed,
+                entityType: "User",
+                entityId: user.Id,
+                userId: user.Id,
+                metadataJson:
+                    $"{{\"reason\":\"Bank integration is not active\",\"bankIntegrationStatus\":\"{user.BankIntegration?.Status.ToString() ?? "Missing"}\"}}");
+
+            return null;
+        }
+
         var passwordValid = _hashingService.Verify(
             request.Password,
             user.AuthCredential.PasswordHash);
 
+        
         if (!passwordValid)
         {
             await _auditService.LogAsync(
@@ -65,10 +99,14 @@ public class AuthService : IAuthService
             request.Pin,
             user.AuthCredential.NormalPinHash);
 
+        
         var duressPinValid = _hashingService.Verify(
             request.Pin,
             user.AuthCredential.DuressPinHash);
 
+        
+        
+        
         if (!normalPinValid && !duressPinValid)
         {
             await _auditService.LogAsync(
@@ -169,6 +207,7 @@ public class AuthService : IAuthService
             userId: user.Id,
             userSessionId: session.Id);
 
+        
         await _auditService.LogAsync(
             AuditEventType.SessionCreated,
             entityType: "UserSession",

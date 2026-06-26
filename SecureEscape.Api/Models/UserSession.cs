@@ -37,7 +37,13 @@ namespace SecureEscape.Api.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        public CaseStatus CaseStatus { get; set; } = CaseStatus.Open;
+
+        public DateTime? CaseResolvedAt { get; set; }
+        
         public User? User { get; set; }
+        
+        public ICollection<AlertAction> AlertActions { get; set; } = new List<AlertAction>();
 
         public ICollection<BankTransaction> Transactions { get; set; } = new List<BankTransaction>();
 

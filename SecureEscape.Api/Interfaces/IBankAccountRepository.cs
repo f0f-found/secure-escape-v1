@@ -7,5 +7,8 @@ public interface IBankAccountRepository
     Task<List<BankAccount>> GetByUserIdAsync(Guid userId);
 
     Task<BankAccount?> GetByIdForUserAsync(Guid accountId, Guid userId);
+    
+    Task<List<BankAccount>> GetByUserIdForAdminAsync(Guid userId);
+
     Task UpdateAsync(BankAccount account);
 }

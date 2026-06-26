@@ -7,14 +7,9 @@ public interface IAlertRepository
 {
     Task<List<Alert>> GetAllAsync(AlertStatus? status, Guid? bankIntegrationId);
 
-
-    Task<Alert?> GetDetailByIdAsync(Guid alertId);
-
     Task<Alert?> GetByIdAsync(Guid alertId);
 
-    Task AddActionAsync(AlertAction alertAction);
+    Task AddAsync(Alert alert);
 
     Task UpdateAsync(Alert alert);
-
-    Task AddAsync(Alert alert);
 }

@@ -26,6 +26,10 @@ namespace SecureEscape.Api.Models
         public string ErrorMessage { get; set; } = string.Empty;
 
         public DateTime AttemptedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? SentAt { get; set; }
+
+        [MaxLength(1000)]
+        public string ResponseMessage { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

@@ -3,45 +3,52 @@ import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import SeverityBadge from "../components/SeverityBadge";
 import StatusBadge from "../components/StatusBadge";
-import type { AlertSummary } from "../types/alert";
-import { getAlerts } from "../services/alertService";
+import type { DuressSessionSummary } from "../types/session";
+import { getDuressSessions } from "../services/sessionService";
 
-const STATUS_FILTERS = ["All", "Open", "Investigating", "Resolved", "FalseAlarm"];
+const STATUS_FILTERS = ["All", "Active", "Expired", "Terminated"];
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [alerts, setAlerts] = useState<AlertSummary[]>([]);
+  const [sessions, setSessions] = useState<DuressSessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("All");
   const [error, setError] = useState("");
 
-  const activeDuressSessions = alerts.filter(
-    (a) => a.type.toLowerCase().includes("duress") && a.status !== "Resolved"
+  const activeDuressSessions = sessions.filter(
+    (s) => s.status === "Active",
   ).length;
 
-  const resolvedCases = alerts.filter((a) => a.status === "Resolved").length;
+  const resolvedCases = sessions.filter(
+    (s) => s.status === "Terminated" || s.status === "Expired",
+  ).length;
 
-  const recentAlerts = [...alerts]
+  const recentSessions = [...sessions]
     .sort(
       (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
     )
     .slice(0, 6);
 
+  const filteredSessions =
+    filter === "All" ? sessions : sessions.filter((s) => s.status === filter);
+
   useEffect(() => {
-    const fetchAlerts = async () => {
+    const fetchSessions = async () => {
       try {
         setLoading(true);
-        const data = await getAlerts(filter === "All" ? undefined : filter);
-        setAlerts(data);
+        const data = await getDuressSessions();
+        setSessions(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load alerts.");
+        setError(
+          err instanceof Error ? err.message : "Failed to load sessions.",
+        );
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAlerts();
+    fetchSessions();
   }, [filter]);
 
   return (
@@ -55,62 +62,57 @@ export default function Dashboard() {
             Activity Dashboard
           </h1>
           <p className="text-gray-400 text-sm mt-2">
-            Monitor recent fraud alerts, active duress activity, and resolved cases.
+            Monitor active duress sessions and resolved cases.
           </p>
         </div>
 
+        {/* Top stats cards */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">
-          <button
-            onClick={() => navigate("/sessions")}
-            className="text-left bg-gray-900 border border-red-900/40 rounded-2xl p-6 hover:border-red-500 hover:bg-gray-900/80 transition"
-          >
+          <div className="text-left bg-gray-900 border border-red-900/40 rounded-2xl p-6">
             <p className="text-gray-400 text-sm">Active Duress Sessions</p>
             <p className="text-4xl font-bold text-red-400 mt-3">
               {activeDuressSessions}
             </p>
             <p className="text-xs text-gray-500 mt-3">
-              Click to view duress sessions
+              Currently active sessions
             </p>
-          </button>
+          </div>
 
-          <button
-            onClick={() => setFilter("Resolved")}
-            className="text-left bg-gray-900 border border-green-900/40 rounded-2xl p-6 hover:border-green-500 hover:bg-gray-900/80 transition"
-          >
-            <p className="text-gray-400 text-sm">Resolved Cases</p>
+          <div className="text-left bg-gray-900 border border-green-900/40 rounded-2xl p-6">
+            <p className="text-gray-400 text-sm">Ended Sessions</p>
             <p className="text-4xl font-bold text-green-400 mt-3">
               {resolvedCases}
             </p>
-            <p className="text-xs text-gray-500 mt-3">
-              Click to filter resolved alerts
-            </p>
-          </button>
+            <p className="text-xs text-gray-500 mt-3">Terminated or expired</p>
+          </div>
 
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-gray-400 text-sm">Recent Alerts</p>
-                <h2 className="text-white font-semibold mt-1">Latest Activity</h2>
+                <p className="text-gray-400 text-sm">Recent Sessions</p>
+                <h2 className="text-white font-semibold mt-1">
+                  Latest Activity
+                </h2>
               </div>
             </div>
-
-            {recentAlerts.length === 0 ? (
+            {recentSessions.length === 0 ? (
               <p className="text-sm text-gray-500 py-6">
-                No recent alerts available.
+                No recent sessions available.
               </p>
             ) : (
               <div className="space-y-3">
-                {recentAlerts.map((alert) => (
+                {recentSessions.map((session) => (
                   <div
-                    key={alert.id}
-                    onClick={() => navigate(`/alerts/${alert.id}`)}
+                    key={session.id}
+                    onClick={() => navigate(`/sessions/${session.id}`)}
                     className="border border-gray-800 rounded-xl p-3 cursor-pointer hover:bg-gray-800 transition"
                   >
                     <p className="text-sm font-semibold text-white">
-                      {alert.customerName}
+                      {session.customerName}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
-                      {alert.type} · {new Date(alert.createdAt).toLocaleString()}
+                      {session.alertTypes.join(", ")} ·{" "}
+                      {new Date(session.startedAt).toLocaleString()}
                     </p>
                   </div>
                 ))}
@@ -119,24 +121,26 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Stats row */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           {[
-            { label: "Total Alerts", value: alerts.length, color: "text-white" },
             {
-              label: "Open",
-              value: alerts.filter((a) => a.status === "Open").length,
+              label: "Total Sessions",
+              value: sessions.length,
+              color: "text-white",
+            },
+            {
+              label: "Active",
+              value: sessions.filter((s) => s.status === "Active").length,
               color: "text-red-400",
             },
             {
               label: "Investigating",
-              value: alerts.filter((a) => a.status === "Investigating").length,
+              value: sessions.filter((s) => s.highestSeverity === "Critical")
+                .length,
               color: "text-yellow-400",
             },
-            {
-              label: "Resolved",
-              value: resolvedCases,
-              color: "text-green-400",
-            },
+            { label: "Ended", value: resolvedCases, color: "text-green-400" },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -150,6 +154,7 @@ export default function Dashboard() {
           ))}
         </div>
 
+        {/* Filter tabs */}
         <div className="flex gap-2 mb-4">
           {STATUS_FILTERS.map((s) => (
             <button
@@ -166,52 +171,80 @@ export default function Dashboard() {
           ))}
         </div>
 
+        {/* Sessions table */}
         <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
           {loading ? (
-            <div className="p-8 text-center text-gray-400">Loading alerts...</div>
+            <div className="p-8 text-center text-gray-400">
+              Loading sessions...
+            </div>
           ) : error ? (
             <div className="p-8 text-center text-red-400">{error}</div>
-          ) : alerts.length === 0 ? (
+          ) : filteredSessions.length === 0 ? (
             <div className="p-8 text-center text-gray-400">
-              No alerts found. Once alerts are created, they will appear here.
+              No sessions found. Duress sessions will appear here once
+              triggered.
             </div>
           ) : (
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-800 text-left">
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-400 uppercase">Customer</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-400 uppercase">Type</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-400 uppercase">Severity</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-400 uppercase">Status</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-400 uppercase">Time</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-400 uppercase">
+                    Customer
+                  </th>
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-400 uppercase">
+                    Alert Types
+                  </th>
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-400 uppercase">
+                    Alerts
+                  </th>
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-400 uppercase">
+                    Severity
+                  </th>
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-400 uppercase">
+                    Status
+                  </th>
+                  <th className="px-6 py-4 text-xs font-semibold text-gray-400 uppercase">
+                    Started
+                  </th>
                   <th className="px-6 py-4 text-xs font-semibold text-gray-400 uppercase"></th>
                 </tr>
               </thead>
               <tbody>
-                {alerts.map((alert, idx) => (
+                {filteredSessions.map((session, idx) => (
                   <tr
-                    key={alert.id}
+                    key={session.id}
                     className={`border-b border-gray-800 hover:bg-gray-800 transition-colors cursor-pointer ${
-                      idx === alerts.length - 1 ? "border-b-0" : ""
+                      idx === filteredSessions.length - 1 ? "border-b-0" : ""
                     }`}
-                    onClick={() => navigate(`/alerts/${alert.id}`)}
+                    onClick={() => navigate(`/sessions/${session.id}`)}
                   >
                     <td className="px-6 py-4">
-                      <p className="text-sm font-semibold text-white">{alert.customerName}</p>
-                      <p className="text-xs text-gray-400">{alert.customerEmail}</p>
+                      <p className="text-sm font-semibold text-white">
+                        {session.customerName}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {session.customerEmail}
+                      </p>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm text-gray-300">{alert.type}</span>
+                      <span className="text-sm text-gray-300">
+                        {session.alertTypes.join(", ")}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
-                      <SeverityBadge severity={alert.severity} />
+                      <span className="text-sm text-white font-semibold">
+                        {session.alertCount}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
-                      <StatusBadge status={alert.status} />
+                      <SeverityBadge severity={session.highestSeverity} />
+                    </td>
+                    <td className="px-6 py-4">
+                      <StatusBadge status={session.status} />
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-sm text-gray-400">
-                        {new Date(alert.createdAt).toLocaleString()}
+                        {new Date(session.startedAt).toLocaleString()}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">

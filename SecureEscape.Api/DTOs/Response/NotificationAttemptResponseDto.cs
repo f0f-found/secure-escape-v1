@@ -15,6 +15,9 @@ public class NotificationAttemptResponseDto
     public string ErrorMessage { get; set; } = string.Empty;
 
     public DateTime AttemptedAt { get; set; }
+    public DateTime? SentAt { get; set; }
+
+    public string ResponseMessage { get; set; } = string.Empty;
 
     public DateTime CreatedAt { get; set; }
 }

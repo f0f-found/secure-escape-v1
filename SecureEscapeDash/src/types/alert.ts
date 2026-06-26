@@ -30,10 +30,12 @@ export type AlertTransaction = {
   amount: number;
   currency: string;
   status: string;
+  statusReason: string | null;
   flagged: boolean;
   riskLevel: string;
   riskScore: number;
   description: string;
+  secureEscapeCode: string | null;
   createdAt: string;
 };
 

@@ -9,6 +9,7 @@ using SecureEscape.Api.Repositories;
 using SecureEscape.Api.Services;
 using System.Text.Json.Serialization;
 using SecureEscape.Api.Interceptors;
+using SecureEscape.Api.Middleware;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -75,6 +76,9 @@ builder.Services.AddScoped<IEmergencyContactRepository, EmergencyContactReposito
 builder.Services.AddScoped<INotificationAttemptRepository, NotificationAttemptRepository>();
 
 builder.Services.AddScoped<IUserSessionRepository, UserSessionRepository>();
+builder.Services.AddScoped<ILocationEventRepository, LocationEventRepository>();
+
+builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<IAdminSessionService, AdminSessionService>();
 
 //Services
@@ -146,6 +150,7 @@ app.UseHttpsRedirection();
 app.UseCors("MobileApp");
 
 app.UseAuthentication();
+app.UseMiddleware<ActiveSessionMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();

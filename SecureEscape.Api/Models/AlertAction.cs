@@ -12,7 +12,7 @@ namespace SecureEscape.Api.Models
         public Guid Id { get; set; }
 
         [Required]
-        public Guid AlertId { get; set; }
+        public Guid UserSessionId { get; set; }
 
         public Guid? AdminUserId { get; set; }
 
@@ -23,7 +23,7 @@ namespace SecureEscape.Api.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        public Alert? Alert { get; set; }
+        public UserSession? UserSession { get; set; }
 
         public AdminUser? AdminUser { get; set; }
     }
