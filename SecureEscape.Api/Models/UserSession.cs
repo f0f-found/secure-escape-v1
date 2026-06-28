@@ -34,8 +34,12 @@ namespace SecureEscape.Api.Models
         public DateTime StartedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? EndedAt { get; set; }
+        
+        public DateTime LastActivityAt { get; set; } = DateTime.UtcNow;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        
+        public DateTime? UpdatedAt {get; set;}
 
         public CaseStatus CaseStatus { get; set; } = CaseStatus.Open;
 

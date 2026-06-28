@@ -15,18 +15,22 @@ public class AuthService : IAuthService
     private readonly ITokenService _tokenService;
     private readonly IAuditService _auditService;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IEmergencyContactRepository _emergencyContactRepository;
 
     public AuthService(
-        AppDbContext context,
-        IHashingService hashingService,
-        ITokenService tokenService,
-        IAuditService auditService, ICurrentUserService currentUserService)
+    AppDbContext context,
+    IHashingService hashingService,
+    ITokenService tokenService,
+    IAuditService auditService,
+    IEmergencyContactRepository emergencyContactRepository,
+    ICurrentUserService currentUserService)
     {
         _context = context;
         _hashingService = hashingService;
         _tokenService = tokenService;
         _auditService = auditService;
         _currentUserService = currentUserService;
+        _emergencyContactRepository = emergencyContactRepository;
     }
 
     public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto request)
@@ -105,8 +109,6 @@ public class AuthService : IAuthService
             user.AuthCredential.DuressPinHash);
 
         
-        
-        
         if (!normalPinValid && !duressPinValid)
         {
             await _auditService.LogAsync(
@@ -121,17 +123,20 @@ public class AuthService : IAuthService
 
         var sessionMode = duressPinValid ? SessionMode.Duress : SessionMode.Normal;
 
+        var now = DateTime.UtcNow;
+
         var session = new UserSession
         {
             Id = Guid.NewGuid(),
             UserId = user.Id,
-            BankSessionId = $"SESS-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}"[..32],
+            BankSessionId = $"SESS-{now:yyyyMMddHHmmss}-{Guid.NewGuid():N}"[..32],
             Mode = sessionMode,
             Status = SessionStatus.Active,
             IpAddress = request.IpAddress,
             DeviceInfo = request.DeviceInfo,
-            StartedAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow
+            StartedAt = now,
+            LastActivityAt = now,
+            CreatedAt = now
         };
 
         await _context.UserSessions.AddAsync(session);
@@ -178,6 +183,26 @@ public class AuthService : IAuthService
             };
 
             await _context.NotificationAttempts.AddAsync(notificationAttempt);
+
+            var emergencyContacts = await _emergencyContactRepository
+                .GetAllByUserIdAsync(user.Id);
+
+            foreach (var contact in emergencyContacts)
+            {
+                var emergencyContactNotification = new NotificationAttempt
+                {
+                    Id = Guid.NewGuid(),
+                    AlertId = alert.Id,
+                    Channel = NotificationChannel.Sms,
+                    Destination = contact.PhoneNumber,
+                    Status = NotificationStatus.Pending,
+                    AttemptedAt = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow,
+                    ResponseMessage = $"Emergency contact notification queued for {contact.FullName}."
+                };
+
+                await _context.NotificationAttempts.AddAsync(emergencyContactNotification);
+            }
         }
 
         if (request.Latitude.HasValue && request.Longitude.HasValue)
@@ -236,10 +261,14 @@ public class AuthService : IAuthService
         var session = await _context.UserSessions
             .FirstOrDefaultAsync(x => x.Id == currentUser.UserSessionId);
 
+        var now = DateTime.UtcNow;
+
         if (session != null)
         {
             session.Status = SessionStatus.Terminated;
-            session.EndedAt = DateTime.UtcNow;
+            session.EndedAt = now;
+            session.LastActivityAt = now;
+            session.UpdatedAt = now;
             await _context.SaveChangesAsync();
         }
 

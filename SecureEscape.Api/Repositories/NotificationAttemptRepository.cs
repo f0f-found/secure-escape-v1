@@ -1,6 +1,8 @@
 using SecureEscape.Api.Data;
 using SecureEscape.Api.Interfaces;
 using SecureEscape.Api.Models;
+using Microsoft.EntityFrameworkCore;
+using SecureEscape.Api.Enums;
 
 namespace SecureEscape.Api.Repositories;
 
@@ -17,5 +19,21 @@ public class NotificationAttemptRepository : INotificationAttemptRepository
     {
         await _context.NotificationAttempts.AddAsync(notificationAttempt);
 
+    }
+
+    public async Task<NotificationAttempt?> GetByIdAsync(Guid id)
+    {
+        return await _context.NotificationAttempts
+            .FirstOrDefaultAsync(notificationAttempt => notificationAttempt.Id == id);
+    }
+
+    public async Task<List<NotificationAttempt>> GetPendingAsync()
+    {
+        return await _context.NotificationAttempts
+            .Where(notificationAttempt =>
+                notificationAttempt.Status == NotificationStatus.Pending ||
+                notificationAttempt.Status == NotificationStatus.Retrying)
+            .OrderBy(notificationAttempt => notificationAttempt.CreatedAt)
+            .ToListAsync();
     }
 }

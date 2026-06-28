@@ -18,6 +18,7 @@ public class TransactionService : ITransactionService
     private readonly IAlertRepository _alertRepository;
     private readonly IRiskEvaluationRepository _riskEvaluationRepository;
     private readonly INotificationAttemptRepository _notificationAttemptRepository;
+    private readonly IEmergencyContactRepository _emergencyContactRepository;
     private readonly IUnitOfWork _unitOfWork;
 
     public TransactionService(
@@ -30,6 +31,7 @@ public class TransactionService : ITransactionService
         IAlertRepository alertRepository,
         IRiskEvaluationRepository riskEvaluationRepository,
         INotificationAttemptRepository notificationAttemptRepository,
+        IEmergencyContactRepository emergencyContactRepository,
         IUnitOfWork unitOfWork)
     {
         _transactionRepository = transactionRepository;
@@ -41,6 +43,7 @@ public class TransactionService : ITransactionService
         _alertRepository = alertRepository;
         _riskEvaluationRepository = riskEvaluationRepository;
         _notificationAttemptRepository = notificationAttemptRepository;
+        _emergencyContactRepository = emergencyContactRepository;
         _unitOfWork = unitOfWork;
     }
 
@@ -241,6 +244,24 @@ public class TransactionService : ITransactionService
             AttemptedAt = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow
         });
+
+        var emergencyContacts = await _emergencyContactRepository
+            .GetAllByUserIdAsync(userId);
+
+        foreach (var contact in emergencyContacts)
+        {
+            await _notificationAttemptRepository.AddAsync(new NotificationAttempt
+            {
+                Id = Guid.NewGuid(),
+                AlertId = alert.Id,
+                Channel = NotificationChannel.Sms,
+                Destination = contact.PhoneNumber,
+                Status = NotificationStatus.Pending,
+                AttemptedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow,
+                ResponseMessage = $"Emergency contact notification queued for {contact.FullName}."
+            });
+        }
 
         await _auditService.LogAsync(
             AuditEventType.AlertCreated,

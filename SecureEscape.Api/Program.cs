@@ -78,6 +78,7 @@ builder.Services.AddScoped<INotificationAttemptRepository, NotificationAttemptRe
 builder.Services.AddScoped<IUserSessionRepository, UserSessionRepository>();
 builder.Services.AddScoped<ILocationEventRepository, LocationEventRepository>();
 
+builder.Services.AddScoped<INotificationDispatchService, NotificationDispatchService>();
 builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<IAdminSessionService, AdminSessionService>();
 
