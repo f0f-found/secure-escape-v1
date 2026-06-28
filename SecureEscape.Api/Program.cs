@@ -69,27 +69,28 @@ builder.Services.AddScoped<IBankAccountRepository, BankAccountRepository>();
 builder.Services.AddScoped<IBeneficiaryRepository, BeneficiaryRepository>();
 
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
-builder.Services.AddScoped<IDecoyProfileRepository, DecoyProfileRepository>();
-builder.Services.AddScoped<IRiskEvaluationRepository, RiskEvaluationRepository>();
-builder.Services.AddScoped<IEmergencyContactRepository, EmergencyContactRepository>();
-
-builder.Services.AddScoped<INotificationAttemptRepository, NotificationAttemptRepository>();
-
 builder.Services.AddScoped<IUserSessionRepository, UserSessionRepository>();
+builder.Services.AddScoped<IDecoyProfileRepository, DecoyProfileRepository>();
 builder.Services.AddScoped<ILocationEventRepository, LocationEventRepository>();
 
-builder.Services.AddScoped<INotificationDispatchService, NotificationDispatchService>();
-builder.Services.AddScoped<ILocationService, LocationService>();
-builder.Services.AddScoped<IAdminSessionService, AdminSessionService>();
+builder.Services.AddScoped<IRiskEvaluationRepository, RiskEvaluationRepository>();
+builder.Services.AddScoped<IEmergencyContactRepository, EmergencyContactRepository>();
+builder.Services.AddScoped<INotificationAttemptRepository, NotificationAttemptRepository>();
+
+
+
+
 
 //Services
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IRiskService, RiskService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
-builder.Services.AddScoped<IProfileService, ProfileService>();
 
+builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<IAccountService, AccountService>();
+builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<IAdminAuthService, AdminAuthService>();
 
 builder.Services.AddScoped<IAdminAlertService, AdminAlertService>();
@@ -98,10 +99,14 @@ builder.Services.AddScoped<IHashingService, BCryptHashingService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IBeneficiaryService, BeneficiaryService>();
-builder.Services.AddScoped<ICurrentAdminService, CurrentAdminService>();
 
+builder.Services.AddScoped<IAdminSessionService, AdminSessionService>();
+builder.Services.AddScoped<ICurrentAdminService, CurrentAdminService>();
 builder.Services.AddScoped<ISecureEscapeService, SecureEscapeService>();
+
 builder.Services.AddScoped<IEmergencyContactService, EmergencyContactService>();
+builder.Services.AddScoped<INotificationDispatchService, NotificationDispatchService>();
+
 
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");

@@ -14,6 +14,7 @@ public class AuthService : IAuthService
     private readonly IHashingService _hashingService;
     private readonly ITokenService _tokenService;
     private readonly IAuditService _auditService;
+    private readonly IRiskService _riskService;
     private readonly ICurrentUserService _currentUserService;
     private readonly IEmergencyContactRepository _emergencyContactRepository;
 
@@ -22,6 +23,7 @@ public class AuthService : IAuthService
     IHashingService hashingService,
     ITokenService tokenService,
     IAuditService auditService,
+    IRiskService riskService,
     IEmergencyContactRepository emergencyContactRepository,
     ICurrentUserService currentUserService)
     {
@@ -31,6 +33,7 @@ public class AuthService : IAuthService
         _auditService = auditService;
         _currentUserService = currentUserService;
         _emergencyContactRepository = emergencyContactRepository;
+        _riskService = riskService;
     }
 
     public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto request)
@@ -145,13 +148,14 @@ public class AuthService : IAuthService
 
         if (duressPinValid)
         {
+            var riskAssessment = _riskService.AssessDuressLogin();
             alert = new Alert
             {
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
                 UserSessionId = session.Id,
                 Type = AlertType.DuressLogin,
-                Severity = RiskLevel.High,
+                Severity = riskAssessment.RiskLevel,
                 Status = AlertStatus.Open,
                 Description = "User logged in using duress PIN.",
                 CreatedAt = DateTime.UtcNow
@@ -163,9 +167,9 @@ public class AuthService : IAuthService
             {
                 Id = Guid.NewGuid(),
                 UserSessionId = session.Id,
-                Score = 0.95m,
-                RiskLevel = RiskLevel.High,
-                ReasonsJson = "{\"reason\":\"Duress PIN matched\"}",
+                Score = riskAssessment.Score,
+                RiskLevel = riskAssessment.RiskLevel,
+                ReasonsJson = riskAssessment.ReasonsJson,
                 CreatedAt = DateTime.UtcNow
             };
 

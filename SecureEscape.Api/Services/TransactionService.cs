@@ -19,6 +19,7 @@ public class TransactionService : ITransactionService
     private readonly IRiskEvaluationRepository _riskEvaluationRepository;
     private readonly INotificationAttemptRepository _notificationAttemptRepository;
     private readonly IEmergencyContactRepository _emergencyContactRepository;
+    private readonly IRiskService _riskService;
     private readonly IUnitOfWork _unitOfWork;
 
     public TransactionService(
@@ -32,6 +33,7 @@ public class TransactionService : ITransactionService
         IRiskEvaluationRepository riskEvaluationRepository,
         INotificationAttemptRepository notificationAttemptRepository,
         IEmergencyContactRepository emergencyContactRepository,
+        IRiskService riskService,
         IUnitOfWork unitOfWork)
     {
         _transactionRepository = transactionRepository;
@@ -44,6 +46,7 @@ public class TransactionService : ITransactionService
         _riskEvaluationRepository = riskEvaluationRepository;
         _notificationAttemptRepository = notificationAttemptRepository;
         _emergencyContactRepository = emergencyContactRepository;
+        _riskService = riskService;
         _unitOfWork = unitOfWork;
     }
 
@@ -116,7 +119,7 @@ public class TransactionService : ITransactionService
     }
 
     //METHODS
-    private static void ProcessNormalTransaction(BankTransaction transaction, BankAccount account)
+    private void ProcessNormalTransaction(BankTransaction transaction, BankAccount account)
     {
         if (account.Status == AccountStatus.Frozen)
         throw new InvalidOperationException("Transaction could not be processed.");
@@ -128,9 +131,11 @@ public class TransactionService : ITransactionService
         account.CurrentBalance -= transaction.Amount;
         account.UpdatedAt = DateTime.UtcNow;
 
+        var riskAssessment = _riskService.AssessNormalTransaction(transaction);
+
         transaction.Status = TransactionStatus.Approved;
-        transaction.RiskLevel = RiskLevel.Medium;
-        transaction.RiskScore = 0.40m;
+        transaction.RiskLevel = riskAssessment.RiskLevel;
+        transaction.RiskScore = riskAssessment.Score;
     }
 
     private async Task ProcessDuressTransactionAsync(
@@ -150,10 +155,15 @@ public class TransactionService : ITransactionService
 
         transaction.Flagged = true;
 
+        var riskAssessment = _riskService.AssessDuressTransaction(
+            transaction,
+            decoyProfile);
+
+        transaction.RiskLevel = riskAssessment.RiskLevel;
+        transaction.RiskScore = riskAssessment.Score;
+
         if (decoyProfile == null)
         {
-            transaction.RiskLevel = RiskLevel.Critical;
-            transaction.RiskScore = 0.99m;
 
             if (transaction.Amount <= account.AvailableBalance)
             {
@@ -174,9 +184,6 @@ public class TransactionService : ITransactionService
         else if (decoyProfile.IsActive)
         {
             var decoyCeiling = Math.Min(decoyProfile.EmergencyBudget, account.AvailableBalance);
-
-            transaction.RiskLevel = RiskLevel.High;
-            transaction.RiskScore = 0.75m;
 
             if (transaction.Amount <= decoyCeiling)
             {
@@ -228,9 +235,10 @@ public class TransactionService : ITransactionService
             Id = Guid.NewGuid(),
             UserSessionId = userSessionId,
             BankTransactionId = transaction.Id,
-            Score = transaction.RiskScore,
-            RiskLevel = RiskLevel.Critical,
-            ReasonsJson = $"{{\"reason\":\"Duress transaction\",\"status\":\"{transaction.Status}\"}}",
+            Score = riskAssessment.Score,
+            RiskLevel = riskAssessment.RiskLevel,
+            ReasonsJson =
+                $"{{\"reason\":\"{riskAssessment.Reason}\",\"status\":\"{transaction.Status}\",\"score\":{riskAssessment.Score},\"riskLevel\":\"{riskAssessment.RiskLevel}\"}}",
             CreatedAt = DateTime.UtcNow
         });
 
