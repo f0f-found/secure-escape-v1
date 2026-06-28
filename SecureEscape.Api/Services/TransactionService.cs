@@ -20,6 +20,7 @@ public class TransactionService : ITransactionService
     private readonly INotificationAttemptRepository _notificationAttemptRepository;
     private readonly IEmergencyContactRepository _emergencyContactRepository;
     private readonly IRiskService _riskService;
+    private readonly IFraudReportingService _fraudReportingService;
     private readonly IUnitOfWork _unitOfWork;
 
     public TransactionService(
@@ -34,6 +35,7 @@ public class TransactionService : ITransactionService
         INotificationAttemptRepository notificationAttemptRepository,
         IEmergencyContactRepository emergencyContactRepository,
         IRiskService riskService,
+        IFraudReportingService fraudReportingService,
         IUnitOfWork unitOfWork)
     {
         _transactionRepository = transactionRepository;
@@ -47,6 +49,7 @@ public class TransactionService : ITransactionService
         _notificationAttemptRepository = notificationAttemptRepository;
         _emergencyContactRepository = emergencyContactRepository;
         _riskService = riskService;
+        _fraudReportingService = fraudReportingService;
         _unitOfWork = unitOfWork;
     }
 
@@ -206,14 +209,13 @@ public class TransactionService : ITransactionService
             }
         }
 
-        transaction.Flagged = true;
-        transaction.FraudReported = transaction.Status != TransactionStatus.Blocked;
 
-        if (transaction.FraudReported)
-        {
-            transaction.FraudReportedAt = DateTime.UtcNow;
-            transaction.FraudReportReference = $"SABRIC-{Guid.NewGuid():N}"[..16].ToUpper();
-        }
+        var fraudReportResult = await _fraudReportingService
+            .ReportDuressTransactionAsync(transaction, userId, userSessionId);
+
+        transaction.FraudReported = fraudReportResult.Reported;
+        transaction.FraudReportedAt = fraudReportResult.ReportedAt;
+        transaction.FraudReportReference = fraudReportResult.Reference;
 
 
         var alert = new Alert
