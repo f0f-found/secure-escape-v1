@@ -50,4 +50,29 @@ public class AlertRepository : IAlertRepository
         _context.Alerts.Update(alert);
         await Task.CompletedTask;
     }
+
+    public async Task<Alert?> GetDetailByIdAsync(Guid alertId, Guid? bankIntegrationId)
+    {
+        var query = _context.Alerts
+            .AsNoTracking()
+            .Include(x => x.User)
+            .Include(x => x.UserSession)
+                .ThenInclude(x => x!.LocationEvents)
+            .Include(x => x.UserSession)
+                .ThenInclude(x => x!.Transactions)
+                    .ThenInclude(x => x.Beneficiary)
+            .Include(x => x.UserSession)
+                .ThenInclude(x => x!.AlertActions)
+                    .ThenInclude(x => x.AdminUser)
+            .Include(x => x.NotificationAttempts)
+            .Where(x => x.Id == alertId)
+            .AsQueryable();
+
+        if (bankIntegrationId.HasValue)
+        {
+            query = query.Where(x => x.User!.BankIntegrationId == bankIntegrationId.Value);
+        }
+
+        return await query.FirstOrDefaultAsync();
+    }
 }

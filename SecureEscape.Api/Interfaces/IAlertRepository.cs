@@ -9,6 +9,8 @@ public interface IAlertRepository
 
     Task<Alert?> GetByIdAsync(Guid alertId);
 
+    Task<Alert?> GetDetailByIdAsync(Guid alertId, Guid? bankIntegrationId);
+
     Task AddAsync(Alert alert);
 
     Task UpdateAsync(Alert alert);

@@ -32,5 +32,51 @@ public class AdminAlertsController : ControllerBase
         return Ok(alerts);
     }
     
+    [HttpGet("{alertId:guid}")]
+    public async Task<ActionResult<AlertDetailResponseDto>> GetAlertById(Guid alertId)
+    {
+        var currentAdmin = _currentAdminService.GetCurrentAdmin();
+
+        var alert = await _adminAlertService.GetAlertDetailAsync(
+            alertId,
+            currentAdmin.BankIntegrationId);
+
+        if (alert == null)
+        {
+            return NotFound(new
+            {
+                message = "Alert not found."
+            });
+        }
+
+        return Ok(alert);
+    }
+
+    [HttpPatch("{alertId:guid}/status")]
+    public async Task<IActionResult> UpdateAlertStatus(
+        Guid alertId,
+        [FromBody] UpdateAlertStatusRequestDto request)
+    {
+        var currentAdmin = _currentAdminService.GetCurrentAdmin();
+
+        var updated = await _adminAlertService.UpdateAlertStatusAsync(
+            alertId,
+            request,
+            currentAdmin.BankIntegrationId,
+            currentAdmin.AdminUserId);
+
+        if (!updated)
+        {
+            return NotFound(new
+            {
+                message = "Alert not found."
+            });
+        }
+
+        return Ok(new
+        {
+            message = "Alert status updated successfully."
+        });
+    }
    
 }
