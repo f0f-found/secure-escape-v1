@@ -13,12 +13,14 @@ public class SecureEscapeService : ISecureEscapeService
     private readonly IHashingService _hashingService;
     private readonly ICurrentUserService _currentUserService;
     private readonly IAuditService _auditService;
+    private readonly IUnitOfWork _unitOfWork;
 
     public SecureEscapeService(
         IDecoyProfileRepository decoyProfileRepository,
         IUserRepository userRepository,
         IHashingService hashingService,
         ICurrentUserService currentUserService,
+        IUnitOfWork unitOfWork,
         IAuditService auditService)
     {
         _decoyProfileRepository = decoyProfileRepository;
@@ -26,6 +28,7 @@ public class SecureEscapeService : ISecureEscapeService
         _hashingService = hashingService;
         _currentUserService = currentUserService;
         _auditService = auditService;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<DecoyProfileResponseDto?> GetActiveDecoyProfileAsync()
@@ -77,6 +80,8 @@ public class SecureEscapeService : ISecureEscapeService
             await _decoyProfileRepository.UpdateAsync(decoyProfile);
         }
 
+        await _unitOfWork.SaveChangesAsync();
+
         await _auditService.LogAsync(
             AuditEventType.DecoyProfileUpdated,
             entityType: "DecoyProfile",
@@ -112,6 +117,8 @@ public class SecureEscapeService : ISecureEscapeService
         user.AuthCredential.UpdatedAt = DateTime.UtcNow;
 
         await _userRepository.UpdateAsync(user);
+
+        await _unitOfWork.SaveChangesAsync();
 
         await _auditService.LogAsync(
             AuditEventType.DuressPinUpdated,

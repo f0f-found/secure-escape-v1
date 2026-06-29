@@ -73,7 +73,7 @@ public class AdminSessionsController : ControllerBase
     {
         var currentAdmin = _currentAdminService.GetCurrentAdmin();
         var success = await _adminSessionService.FreezeAccountAsync(
-            sessionId, currentAdmin.BankIntegrationId);
+            sessionId, currentAdmin.BankIntegrationId, currentAdmin.AdminUserId);
 
         if (!success)
             return NotFound(new { message = "Session not found." });

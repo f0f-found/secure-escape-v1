@@ -14,10 +14,14 @@ namespace SecureEscape.Api.Interceptors
     public class AuditInterceptor : SaveChangesInterceptor
     {
         private readonly ICurrentUserService _currentUserService;
+        private readonly ICurrentAdminService _currentAdminService;
 
-        public AuditInterceptor(ICurrentUserService currentUserService)
+        public AuditInterceptor(
+            ICurrentUserService currentUserService,
+            ICurrentAdminService currentAdminService)
         {
             _currentUserService = currentUserService;
+            _currentAdminService = currentAdminService;
         }
 
         public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
@@ -34,12 +38,23 @@ namespace SecureEscape.Api.Interceptors
             try { currentUser = _currentUserService.GetCurrentUser(); }
             catch { /* no authenticated user — system action */ }
 
+            CurrentAdminContext? currentAdmin = null;
+            try { currentAdmin = _currentAdminService.GetCurrentAdmin(); }
+            catch { /* not an admin action */ }
+
             var auditLogs = new List<AuditLog>();
 
             foreach (var entry in context.ChangeTracker.Entries())
             {
                 if (entry.Entity is AuditLog)
                     continue;
+
+                if (entry.Entity is RiskEvaluation ||
+                    entry.Entity is NotificationAttempt ||
+                    entry.Entity is LocationEvent)
+                {
+                    continue;
+                }  
 
                 if (entry.State == EntityState.Added)
                 {
@@ -51,6 +66,7 @@ namespace SecureEscape.Api.Interceptors
                         EntityId = GetEntityId(entry.Entity),
                         UserId = currentUser?.UserId,
                         UserSessionId = currentUser?.UserSessionId,
+                        AdminUserId = currentAdmin?.AdminUserId,
                         CreatedAt = DateTime.UtcNow
                     });
                 }
@@ -60,11 +76,12 @@ namespace SecureEscape.Api.Interceptors
                     auditLogs.Add(new AuditLog
                     {
                         Id = Guid.NewGuid(),
-                        EventType = AuditEventType.EntityUpdated,
+                        EventType = AuditEventType.EntityCreated,
                         EntityType = entry.Entity.GetType().Name,
                         EntityId = GetEntityId(entry.Entity),
                         UserId = currentUser?.UserId,
                         UserSessionId = currentUser?.UserSessionId,
+                        AdminUserId = currentAdmin?.AdminUserId,
                         CreatedAt = DateTime.UtcNow
                     });
                 }
@@ -74,11 +91,12 @@ namespace SecureEscape.Api.Interceptors
                     auditLogs.Add(new AuditLog
                     {
                         Id = Guid.NewGuid(),
-                        EventType = AuditEventType.EntityDeleted,
+                        EventType = AuditEventType.EntityCreated,
                         EntityType = entry.Entity.GetType().Name,
                         EntityId = GetEntityId(entry.Entity),
                         UserId = currentUser?.UserId,
                         UserSessionId = currentUser?.UserSessionId,
+                        AdminUserId = currentAdmin?.AdminUserId,
                         CreatedAt = DateTime.UtcNow
                     });
                 }

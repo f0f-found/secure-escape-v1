@@ -21,9 +21,9 @@ public class UserRepository : IUserRepository
             .FirstOrDefaultAsync(x => x.Id == userId);
     }
 
-    public async Task UpdateAsync(User user)
+    public Task UpdateAsync(User user)
     {
         _context.Users.Update(user);
-        await _context.SaveChangesAsync();
+        return Task.CompletedTask;
     }
 }

@@ -10,13 +10,16 @@ public class BeneficiaryService : IBeneficiaryService
 {
     private readonly IBeneficiaryRepository _repository;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IUnitOfWork _unitOfWork;
 
     public BeneficiaryService(
-        IBeneficiaryRepository repository,
-        ICurrentUserService currentUserService)
+    IBeneficiaryRepository repository,
+    ICurrentUserService currentUserService,
+    IUnitOfWork unitOfWork)
     {
         _repository = repository;
         _currentUserService = currentUserService;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<List<BeneficiaryResponseDto>> GetAllAsync()
@@ -50,6 +53,8 @@ public class BeneficiaryService : IBeneficiaryService
         };
 
         await _repository.AddAsync(beneficiary);
+        await _unitOfWork.SaveChangesAsync();
+
         return MapToResponse(beneficiary);
     }
 
@@ -64,6 +69,8 @@ public class BeneficiaryService : IBeneficiaryService
         beneficiary.UpdatedAt = DateTime.UtcNow;
 
         await _repository.UpdateAsync(beneficiary);
+        await _unitOfWork.SaveChangesAsync();
+        
         return true;
     }
 

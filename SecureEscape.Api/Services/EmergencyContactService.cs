@@ -10,13 +10,16 @@ public class EmergencyContactService : IEmergencyContactService
 {
     private readonly IEmergencyContactRepository _repository;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IUnitOfWork _unitOfWork;
 
     public EmergencyContactService(
         IEmergencyContactRepository repository,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IUnitOfWork unitOfWork)
     {
         _repository = repository;
         _currentUserService = currentUserService;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<List<EmergencyContactResponseDto>> GetAllAsync()
@@ -55,6 +58,7 @@ public class EmergencyContactService : IEmergencyContactService
         };
 
         await _repository.AddAsync(contact);
+        await _unitOfWork.SaveChangesAsync();
         return MapToResponse(contact);
     }
 

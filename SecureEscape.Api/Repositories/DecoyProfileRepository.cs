@@ -30,12 +30,12 @@ public class DecoyProfileRepository : IDecoyProfileRepository
     public async Task AddAsync(DecoyProfile decoyProfile)
     {
         await _context.DecoyProfiles.AddAsync(decoyProfile);
-        await _context.SaveChangesAsync();
+        
     }
 
-    public async Task UpdateAsync(DecoyProfile decoyProfile)
+    public Task UpdateAsync(DecoyProfile decoyProfile)
     {
         _context.DecoyProfiles.Update(decoyProfile);
-        await _context.SaveChangesAsync();
+        return Task.CompletedTask;
     }
 }

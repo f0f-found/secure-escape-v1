@@ -22,7 +22,7 @@ namespace SecureEscape.Api.Repositories
         public async Task AddAsync(Beneficiary beneficiary)
         {
             await _context.Beneficiaries.AddAsync(beneficiary);
-            await _context.SaveChangesAsync();
+            
         }
 
         public async Task<List<Beneficiary>> GetAllByUserIdAsync(Guid userId)
@@ -48,10 +48,10 @@ namespace SecureEscape.Api.Repositories
                     && x.Status == BeneficiaryStatus.Active);
         }
 
-        public async Task UpdateAsync(Beneficiary beneficiary)
+        public Task UpdateAsync(Beneficiary beneficiary)
         {
             _context.Beneficiaries.Update(beneficiary);
-            await _context.SaveChangesAsync();
+            return Task.CompletedTask;
         }
     }
 }

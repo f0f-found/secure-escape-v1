@@ -147,7 +147,7 @@ public class AdminSessionService : IAdminSessionService
         return true;
     }
 
-    public async Task<bool> FreezeAccountAsync(Guid sessionId, Guid? bankIntegrationId)
+    public async Task<bool> FreezeAccountAsync(Guid sessionId, Guid? bankIntegrationId, Guid adminUserId)
     {
         var session = await _userSessionRepository.GetDuressSessionDetailAsync(sessionId);
 
@@ -170,6 +170,7 @@ public class AdminSessionService : IAdminSessionService
             Id = Guid.NewGuid(),
             UserSessionId = session.Id,
             ActionType = AlertActionType.FrozeAccount,
+            AdminUserId = adminUserId,
             Notes = $"All accounts frozen by fraud team at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC.",
             CreatedAt = DateTime.UtcNow
         };
@@ -182,6 +183,7 @@ public class AdminSessionService : IAdminSessionService
             entityType: "BankAccount",
             userId: session.UserId,
             userSessionId: session.Id,
+            adminUserId: adminUserId,
             metadataJson: $"{{\"accountCount\":{accounts.Count},\"frozenBy\":\"FraudTeam\"}}");
 
         return true;

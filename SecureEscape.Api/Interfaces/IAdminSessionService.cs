@@ -13,5 +13,5 @@ public interface IAdminSessionService
 
     Task<bool> AddCaseActionAsync(Guid sessionId, CreateCaseActionRequestDto request, Guid? bankIntegrationId, Guid adminUserId);
 
-    Task<bool> FreezeAccountAsync(Guid sessionId, Guid? bankIntegrationId);
+    Task<bool> FreezeAccountAsync(Guid sessionId, Guid? bankIntegrationId, Guid adminUserId);
 }
