@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SecureEscape.Api.Data;
 
@@ -10,9 +11,11 @@ using SecureEscape.Api.Data;
 namespace SecureEscape.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260628161313_AddVoucherNumberToBankTransaction")]
+    partial class AddVoucherNumberToBankTransaction
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -457,12 +460,10 @@ namespace SecureEscape.Api.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("VoucherNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
+                        .HasColumnType("longtext");
 
                     b.Property<string>("VoucherPin")
-                        .HasMaxLength(20)
-                        .HasColumnType("varchar(20)");
+                        .HasColumnType("longtext");
 
                     b.Property<bool>("VoucherRedeemed")
                         .HasColumnType("tinyint(1)");

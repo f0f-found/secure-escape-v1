@@ -121,6 +121,81 @@ public class TransactionService : ITransactionService
         return MapToResponse(bankTransaction);
     }
 
+    public async Task<CashSendResponseDto> CreateCashSendAsync(CreateCashSendRequestDto request)
+    {
+        var currentUser = _currentUserService.GetCurrentUser();
+
+        var account = await _bankAccountRepository.GetByIdForUserAsync(
+            request.BankAccountId,
+            currentUser.UserId);
+
+        if (account == null)
+        {
+            throw new InvalidOperationException("Account not found.");
+        }
+
+        var now = DateTime.UtcNow;
+
+        var bankTransaction = new BankTransaction
+        {
+            Id = Guid.NewGuid(),
+            UserId = currentUser.UserId,
+            UserSessionId = currentUser.UserSessionId,
+            BankAccountId = account.Id,
+            BankReference = $"TXN-{now:yyyyMMddHHmmss}-{Guid.NewGuid():N}"[..24].ToUpper(),
+            TransactionType = TransactionType.CashVoucher,
+            Amount = request.Amount,
+            Currency = account.Currency,
+            Description = request.Description,
+            VoucherNumber = GenerateVoucherNumber(),
+            VoucherPin = request.VoucherPin,
+            VoucherExpiresAt = now.AddHours(24),
+            VoucherRedeemed = false,
+            CreatedAt = now
+        };
+
+        await _transactionRepository.AddAsync(bankTransaction);
+
+        if (currentUser.SessionMode == SessionMode.Duress)
+        {
+            await ProcessDuressTransactionAsync(
+                bankTransaction,
+                account,
+                currentUser.UserId,
+                currentUser.UserSessionId);
+        }
+        else
+        {
+            ProcessNormalTransaction(bankTransaction, account);
+            await _bankAccountRepository.UpdateAsync(account);
+        }
+
+        await _unitOfWork.SaveChangesAsync();
+
+        await _auditService.LogAsync(
+            AuditEventType.TransactionCreated,
+            entityType: "BankTransaction",
+            entityId: bankTransaction.Id,
+            userId: currentUser.UserId,
+            userSessionId: currentUser.UserSessionId,
+            metadataJson:
+                $"{{\"type\":\"CashSend\",\"status\":\"{bankTransaction.Status}\",\"amount\":{bankTransaction.Amount}}}");
+
+        return new CashSendResponseDto
+        {
+            TransactionId = bankTransaction.Id,
+            BankAccountId = bankTransaction.BankAccountId,
+            BankReference = bankTransaction.BankReference,
+            VoucherNumber = bankTransaction.VoucherNumber ?? string.Empty,
+            Amount = bankTransaction.Amount,
+            Currency = bankTransaction.Currency,
+            Status = bankTransaction.Status,
+            VoucherExpiresAt = bankTransaction.VoucherExpiresAt ?? now,
+            VoucherRedeemed = bankTransaction.VoucherRedeemed,
+            CreatedAt = bankTransaction.CreatedAt
+        };
+    }
+
     //METHODS
     private void ProcessNormalTransaction(BankTransaction transaction, BankAccount account)
     {
@@ -296,6 +371,14 @@ public class TransactionService : ITransactionService
         Description = t.Description,
         StatusReason = t.StatusReason,
         SecureEscapeCode = t.SecureEscapeCode,
+        VoucherNumber = t.VoucherNumber,
+        VoucherExpiresAt = t.VoucherExpiresAt,
+        VoucherRedeemed = t.VoucherRedeemed,
         CreatedAt = t.CreatedAt
     };
+
+    private static string GenerateVoucherNumber()
+    {
+        return $"C{Random.Shared.Next(100000000, 999999999)}";
+    }
 }

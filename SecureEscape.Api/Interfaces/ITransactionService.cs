@@ -7,4 +7,5 @@ public interface ITransactionService
 {
     Task<List<TransactionResponseDto>> GetAllAsync();
     Task<TransactionResponseDto> CreateAsync(CreateTransactionRequestDto request);
+    Task<CashSendResponseDto> CreateCashSendAsync(CreateCashSendRequestDto request);
 }

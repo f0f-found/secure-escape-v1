@@ -39,4 +39,13 @@ public class TransactionController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
+
+    [HttpPost("cash-send")]
+    public async Task<ActionResult<CashSendResponseDto>> CreateCashSend(
+        [FromBody] CreateCashSendRequestDto request)
+    {
+        var result = await _service.CreateCashSendAsync(request);
+
+        return Ok(result);
+    }
 }
