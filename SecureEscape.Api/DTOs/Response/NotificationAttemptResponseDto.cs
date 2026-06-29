@@ -10,11 +10,14 @@ public class NotificationAttemptResponseDto
 
     public string Destination { get; set; } = string.Empty;
 
+    public string MessageBody { get; set; } = string.Empty;
+
     public NotificationStatus Status { get; set; }
 
     public string ErrorMessage { get; set; } = string.Empty;
 
     public DateTime AttemptedAt { get; set; }
+
     public DateTime? SentAt { get; set; }
 
     public string ResponseMessage { get; set; } = string.Empty;

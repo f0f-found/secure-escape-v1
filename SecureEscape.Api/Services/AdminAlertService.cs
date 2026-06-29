@@ -180,6 +180,7 @@ public class AdminAlertService : IAdminAlertService
                     Id = x.Id,
                     Channel = x.Channel,
                     Destination = x.Destination,
+                    MessageBody = x.MessageBody,
                     Status = x.Status,
                     ErrorMessage = x.ErrorMessage,
                     AttemptedAt = x.AttemptedAt,

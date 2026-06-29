@@ -56,7 +56,9 @@ public class NotificationDispatchService : INotificationDispatchService
             // Temporary simulated provider. Replace this later with real SMS/email/webhook logic.
             attempt.Status = NotificationStatus.Sent;
             attempt.SentAt = DateTime.UtcNow;
-            attempt.ResponseMessage = $"Simulated {attempt.Channel} notification delivered.";
+            attempt.ResponseMessage = string.IsNullOrWhiteSpace(attempt.MessageBody)
+                ? $"Simulated {attempt.Channel} notification delivered."
+                : $"Simulated {attempt.Channel} notification delivered with message body.";
             attempt.ErrorMessage = string.Empty;
 
             await _auditService.LogAsync(
@@ -97,6 +99,7 @@ public class NotificationDispatchService : INotificationDispatchService
             Id = attempt.Id,
             Channel = attempt.Channel,
             Destination = attempt.Destination,
+            MessageBody = attempt.MessageBody,
             Status = attempt.Status,
             ErrorMessage = attempt.ErrorMessage,
             AttemptedAt = attempt.AttemptedAt,

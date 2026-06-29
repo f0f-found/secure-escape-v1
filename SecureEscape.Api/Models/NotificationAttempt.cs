@@ -20,12 +20,16 @@ namespace SecureEscape.Api.Models
         [MaxLength(255)]
         public string Destination { get; set; } = string.Empty;
 
+        [MaxLength(2000)]
+        public string MessageBody { get; set; } = string.Empty;
+
         public NotificationStatus Status { get; set; } = NotificationStatus.Pending;
 
         [MaxLength(1000)]
         public string ErrorMessage { get; set; } = string.Empty;
 
         public DateTime AttemptedAt { get; set; } = DateTime.UtcNow;
+
         public DateTime? SentAt { get; set; }
 
         [MaxLength(1000)]

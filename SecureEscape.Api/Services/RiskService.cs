@@ -71,15 +71,15 @@ public class RiskService : IRiskService
             };
         }
 
-        if (transaction.Amount > decoyProfile.Tier1Limit)
-        {
-            return new RiskAssessmentResult
-            {
-                Score = 0.85m,
-                RiskLevel = RiskLevel.High,
-                Reason = "Duress transaction exceeds tier 1 limit"
-            };
-        }
+        // if (transaction.Amount > decoyProfile.Tier1Limit)
+        // {
+        //     return new RiskAssessmentResult
+        //     {
+        //         Score = 0.85m,
+        //         RiskLevel = RiskLevel.High,
+        //         Reason = "Duress transaction exceeds tier 1 limit"
+        //     };
+        // }
 
         return new RiskAssessmentResult
         {

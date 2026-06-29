@@ -38,4 +38,13 @@ public class LocationEventRepository : ILocationEventRepository
             .OrderBy(location => location.CapturedAt)
             .ToListAsync();
     }
+
+    public async Task<LocationEvent?> GetLatestBySessionIdAsync(Guid userSessionId)
+    {
+        return await _context.LocationEvents
+            .AsNoTracking()
+            .Where(location => location.UserSessionId == userSessionId)
+            .OrderByDescending(location => location.CapturedAt)
+            .FirstOrDefaultAsync();
+    }
 }

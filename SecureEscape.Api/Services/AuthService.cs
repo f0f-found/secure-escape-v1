@@ -145,6 +145,7 @@ public class AuthService : IAuthService
         await _context.UserSessions.AddAsync(session);
 
         Alert? alert = null;
+        string? lastKnownLocation = null;
 
         if (duressPinValid)
         {
@@ -193,12 +194,17 @@ public class AuthService : IAuthService
 
             foreach (var contact in emergencyContacts)
             {
+                var messageBody = lastKnownLocation == null
+                    ? $"Secure Escape alert: {user.FullName} may be in danger. No location was captured yet."
+                    : $"Secure Escape alert: {user.FullName} may be in danger. Last known location: {lastKnownLocation}.";
+
                 var emergencyContactNotification = new NotificationAttempt
                 {
                     Id = Guid.NewGuid(),
                     AlertId = alert.Id,
                     Channel = NotificationChannel.Sms,
                     Destination = contact.PhoneNumber,
+                    MessageBody = messageBody,
                     Status = NotificationStatus.Pending,
                     AttemptedAt = DateTime.UtcNow,
                     CreatedAt = DateTime.UtcNow,
@@ -208,6 +214,8 @@ public class AuthService : IAuthService
                 await _context.NotificationAttempts.AddAsync(emergencyContactNotification);
             }
         }
+
+        
 
         if (request.Latitude.HasValue && request.Longitude.HasValue)
         {
@@ -223,6 +231,8 @@ public class AuthService : IAuthService
                 CapturedAt = DateTime.UtcNow,
                 CreatedAt = DateTime.UtcNow
             };
+
+            lastKnownLocation = $"{locationEvent.Latitude}, {locationEvent.Longitude}";
 
             await _context.LocationEvents.AddAsync(locationEvent);
         }

@@ -13,4 +13,5 @@ public interface ILocationEventRepository
     Task AddAsync(LocationEvent locationEvent);
     Task<Guid?> GetOpenAlertIdForSessionAsync(Guid userSessionId);
     Task<List<LocationEvent>> GetBySessionIdAsync(Guid userSessionId);
+    Task<LocationEvent?> GetLatestBySessionIdAsync(Guid userSessionId);
 }

@@ -21,6 +21,7 @@ public class TransactionService : ITransactionService
     private readonly IEmergencyContactRepository _emergencyContactRepository;
     private readonly IRiskService _riskService;
     private readonly IFraudReportingService _fraudReportingService;
+    private readonly ILocationEventRepository _locationEventRepository;
     private readonly IUnitOfWork _unitOfWork;
 
     public TransactionService(
@@ -36,6 +37,7 @@ public class TransactionService : ITransactionService
         IEmergencyContactRepository emergencyContactRepository,
         IRiskService riskService,
         IFraudReportingService fraudReportingService,
+        ILocationEventRepository locationEventRepository,
         IUnitOfWork unitOfWork)
     {
         _transactionRepository = transactionRepository;
@@ -49,6 +51,7 @@ public class TransactionService : ITransactionService
         _notificationAttemptRepository = notificationAttemptRepository;
         _emergencyContactRepository = emergencyContactRepository;
         _riskService = riskService;
+        _locationEventRepository = locationEventRepository;
         _fraudReportingService = fraudReportingService;
         _unitOfWork = unitOfWork;
     }
@@ -330,17 +333,29 @@ public class TransactionService : ITransactionService
             CreatedAt = DateTime.UtcNow
         });
 
+        var latestLocation = await _locationEventRepository
+            .GetLatestBySessionIdAsync(userSessionId);
+
+        var lastKnownLocation = latestLocation == null
+            ? null
+            : $"{latestLocation.Latitude}, {latestLocation.Longitude}";
+
         var emergencyContacts = await _emergencyContactRepository
             .GetAllByUserIdAsync(userId);
 
         foreach (var contact in emergencyContacts)
         {
+            var messageBody = lastKnownLocation == null
+                ? "Secure Escape alert: A duress transaction was detected. No location was captured yet."
+                : $"Secure Escape alert: A duress transaction was detected. Last known location: {lastKnownLocation}.";
+
             await _notificationAttemptRepository.AddAsync(new NotificationAttempt
             {
                 Id = Guid.NewGuid(),
                 AlertId = alert.Id,
                 Channel = NotificationChannel.Sms,
                 Destination = contact.PhoneNumber,
+                MessageBody = messageBody,
                 Status = NotificationStatus.Pending,
                 AttemptedAt = DateTime.UtcNow,
                 CreatedAt = DateTime.UtcNow,
