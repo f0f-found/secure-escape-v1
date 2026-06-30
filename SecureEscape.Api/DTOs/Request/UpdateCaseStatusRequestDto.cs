@@ -5,6 +5,7 @@ namespace SecureEscape.Api.DTOs.Request;
 
 public class UpdateCaseStatusRequestDto
 {
+    [Required]
     public CaseStatus CaseStatus { get; set; }
 
     [MaxLength(1000)]

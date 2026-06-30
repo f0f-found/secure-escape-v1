@@ -5,6 +5,7 @@ namespace SecureEscape.Api.DTOs.Request;
 
 public class CreateCaseActionRequestDto
 {
+    [Required]
     public AlertActionType ActionType { get; set; }
 
     [MaxLength(1000)]

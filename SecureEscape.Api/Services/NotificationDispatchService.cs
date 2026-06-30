@@ -91,6 +91,23 @@ public class NotificationDispatchService : INotificationDispatchService
         }
     }
 
+    public async Task<List<NotificationAttemptResponseDto>> DispatchPendingForSessionAsync(
+        Guid userSessionId)
+    {
+        var pendingAttempts = await _notificationAttemptRepository
+            .GetPendingBySessionIdAsync(userSessionId);
+
+        var results = new List<NotificationAttemptResponseDto>();
+
+        foreach (var attempt in pendingAttempts)
+        {
+            var result = await DispatchAttemptAsync(attempt);
+            results.Add(result);
+        }
+
+        return results;
+    }
+
     private static NotificationAttemptResponseDto MapToResponse(
         NotificationAttempt attempt)
     {

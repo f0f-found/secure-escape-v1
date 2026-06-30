@@ -36,4 +36,19 @@ public class NotificationAttemptRepository : INotificationAttemptRepository
             .OrderBy(notificationAttempt => notificationAttempt.CreatedAt)
             .ToListAsync();
     }
+
+    public async Task<List<NotificationAttempt>> GetPendingBySessionIdAsync(Guid userSessionId)
+    {
+        return await _context.NotificationAttempts
+            .Include(notificationAttempt => notificationAttempt.Alert)
+            .Where(notificationAttempt =>
+                notificationAttempt.Alert != null &&
+                notificationAttempt.Alert.UserSessionId == userSessionId &&
+                (
+                    notificationAttempt.Status == NotificationStatus.Pending ||
+                    notificationAttempt.Status == NotificationStatus.Retrying
+                ))
+            .OrderBy(notificationAttempt => notificationAttempt.CreatedAt)
+            .ToListAsync();
+    }
 }

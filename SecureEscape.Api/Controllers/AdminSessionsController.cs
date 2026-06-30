@@ -42,42 +42,70 @@ public class AdminSessionsController : ControllerBase
         return Ok(session);
     }
 
+    [HttpPost("{sessionId:guid}/dispatch-notifications")]
+    public async Task<IActionResult> DispatchSessionNotifications(Guid sessionId)
+    {
+        var currentAdmin = _currentAdminService.GetCurrentAdmin();
+
+        var updatedSession = await _adminSessionService.DispatchSessionNotificationsAsync(
+            sessionId,
+            currentAdmin.BankIntegrationId);
+
+        if (updatedSession == null)
+        {
+            return NotFound(new
+            {
+                message = "Session not found."
+            });
+        }
+
+        return Ok(updatedSession);
+    }
+
     [HttpPatch("{sessionId:guid}/case-status")]
     public async Task<IActionResult> UpdateCaseStatus(Guid sessionId, UpdateCaseStatusRequestDto request)
     {
         var currentAdmin = _currentAdminService.GetCurrentAdmin();
-        var updated = await _adminSessionService.UpdateCaseStatusAsync(
-            sessionId, request, currentAdmin.BankIntegrationId, currentAdmin.AdminUserId);
+        var updatedSession = await _adminSessionService.UpdateCaseStatusAsync(
+            sessionId,
+            request,
+            currentAdmin.BankIntegrationId,
+            currentAdmin.AdminUserId);
 
-        if (!updated)
+        if (updatedSession == null)
             return NotFound(new { message = "Session not found." });
 
-        return Ok(new { message = "Case status updated successfully." });
+        return Ok(updatedSession);
     }
 
     [HttpPost("{sessionId:guid}/actions")]
     public async Task<IActionResult> AddCaseAction(Guid sessionId, CreateCaseActionRequestDto request)
     {
         var currentAdmin = _currentAdminService.GetCurrentAdmin();
-        var created = await _adminSessionService.AddCaseActionAsync(
-            sessionId, request, currentAdmin.BankIntegrationId, currentAdmin.AdminUserId);
+        var updatedSession = await _adminSessionService.AddCaseActionAsync(
+            sessionId,
+            request,
+            currentAdmin.BankIntegrationId,
+            currentAdmin.AdminUserId);
 
-        if (!created)
+        if (updatedSession == null)
             return NotFound(new { message = "Session not found." });
 
-        return Ok(new { message = "Action recorded successfully." });
+        return Ok(updatedSession);
     }
 
     [HttpPost("{sessionId:guid}/freeze-accounts")]
     public async Task<IActionResult> FreezeAccounts(Guid sessionId)
     {
         var currentAdmin = _currentAdminService.GetCurrentAdmin();
-        var success = await _adminSessionService.FreezeAccountAsync(
-            sessionId, currentAdmin.BankIntegrationId, currentAdmin.AdminUserId);
+        var updatedSession = await _adminSessionService.FreezeAccountAsync(
+            sessionId,
+            currentAdmin.BankIntegrationId,
+            currentAdmin.AdminUserId);
 
-        if (!success)
+        if (updatedSession == null)
             return NotFound(new { message = "Session not found." });
 
-        return Ok(new { message = "All accounts frozen successfully." });
+        return Ok(updatedSession);
     }
 }

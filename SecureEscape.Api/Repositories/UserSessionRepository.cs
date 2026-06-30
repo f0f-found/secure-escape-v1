@@ -38,7 +38,7 @@ public class UserSessionRepository : IUserSessionRepository
     {
         return await _context.UserSessions
             .AsNoTracking()
-            .Include(x => x.User)
+            .Include(x => x.User).ThenInclude(x => x!.BankAccounts)
             .Include(x => x.Alerts)
                 .ThenInclude(x => x.NotificationAttempts)
             .Include(x => x.AlertActions)

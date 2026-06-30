@@ -19,6 +19,22 @@ public class DuressSessionDetailResponseDto
     public DateTime? EndedAt { get; set; }
     public DateTime? CaseResolvedAt { get; set; }
 
+    public int AlertCount { get; set; }
+
+    public int TransactionCount { get; set; }
+
+    public int LocationCount { get; set; }
+
+    public int NotificationAttemptCount { get; set; }
+
+    public RiskLevel HighestSeverity { get; set; } = RiskLevel.Low;
+
+    public DateTime? LastLocationAt { get; set; }
+
+    public DateTime? LastAlertAt { get; set; }
+
+    public bool AccountsFrozen { get; set; }
+
     public List<SessionAlertLogResponseDto> Alerts { get; set; } = new();
     public List<AlertTransactionResponseDto> Transactions { get; set; } = new();
     public List<AlertLocationResponseDto> Locations { get; set; } = new();
