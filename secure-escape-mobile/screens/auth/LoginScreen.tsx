@@ -11,6 +11,9 @@ import {
 import { colors } from "@/utils/theme";
 import { login } from "@/services/authService";
 import { saveAuthSession } from "@/services/tokenStore";
+import * as Location from "expo-location";
+import Constants from "expo-constants";
+import { Platform } from "react-native";
 
 interface LoginScreenProps {
   onLoginSuccess?: () => void;
@@ -24,6 +27,32 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const [biometricsEnabled, setBiometricsEnabled] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
+  const getLoginContext = async () => {
+    let latitude: number | undefined;
+    let longitude: number | undefined;
+    let accuracyMeters: number | undefined;
+
+    const permission = await Location.requestForegroundPermissionsAsync();
+
+    if (permission.status === "granted") {
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      latitude = position.coords.latitude;
+      longitude = position.coords.longitude;
+      accuracyMeters = position.coords.accuracy ?? undefined;
+    }
+
+    return {
+      deviceInfo: `${Platform.OS} • ${Constants.deviceName ?? "Unknown device"} • Expo mobile app`,
+      ipAddress: "",
+      latitude,
+      longitude,
+      accuracyMeters,
+    };
+  };
+
   const handleSubmit = async () => {
     if (!email || !password || pin.length < 4) {
       Alert.alert(
@@ -35,13 +64,12 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
     try {
       setIsSubmitting(true);
-
+      const loginContext = await getLoginContext();
       const response = await login({
         email,
         password,
         pin,
-        deviceInfo: "Expo mobile app",
-        ipAddress: "127.0.0.1",
+        ...loginContext,
       });
 
       await saveAuthSession({

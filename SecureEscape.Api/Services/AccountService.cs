@@ -70,12 +70,17 @@ public class AccountService : IAccountService
 
         if (isDecoyView)
         {
+            var decoyAvailableBalance = Math.Max(
+                0,
+                Math.Min(decoyProfile!.EmergencyBudget, account.AvailableBalance)
+            );
+
             availableBalance = index == 0
-                ? decoyProfile!.DisplayBalance
+                ? decoyAvailableBalance
                 : 0;
 
             currentBalance = index == 0
-                ? decoyProfile!.DisplayBalance
+                ? decoyAvailableBalance
                 : 0;
         }
 

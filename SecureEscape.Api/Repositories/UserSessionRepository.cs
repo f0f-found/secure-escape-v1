@@ -64,4 +64,13 @@ public class UserSessionRepository : IUserSessionRepository
         _context.UserSessions.Update(session);
         await Task.CompletedTask;
     }
+
+    public async Task<List<UserSession>> GetStaleActiveSessionsAsync(DateTime cutoffTime)
+    {
+        return await _context.UserSessions
+            .Where(session =>
+                session.Status == SessionStatus.Active &&
+                session.LastActivityAt < cutoffTime)
+            .ToListAsync();
+    }
 }

@@ -8,10 +8,12 @@ namespace SecureEscape.Api.Interfaces
 
         Task<UserSession?> GetDuressSessionDetailAsync(Guid sessionId);
 
+
         Task<UserSession?> GetByIdAsync(Guid sessionId);
 
         Task AddActionAsync(AlertAction alertAction);
 
         Task UpdateAsync(UserSession session);
+        Task<List<UserSession>> GetStaleActiveSessionsAsync(DateTime cutoffTime);
     }
 }

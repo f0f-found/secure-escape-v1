@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import SeverityBadge from "../components/SeverityBadge";
-import StatusBadge from "../components/StatusBadge";
+// import StatusBadge from "../components/StatusBadge";
 import type { DuressSessionSummary } from "../types/session";
 import { getDuressSessions } from "../services/sessionService";
 
@@ -240,7 +240,7 @@ export default function Dashboard() {
                       <SeverityBadge severity={session.highestSeverity} />
                     </td>
                     <td className="px-6 py-4">
-                      <StatusBadge status={session.status} />
+                      <p className="text-sm text-gray-500">{session.status}</p>
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-sm text-gray-400">

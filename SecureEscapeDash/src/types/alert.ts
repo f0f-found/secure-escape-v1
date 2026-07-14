@@ -19,6 +19,7 @@ export type AlertLocation = {
   accuracyMeters: number;
   locationSource: string;
   capturedAt: string;
+  createdAt: string;
 };
 
 export type AlertTransaction = {
@@ -54,6 +55,9 @@ export type NotificationAttempt = {
   destination: string;
   status: string;
   errorMessage: string;
+  messageBody: string;
+  sentAt: string | null;
+  responseMessage: string;
   attemptedAt: string;
   createdAt: string;
 };

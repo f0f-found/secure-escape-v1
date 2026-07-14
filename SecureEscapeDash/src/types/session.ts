@@ -13,6 +13,8 @@ export type DuressSessionSummary = {
   status: string;
   startedAt: string;
   endedAt: string | null;
+  caseStatus: string;
+  lastAlertAt: string | null;
   alertCount: number;
   highestSeverity: string;
   alertTypes: string[];
@@ -23,6 +25,8 @@ export type SessionAlertLog = {
   type: string;
   severity: string;
   description: string;
+  status: string;
+  resolvedAt: string | null;
   createdAt: string;
   notificationAttempts: NotificationAttempt[];
 };
@@ -41,6 +45,14 @@ export type DuressSessionDetail = {
   startedAt: string;
   endedAt: string | null;
   caseResolvedAt: string | null;
+  alertCount: number;
+  transactionCount: number;
+  locationCount: number;
+  notificationAttemptCount: number;
+  highestSeverity: string;
+  lastLocationAt: string | null;
+  lastAlertAt: string | null;
+  accountsFrozen: boolean;
   alerts: SessionAlertLog[];
   transactions: AlertTransaction[];
   locations: AlertLocation[];

@@ -8,6 +8,8 @@ import {
   getDuressSessionById,
   updateCaseStatus,
   addCaseAction,
+  freezeSessionAccounts,
+  dispatchSessionNotifications,
 } from "../services/sessionService";
 
 const CASE_STATUSES = ["Open", "Investigating", "Resolved", "FalseAlarm"];
@@ -37,6 +39,10 @@ export default function SessionDetail() {
   const [actionNotes, setActionNotes] = useState("");
   const [addingAction, setAddingAction] = useState(false);
 
+  const [freezingAccounts, setFreezingAccounts] = useState(false);
+  const [dispatchingNotifications, setDispatchingNotifications] =
+    useState(false);
+
   useEffect(() => {
     if (!id) return;
 
@@ -60,11 +66,17 @@ export default function SessionDetail() {
 
   const handleStatusUpdate = async () => {
     if (!selectedStatus || !id) return;
+
     try {
       setUpdatingStatus(true);
-      await updateCaseStatus(id, selectedStatus, statusNotes);
-      const data = await getDuressSessionById(id);
-      setSession(data);
+      const updatedSession = await updateCaseStatus(
+        id,
+        selectedStatus,
+        statusNotes,
+      );
+
+      setSession(updatedSession);
+      setSelectedStatus(updatedSession.caseStatus);
       setStatusNotes("");
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to update status.");
@@ -75,17 +87,50 @@ export default function SessionDetail() {
 
   const handleAddAction = async () => {
     if (!actionType || !id) return;
+
     try {
       setAddingAction(true);
-      await addCaseAction(id, actionType, actionNotes);
-      const data = await getDuressSessionById(id);
-      setSession(data);
+      const updatedSession = await addCaseAction(id, actionType, actionNotes);
+
+      setSession(updatedSession);
       setActionType("");
       setActionNotes("");
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to add action.");
     } finally {
       setAddingAction(false);
+    }
+  };
+
+  const handleFreezeAccounts = async () => {
+    if (!id) return;
+
+    try {
+      setFreezingAccounts(true);
+      const updatedSession = await freezeSessionAccounts(id);
+      setSession(updatedSession);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to freeze accounts.");
+    } finally {
+      setFreezingAccounts(false);
+    }
+  };
+
+  const handleDispatchNotifications = async () => {
+    if (!id) return;
+
+    try {
+      setDispatchingNotifications(true);
+      const updatedSession = await dispatchSessionNotifications(id);
+      setSession(updatedSession);
+    } catch (err) {
+      alert(
+        err instanceof Error
+          ? err.message
+          : "Failed to dispatch notifications.",
+      );
+    } finally {
+      setDispatchingNotifications(false);
     }
   };
 
@@ -132,6 +177,78 @@ export default function SessionDetail() {
           <div className="flex gap-3">
             <StatusBadge status={session.status} />
             <SeverityBadge severity={session.caseStatus} />
+          </div>
+        </div>
+        {/* Session Summary */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {[
+            {
+              label: "Alerts",
+              value: session.alertCount,
+              tone: "text-red-400",
+            },
+            {
+              label: "Transactions",
+              value: session.transactionCount,
+              tone: "text-white",
+            },
+            {
+              label: "Locations",
+              value: session.locationCount,
+              tone: "text-indigo-400",
+            },
+            {
+              label: "Notifications",
+              value: session.notificationAttemptCount,
+              tone: "text-yellow-400",
+            },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="bg-gray-900 border border-gray-800 rounded-2xl p-4"
+            >
+              <p className="text-gray-400 text-xs uppercase tracking-wide">
+                {item.label}
+              </p>
+              <p className={`text-2xl font-bold mt-2 ${item.tone}`}>
+                {item.value}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
+            <p className="text-gray-400 text-xs uppercase tracking-wide">
+              Case Status
+            </p>
+            <p className="text-white font-semibold mt-2">
+              {session.caseStatus}
+            </p>
+          </div>
+
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
+            <p className="text-gray-400 text-xs uppercase tracking-wide">
+              Last Location
+            </p>
+            <p className="text-white font-semibold mt-2">
+              {session.lastLocationAt
+                ? new Date(session.lastLocationAt).toLocaleString()
+                : "No location yet"}
+            </p>
+          </div>
+
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
+            <p className="text-gray-400 text-xs uppercase tracking-wide">
+              Account State
+            </p>
+            <p
+              className={`font-semibold mt-2 ${
+                session.accountsFrozen ? "text-red-400" : "text-green-400"
+              }`}
+            >
+              {session.accountsFrozen ? "Frozen" : "Active"}
+            </p>
           </div>
         </div>
 
@@ -330,6 +447,39 @@ export default function SessionDetail() {
 
           {/* RIGHT COLUMN — case management */}
           <div className="space-y-6">
+            {/* Session Actions */}
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+              <h2 className="text-white font-semibold mb-4">Session Actions</h2>
+
+              <div className="space-y-3">
+                <button
+                  onClick={handleDispatchNotifications}
+                  disabled={dispatchingNotifications}
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold rounded-xl py-3 text-sm transition-colors"
+                >
+                  {dispatchingNotifications
+                    ? "Dispatching..."
+                    : "Dispatch Pending Notifications"}
+                </button>
+
+                <button
+                  onClick={handleFreezeAccounts}
+                  disabled={freezingAccounts || session.accountsFrozen}
+                  className="w-full bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white font-semibold rounded-xl py-3 text-sm transition-colors"
+                >
+                  {session.accountsFrozen
+                    ? "Accounts Frozen"
+                    : freezingAccounts
+                      ? "Freezing..."
+                      : "Freeze Customer Accounts"}
+                </button>
+              </div>
+
+              <p className="text-xs text-gray-500 mt-4">
+                Notification dispatch only processes pending notifications for
+                this session.
+              </p>
+            </div>
             {/* Case Status */}
             <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
               <h2 className="text-white font-semibold mb-4">Case Status</h2>

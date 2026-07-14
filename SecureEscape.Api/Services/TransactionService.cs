@@ -203,7 +203,7 @@ public class TransactionService : ITransactionService
     private void ProcessNormalTransaction(BankTransaction transaction, BankAccount account)
     {
         if (account.Status == AccountStatus.Frozen)
-        throw new InvalidOperationException("Transaction could not be processed.");
+            throw new InvalidOperationException("Transaction could not be processed.");
 
         if (account.AvailableBalance < transaction.Amount)
             throw new InvalidOperationException("Insufficient funds.");
@@ -231,7 +231,7 @@ public class TransactionService : ITransactionService
             transaction.StatusReason = "Account unavailable.";
             return;
         }
-        
+
         var decoyProfile = await _decoyProfileRepository.GetActiveByUserIdAsync(userId);
 
         transaction.Flagged = true;
@@ -271,6 +271,7 @@ public class TransactionService : ITransactionService
                 account.AvailableBalance -= transaction.Amount;
                 account.CurrentBalance -= transaction.Amount;
                 decoyProfile.EmergencyBudget -= transaction.Amount;
+                decoyProfile.DisplayBalance -= transaction.Amount;
                 account.UpdatedAt = DateTime.UtcNow;
                 decoyProfile.UpdatedAt = DateTime.UtcNow;
 

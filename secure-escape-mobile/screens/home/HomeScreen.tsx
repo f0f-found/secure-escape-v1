@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { getProfileMe } from "@/services/profileService";
 import { ProfileMeResponse } from "@/types/profile";
 import { useRouter } from "expo-router";
 import { logout } from "@/services/authService";
+import { useFocusEffect } from "@react-navigation/native";
 
 const { width } = Dimensions.get("window");
 
@@ -30,6 +31,12 @@ export default function HomeScreen() {
     loadAccounts();
     loadProfile();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadAccounts();
+    }, []),
+  );
 
   const loadProfile = async () => {
     try {
@@ -47,7 +54,6 @@ export default function HomeScreen() {
       setIsLoading(false);
     }
   };
-  
 
   const loadAccounts = async () => {
     try {
@@ -98,9 +104,14 @@ export default function HomeScreen() {
       label: "Transfer",
       icon: "swap-horizontal",
       bg: "#FFF0F5",
-      link: "/transfers/",
+      link: "/beneficiaries/beneficiary-list",
     },
-    { label: "Send Cash", icon: "cash", bg: "#E6FAF8" },
+    {
+      label: "Send Cash",
+      icon: "cash",
+      bg: "#E6FAF8",
+      link: "/transactions/create-cash-send",
+    },
     { label: "Buy Prepaid", icon: "phone-portrait", bg: "#FFFBEB" },
     { label: "Pay the bill", icon: "document-text", bg: "#F0FDF4" },
     { label: "Credit card", icon: "card", bg: "#FFF5F5" },
@@ -187,7 +198,11 @@ export default function HomeScreen() {
               key={idx}
               style={styles.favTile}
               activeOpacity={0.7}
-              onPress={() => router.push("/beneficiaries/beneficiary-list")}
+              onPress={() => {
+                if (item.link) {
+                  router.push(item.link as never);
+                }
+              }}
             >
               <View style={[styles.favIcon, { backgroundColor: item.bg }]}>
                 <Ionicons
@@ -208,6 +223,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.greyBg },
   scrollContent: {
+    paddingTop: 20,
     paddingBottom: 40, // extra space at bottom
   },
   headerComponent: {

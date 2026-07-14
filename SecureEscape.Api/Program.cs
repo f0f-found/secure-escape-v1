@@ -53,7 +53,14 @@ var connString = builder.Configuration.GetConnectionString("default");
 builder.Services.AddDbContext<AppDbContext>((serviceProvider, options) =>
     options.UseMySql(
         builder.Configuration.GetConnectionString("default"),
-        new MySqlServerVersion(new Version(8, 0, 21))
+        new MySqlServerVersion(new Version(8, 0, 21)),
+        mysqlOptions =>
+        {
+            mysqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(10),
+                errorNumbersToAdd: null);
+        }
     )
     .AddInterceptors(serviceProvider.GetRequiredService<AuditInterceptor>())
 );
