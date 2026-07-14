@@ -1,16 +1,18 @@
-using SecureEscape.Api.DTOs.Request;
 using SecureEscape.Api.DTOs.Response;
+using SecureEscape.Api.DTOs.Request;
 using SecureEscape.Api.Enums;
 
 namespace SecureEscape.Api.Interfaces;
 
 public interface IAdminAlertService
 {
-    Task<List<AlertSummaryResponseDto>> GetAlertsAsync(AlertStatus? status = null);
+    Task<List<AlertSummaryResponseDto>> GetAlertsAsync(AlertStatus? status, Guid? bankIntegrationId);
 
-    Task<AlertDetailResponseDto?> GetAlertByIdAsync(Guid alertId);
+    Task<AlertDetailResponseDto?> GetAlertDetailAsync(Guid alertId, Guid? bankIntegrationId);
 
-    Task<bool> UpdateAlertStatusAsync(Guid alertId, UpdateAlertStatusRequestDto request);
-
-    Task<bool> AddAlertActionAsync(Guid alertId, CreateAlertActionRequestDto request);
+    Task<bool> UpdateAlertStatusAsync(
+        Guid alertId,
+        UpdateAlertStatusRequestDto request,
+        Guid? bankIntegrationId,
+        Guid adminUserId);
 }

@@ -1,5 +1,5 @@
-using SecureEscape.Api.DTOs.Request;
 using SecureEscape.Api.DTOs.Response;
+using SecureEscape.Api.DTOs.Request;
 using SecureEscape.Api.Enums;
 using SecureEscape.Api.Interfaces;
 using SecureEscape.Api.Models;
@@ -10,25 +10,29 @@ public class AdminAlertService : IAdminAlertService
 {
     private readonly IAlertRepository _alertRepository;
     private readonly IAuditService _auditService;
+    private readonly IUnitOfWork _unitOfWork;
 
     public AdminAlertService(
         IAlertRepository alertRepository,
-        IAuditService auditService)
+        IAuditService auditService,
+        IUnitOfWork unitOfWork)
     {
         _alertRepository = alertRepository;
         _auditService = auditService;
+        _unitOfWork = unitOfWork;
     }
 
-    public async Task<List<AlertSummaryResponseDto>> GetAlertsAsync(AlertStatus? status = null)
+    public async Task<List<AlertSummaryResponseDto>> GetAlertsAsync(AlertStatus? status, Guid? bankIntegrationId)
     {
-        var alerts = await _alertRepository.GetAllAsync(status);
-
+        var alerts = await _alertRepository.GetAllAsync(status, bankIntegrationId);
         return alerts.Select(MapToSummary).ToList();
     }
 
-    public async Task<AlertDetailResponseDto?> GetAlertByIdAsync(Guid alertId)
+    public async Task<AlertDetailResponseDto?> GetAlertDetailAsync(
+        Guid alertId,
+        Guid? bankIntegrationId)
     {
-        var alert = await _alertRepository.GetDetailByIdAsync(alertId);
+        var alert = await _alertRepository.GetDetailByIdAsync(alertId, bankIntegrationId);
 
         if (alert == null)
         {
@@ -38,7 +42,11 @@ public class AdminAlertService : IAdminAlertService
         return MapToDetail(alert);
     }
 
-    public async Task<bool> UpdateAlertStatusAsync(Guid alertId, UpdateAlertStatusRequestDto request)
+    public async Task<bool> UpdateAlertStatusAsync(
+        Guid alertId,
+        UpdateAlertStatusRequestDto request,
+        Guid? bankIntegrationId,
+        Guid adminUserId)
     {
         var alert = await _alertRepository.GetByIdAsync(alertId);
 
@@ -47,29 +55,23 @@ public class AdminAlertService : IAdminAlertService
             return false;
         }
 
+        var detail = await _alertRepository.GetDetailByIdAsync(alertId, bankIntegrationId);
+
+        if (detail == null)
+        {
+            return false;
+        }
+
         alert.Status = request.Status;
 
-        if (request.Status == AlertStatus.Resolved || request.Status == AlertStatus.FalseAlarm)
+        if (request.Status == AlertStatus.Resolved ||
+            request.Status == AlertStatus.FalseAlarm)
         {
             alert.ResolvedAt = DateTime.UtcNow;
         }
 
         await _alertRepository.UpdateAsync(alert);
-
-        var action = new AlertAction
-        {
-            Id = Guid.NewGuid(),
-            AlertId = alert.Id,
-            ActionType = request.Status == AlertStatus.Resolved
-                ? AlertActionType.Resolved
-                : AlertActionType.Assigned,
-            Notes = string.IsNullOrWhiteSpace(request.Notes)
-                ? $"Alert status updated to {request.Status}."
-                : request.Notes,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        await _alertRepository.AddActionAsync(action);
+        await _unitOfWork.SaveChangesAsync();
 
         await _auditService.LogAsync(
             AuditEventType.AlertStatusUpdated,
@@ -77,38 +79,9 @@ public class AdminAlertService : IAdminAlertService
             entityId: alert.Id,
             userId: alert.UserId,
             userSessionId: alert.UserSessionId,
-            metadataJson: $"{{\"status\":\"{request.Status}\"}}");
-
-        return true;
-    }
-
-    public async Task<bool> AddAlertActionAsync(Guid alertId, CreateAlertActionRequestDto request)
-    {
-        var alert = await _alertRepository.GetByIdAsync(alertId);
-
-        if (alert == null)
-        {
-            return false;
-        }
-
-        var action = new AlertAction
-        {
-            Id = Guid.NewGuid(),
-            AlertId = alert.Id,
-            ActionType = request.ActionType,
-            Notes = request.Notes,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        await _alertRepository.AddActionAsync(action);
-
-        await _auditService.LogAsync(
-            AuditEventType.AlertStatusUpdated,
-            entityType: "AlertAction",
-            entityId: action.Id,
-            userId: alert.UserId,
-            userSessionId: alert.UserSessionId,
-            metadataJson: $"{{\"actionType\":\"{request.ActionType}\"}}");
+            adminUserId: adminUserId,
+            metadataJson:
+                $"{{\"status\":\"{request.Status}\",\"notes\":\"{request.Notes}\"}}");
 
         return true;
     }
@@ -133,6 +106,8 @@ public class AdminAlertService : IAdminAlertService
 
     private static AlertDetailResponseDto MapToDetail(Alert alert)
     {
+        var session = alert.UserSession;
+
         return new AlertDetailResponseDto
         {
             Id = alert.Id,
@@ -147,88 +122,73 @@ public class AdminAlertService : IAdminAlertService
             Description = alert.Description,
             CreatedAt = alert.CreatedAt,
             ResolvedAt = alert.ResolvedAt,
-            SessionMode = alert.UserSession?.Mode.ToString() ?? string.Empty,
-            SessionStatus = alert.UserSession?.Status.ToString() ?? string.Empty,
-            IpAddress = alert.UserSession?.IpAddress ?? string.Empty,
-            DeviceInfo = alert.UserSession?.DeviceInfo ?? string.Empty,
-            SessionStartedAt = alert.UserSession?.StartedAt ?? DateTime.MinValue,
-            Locations = alert.LocationEvents
-                .OrderByDescending(x => x.CapturedAt)
-                .Select(MapToLocation)
-                .ToList(),
-            Transactions = alert.UserSession?.Transactions
+            SessionMode = session?.Mode.ToString() ?? string.Empty,
+            SessionStatus = session?.Status.ToString() ?? string.Empty,
+            IpAddress = session?.IpAddress ?? string.Empty,
+            DeviceInfo = session?.DeviceInfo ?? string.Empty,
+            SessionStartedAt = session?.StartedAt ?? DateTime.MinValue,
+            Locations = session?.LocationEvents
+                .OrderBy(x => x.CapturedAt)
+                .Select(x => new AlertLocationResponseDto
+                {
+                    Id = x.Id,
+                    Latitude = x.Latitude,
+                    Longitude = x.Longitude,
+                    AccuracyMeters = x.AccuracyMeters,
+                    LocationSource = x.LocationSource,
+                    CapturedAt = x.CapturedAt,
+                    CreatedAt = x.CreatedAt
+                })
+                .ToList() ?? new List<AlertLocationResponseDto>(),
+            Transactions = session?.Transactions
                 .OrderByDescending(x => x.CreatedAt)
-                .Select(MapToTransaction)
+                .Select(x => new AlertTransactionResponseDto
+                {
+                    Id = x.Id,
+                    BankAccountId = x.BankAccountId,
+                    BeneficiaryId = x.BeneficiaryId,
+                    BankReference = x.BankReference,
+                    TransactionType = x.TransactionType,
+                    Amount = x.Amount,
+                    Currency = x.Currency,
+                    Status = x.Status,
+                    StatusReason = x.StatusReason,
+                    Flagged = x.Flagged,
+                    RiskLevel = x.RiskLevel,
+                    RiskScore = x.RiskScore,
+                    Description = x.Description,
+                    SecureEscapeCode = x.SecureEscapeCode,
+                    CreatedAt = x.CreatedAt
+                })
                 .ToList() ?? new List<AlertTransactionResponseDto>(),
-            Actions = alert.AlertActions
+            Actions = session?.AlertActions
                 .OrderByDescending(x => x.CreatedAt)
-                .Select(MapToAction)
-                .ToList(),
+                .Select(x => new AlertActionResponseDto
+                {
+                    Id = x.Id,
+                    AdminUserId = x.AdminUserId,
+                    AdminName = x.AdminUser?.FullName ?? string.Empty,
+                    ActionType = x.ActionType,
+                    Notes = x.Notes,
+                    CreatedAt = x.CreatedAt
+                })
+                .ToList() ?? new List<AlertActionResponseDto>(),
             NotificationAttempts = alert.NotificationAttempts
                 .OrderByDescending(x => x.CreatedAt)
-                .Select(MapToNotificationAttempt)
+                .Select(x => new NotificationAttemptResponseDto
+                {
+                    Id = x.Id,
+                    Channel = x.Channel,
+                    Destination = x.Destination,
+                    MessageBody = x.MessageBody,
+                    Status = x.Status,
+                    ErrorMessage = x.ErrorMessage,
+                    AttemptedAt = x.AttemptedAt,
+                    SentAt = x.SentAt,
+                    ResponseMessage = x.ResponseMessage,
+                    CreatedAt = x.CreatedAt
+                })
                 .ToList()
-        };
-    }
-
-    private static AlertLocationResponseDto MapToLocation(LocationEvent location)
-    {
-        return new AlertLocationResponseDto
-        {
-            Id = location.Id,
-            Latitude = location.Latitude,
-            Longitude = location.Longitude,
-            AccuracyMeters = location.AccuracyMeters,
-            LocationSource = location.LocationSource,
-            CapturedAt = location.CapturedAt,
-            CreatedAt = location.CreatedAt
-        };
-    }
-
-    private static AlertTransactionResponseDto MapToTransaction(BankTransaction transaction)
-    {
-        return new AlertTransactionResponseDto
-        {
-            Id = transaction.Id,
-            BankAccountId = transaction.BankAccountId,
-            BeneficiaryId = transaction.BeneficiaryId,
-            BankReference = transaction.BankReference,
-            TransactionType = transaction.TransactionType,
-            Amount = transaction.Amount,
-            Currency = transaction.Currency,
-            Status = transaction.Status,
-            Flagged = transaction.Flagged,
-            RiskLevel = transaction.RiskLevel,
-            RiskScore = transaction.RiskScore,
-            Description = transaction.Description,
-            CreatedAt = transaction.CreatedAt
-        };
-    }
-
-    private static AlertActionResponseDto MapToAction(AlertAction action)
-    {
-        return new AlertActionResponseDto
-        {
-            Id = action.Id,
-            AdminUserId = action.AdminUserId,
-            AdminName = action.AdminUser?.FullName ?? string.Empty,
-            ActionType = action.ActionType,
-            Notes = action.Notes,
-            CreatedAt = action.CreatedAt
-        };
-    }
-
-    private static NotificationAttemptResponseDto MapToNotificationAttempt(NotificationAttempt attempt)
-    {
-        return new NotificationAttemptResponseDto
-        {
-            Id = attempt.Id,
-            Channel = attempt.Channel,
-            Destination = attempt.Destination,
-            Status = attempt.Status,
-            ErrorMessage = attempt.ErrorMessage,
-            AttemptedAt = attempt.AttemptedAt,
-            CreatedAt = attempt.CreatedAt
         };
     }
 }

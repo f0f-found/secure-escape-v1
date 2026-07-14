@@ -34,8 +34,6 @@ namespace SecureEscape.Api.Models
 
         public UserSession? UserSession { get; set; }
 
-        public ICollection<AlertAction> AlertActions { get; set; } = new List<AlertAction>();
-
         public ICollection<LocationEvent> LocationEvents { get; set; } = new List<LocationEvent>();
 
         public ICollection<NotificationAttempt> NotificationAttempts { get; set; } = new List<NotificationAttempt>();

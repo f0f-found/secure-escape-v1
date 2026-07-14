@@ -1,5 +1,5 @@
 // screens/Screen11_BeneficiaryList.js – with BottomNav, no SafeAreaView
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -7,71 +7,15 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/utils/theme";
 import { useRouter } from "expo-router";
-
-type Beneficiary = {
-  id: string;
-  initials: string;
-  name: string;
-  lastPaid: string;
-};
-
-// Mock data (unchanged)
-const frequentBeneficiariesAll = [
-  { id: "1", initials: "O", name: "O", lastPaid: "15 May 2026 14:19" },
-  { id: "2", initials: "R", name: "Rend", lastPaid: "11 May 2026 19:48" },
-  {
-    id: "3",
-    initials: "CS",
-    name: "CORNERSTONE SPACES PTY LTD",
-    lastPaid: "02 May 2026 13:26",
-  },
-  { id: "4", initials: "N", name: "Ns", lastPaid: "16 Apr 2026 18:24" },
-  { id: "5", initials: "M", name: "Munetsi", lastPaid: "09 Apr 2026 17:26" },
-  { id: "6", initials: "R", name: "Remmie", lastPaid: "25 Mar 2026 17:50" },
-  {
-    id: "7",
-    initials: "JP",
-    name: "Jabu Pienaar",
-    lastPaid: "20 Mar 2026 11:02",
-  },
-  { id: "8", initials: "LM", name: "Lebo M", lastPaid: "18 Mar 2026 09:33" },
-  { id: "9", initials: "TK", name: "Thabo K", lastPaid: "10 Mar 2026 15:44" },
-  { id: "10", initials: "NS", name: "Nomsa S", lastPaid: "05 Mar 2026 08:20" },
-];
-
-const oneTimeBeneficiariesAll = [
-  { id: "11", initials: "JD", name: "John Doe", lastPaid: "10 May 2026 09:15" },
-  {
-    id: "12",
-    initials: "AB",
-    name: "Alice Brown",
-    lastPaid: "05 May 2026 12:30",
-  },
-  {
-    id: "13",
-    initials: "MC",
-    name: "Mike Chen",
-    lastPaid: "28 Apr 2026 10:00",
-  },
-  {
-    id: "14",
-    initials: "SG",
-    name: "Sarah Green",
-    lastPaid: "22 Apr 2026 16:45",
-  },
-  {
-    id: "15",
-    initials: "PW",
-    name: "Peter White",
-    lastPaid: "15 Apr 2026 08:12",
-  },
-  { id: "16", initials: "LJ", name: "Linda J", lastPaid: "12 Apr 2026 13:30" },
-];
+import { useFocusEffect } from "@react-navigation/native";
+import { getBeneficiaries } from "@/services/beneficiaryService";
+import { BeneficiaryResponse } from "@/types/beneficiary";
 
 export default function BeneficiaryList() {
   const router = useRouter();
@@ -79,27 +23,67 @@ export default function BeneficiaryList() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("Recently paid");
   const [showAll, setShowAll] = useState(true);
+  const [beneficiaries, setBeneficiaries] = useState<BeneficiaryResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const fullList =
-    activeTab === "Frequent"
-      ? frequentBeneficiariesAll
-      : oneTimeBeneficiariesAll;
-  const visibleList = showAll ? fullList : fullList.slice(0, 5);
+  const loadBeneficiaries = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const data = await getBeneficiaries();
+      setBeneficiaries(data);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load beneficiaries.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadBeneficiaries();
+    }, []),
+  );
+
+  const visibleList = showAll ? beneficiaries : beneficiaries.slice(0, 5);
+
   const filteredData = visibleList.filter((item) =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  const renderItem = ({ item }: { item: Beneficiary }) => (
+  const renderItem = ({ item }: { item: BeneficiaryResponse }) => (
     <TouchableOpacity
       style={styles.beneficiaryRow}
-      onPress={() => router.push("/")}
+      onPress={() =>
+        router.push({
+          pathname: "/transactions/create-transaction",
+          params: {
+            beneficiaryId: item.id,
+            beneficiaryName: item.name,
+            reference: item.reference,
+          },
+        })
+      }
     >
       <View style={styles.initialsCircle}>
-        <Text style={styles.initialsText}>{item.initials || "?"}</Text>
+        <Text style={styles.initialsText}>
+          {item.name
+            .split(" ")
+            .map((part) => part[0])
+            .join("")
+            .slice(0, 2)
+            .toUpperCase() || "?"}
+        </Text>
       </View>
       <View style={styles.beneficiaryInfo}>
         <Text style={styles.beneficiaryName}>{item.name || "Unknown"}</Text>
-        <Text style={styles.lastPaid}>Last paid: {item.lastPaid || "N/A"}</Text>
+        <Text style={styles.lastPaid}>
+          {item.bankName} • {item.accountNumber}
+        </Text>
       </View>
       <Ionicons name="chevron-forward" size={20} color="#ccc" />
     </TouchableOpacity>
@@ -193,9 +177,11 @@ export default function BeneficiaryList() {
             </Text>
           </TouchableOpacity>
         </View>
+        {loading && <ActivityIndicator color={colors.primary} />}
 
+        {!!error && !loading && <Text style={styles.emptyText}>{error}</Text>}
         <FlatList
-          data={filteredData}
+          data={loading || error ? [] : filteredData}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}

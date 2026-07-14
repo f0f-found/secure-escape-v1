@@ -40,7 +40,7 @@ export default function AddBeneficiaryOptions() {
       desc: "Enter beneficiary’s details",
       icon: "business-outline",
       action: "navigate",
-      route: "/beneficiaries/beneficiary-list",
+      route: "/beneficiaries/create-beneficiary",
     },
   ];
 

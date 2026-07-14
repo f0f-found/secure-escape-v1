@@ -4,8 +4,9 @@ namespace SecureEscape.Api.Enums
     {
         Transfer = 1,
         Payment = 2,
-        Withdrawal = 3,
-        CardPayment = 4,
-        Prepaid = 5
+        CashVoucher = 3,
+        Withdrawal = 4,
+        CardPayment = 5,
+        Prepaid = 6
     }
 }

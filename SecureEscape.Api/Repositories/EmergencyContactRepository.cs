@@ -33,18 +33,18 @@ public class EmergencyContactRepository : IEmergencyContactRepository
     public async Task AddAsync(EmergencyContact contact)
     {
         await _context.EmergencyContacts.AddAsync(contact);
-        await _context.SaveChangesAsync();
+        
     }
 
-    public async Task UpdateAsync(EmergencyContact contact)
+    public Task UpdateAsync(EmergencyContact contact)
     {
         _context.EmergencyContacts.Update(contact);
-        await _context.SaveChangesAsync();
+        return Task.CompletedTask;
     }
 
-    public async Task DeleteAsync(EmergencyContact contact)
+    public Task DeleteAsync(EmergencyContact contact)
     {
         _context.EmergencyContacts.Remove(contact);
-        await _context.SaveChangesAsync();
+        return Task.CompletedTask;
     }
 }

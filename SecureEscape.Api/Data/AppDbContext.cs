@@ -310,10 +310,10 @@ namespace SecureEscape.Api.Data
                 .HasForeignKey(x => x.BankTransactionId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            modelBuilder.Entity<Alert>()
+            modelBuilder.Entity<UserSession>()
                 .HasMany(x => x.AlertActions)
-                .WithOne(x => x.Alert)
-                .HasForeignKey(x => x.AlertId)
+                .WithOne(x => x.UserSession)
+                .HasForeignKey(x => x.UserSessionId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<Alert>()

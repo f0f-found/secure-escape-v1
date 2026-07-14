@@ -106,7 +106,7 @@ export async function isSessionExpired() {
     return true;
   }
 
-  const oneMinute = 60 * 1000;
+  const inActivityBoundary = 60 * 3000;
 
-  return Date.now() - lastActivity > oneMinute;
+  return Date.now() - lastActivity > inActivityBoundary;
 }

@@ -11,8 +11,7 @@ namespace SecureEscape.Api.Models
     {
         public Guid Id { get; set; }
 
-        [Required]
-        public Guid BankIntegrationId { get; set; }
+        public Guid? BankIntegrationId { get; set; }
 
         [Required]
         [MaxLength(100)]
@@ -27,7 +26,7 @@ namespace SecureEscape.Api.Models
         [MaxLength(255)]
         public string PasswordHash { get; set; } = string.Empty;
 
-        public AdminRole AdminRole { get; set; } = AdminRole.FraudAnalyst;
+        public AdminRole AdminRole { get; set; } = AdminRole.SecureEscapeAdmin;
 
         public AdminUserStatus ActivityStatus { get; set; } = AdminUserStatus.Active;
 

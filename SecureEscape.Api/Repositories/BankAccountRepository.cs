@@ -26,7 +26,21 @@ public class BankAccountRepository : IBankAccountRepository
     public async Task<BankAccount?> GetByIdForUserAsync(Guid accountId, Guid userId)
     {
         return await _context.BankAccounts
-            .AsNoTracking()
+            //.AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == accountId && x.UserId == userId);
+    }
+
+    public async Task<List<BankAccount>> GetByUserIdForAdminAsync(Guid userId)
+    {
+        return await _context.BankAccounts
+            .Where(x => x.UserId == userId)
+            .ToListAsync();
+    }
+
+    public Task UpdateAsync(BankAccount account)
+    {
+        _context.BankAccounts.Update(account);
+        return Task.CompletedTask;
+
     }
 }

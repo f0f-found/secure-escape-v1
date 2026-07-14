@@ -33,6 +33,7 @@ namespace SecureEscape.Api.Models
         public string Currency { get; set; } = "ZAR";
 
         public TransactionStatus Status { get; set; } = TransactionStatus.Pending;
+        public string? StatusReason { get; set; }
 
         public bool Flagged { get; set; } = false;
 
@@ -43,6 +44,24 @@ namespace SecureEscape.Api.Models
 
         [MaxLength(500)]
         public string Description { get; set; } = string.Empty;
+
+        public string? SecureEscapeCode { get; set; }
+
+        [MaxLength(50)]
+        public string? VoucherNumber { get; set; }
+
+        [MaxLength(20)]
+        public string? VoucherPin { get; set; }
+
+        public DateTime? VoucherExpiresAt { get; set; }
+
+        public bool VoucherRedeemed { get; set; } = false;
+       
+        public bool FraudReported { get; set; } = false;
+
+        public DateTime? FraudReportedAt { get; set; }
+
+        public string? FraudReportReference { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

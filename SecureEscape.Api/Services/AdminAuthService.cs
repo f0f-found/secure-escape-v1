@@ -3,6 +3,7 @@ using SecureEscape.Api.Data;
 using SecureEscape.Api.DTOs.Request;
 using SecureEscape.Api.DTOs.Response;
 using SecureEscape.Api.Interfaces;
+using SecureEscape.Api.Enums;
 
 namespace SecureEscape.Api.Services;
 
@@ -28,7 +29,17 @@ public class AdminAuthService : IAdminAuthService
             .Include(x => x.BankIntegration)
             .FirstOrDefaultAsync(x => x.Email == request.Email);
 
-        if (adminUser == null) return null;
+        if (adminUser == null ||
+        adminUser.ActivityStatus != AdminUserStatus.Active)
+        {
+            return null;
+        }
+
+        if (adminUser.BankIntegration != null &&
+            adminUser.BankIntegration.Status != BankIntegrationStatus.Active)
+        {
+            return null;
+        }
 
         var passwordValid = _hashingService.Verify(request.Password, adminUser.PasswordHash);
 
@@ -46,4 +57,6 @@ public class AdminAuthService : IAdminAuthService
             Token = token
         };
     }
+
+
 }
