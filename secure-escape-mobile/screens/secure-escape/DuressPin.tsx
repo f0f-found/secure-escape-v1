@@ -14,6 +14,7 @@ import * as Haptics from "expo-haptics";
 import { colors } from "@/utils/theme";
 import { useRouter } from "expo-router";
 import { setDuressPin } from "@/services/secureEscapeService";
+import { ErrorBanner, ErrorModal } from "@/components/FormErrorMessage";
 
 export default function DuressPin() {
   const router = useRouter();
@@ -22,7 +23,55 @@ export default function DuressPin() {
   const [agreed, setAgreed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
   const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const showError = (message: string) => {
+    setError(message);
+    setShowErrorModal(true);
+  };
+
+  const clearError = () => {
+    setError(null);
+    setShowErrorModal(false);
+  };
+
+  const getValidationMessage = () => {
+    if (!currentPassword.trim()) {
+      return "Please enter your current password.";
+    }
+
+    if (!pin1.trim()) {
+      return "Please enter your duress PIN.";
+    }
+
+    if (pin1.length < 4) {
+      return "Duress PIN must be at least 4 digits.";
+    }
+
+    if (pin1.length > 6) {
+      return "Duress PIN cannot be more than 6 digits.";
+    }
+
+    if (!pin2.trim()) {
+      return "Please re-enter your duress PIN.";
+    }
+
+    if (pin2.length < 4) {
+      return "Confirmation PIN must be at least 4 digits.";
+    }
+
+    if (pin1 !== pin2) {
+      return "Duress PINs do not match.";
+    }
+
+    if (!agreed) {
+      return "Please agree to the Terms and Conditions before continuing.";
+    }
+
+    return null;
+  };
 
   const animateCheck = () => {
     Animated.sequence([
@@ -39,23 +88,22 @@ export default function DuressPin() {
       }),
     ]).start();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    clearError();
     setAgreed(!agreed);
   };
 
   const handleEnable = async () => {
-    if (!agreed) {
-      alert("You must agree to the Terms");
-      return;
-    }
+    const validationMessage = getValidationMessage();
 
-    if (pin1 !== pin2) {
+    if (validationMessage) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      alert("PINs do not match");
+      showError(validationMessage);
       return;
     }
 
     try {
       setIsSaving(true);
+      clearError();
       await setDuressPin({
         currentPassword,
         duressPin: pin1,
@@ -64,7 +112,7 @@ export default function DuressPin() {
       router.push("/secure-escape/emergency-contact?from=onboarding");
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      alert(
+      showError(
         error instanceof Error ? error.message : "Failed to set duress PIN.",
       );
     } finally {
@@ -108,7 +156,10 @@ export default function DuressPin() {
           style={styles.input}
           secureTextEntry
           value={currentPassword}
-          onChangeText={setCurrentPassword}
+          onChangeText={(value) => {
+            setCurrentPassword(value);
+            clearError();
+          }}
           placeholder="Enter your password"
           placeholderTextColor="#ccc"
         />
@@ -120,7 +171,10 @@ export default function DuressPin() {
           maxLength={6}
           keyboardType="numeric"
           value={pin1}
-          onChangeText={setPin1}
+          onChangeText={(value) => {
+            setPin1(value);
+            clearError();
+          }}
           placeholder="••••••"
           placeholderTextColor="#ccc"
         />
@@ -132,7 +186,10 @@ export default function DuressPin() {
           maxLength={6}
           keyboardType="numeric"
           value={pin2}
-          onChangeText={setPin2}
+          onChangeText={(value) => {
+            setPin2(value);
+            clearError();
+          }}
           placeholder="••••••"
           placeholderTextColor="#ccc"
         />
@@ -155,10 +212,15 @@ export default function DuressPin() {
           </Text>
         </TouchableOpacity>
 
+        <ErrorBanner
+          message={error}
+          onPress={() => setShowErrorModal(true)}
+        />
+
         <TouchableOpacity
           style={[styles.enableButton, !isEnabled && styles.disabledButton]}
           onPress={handleEnable}
-          disabled={!isEnabled || isSaving}
+          disabled={isSaving}
         >
           <LinearGradient
             colors={isEnabled ? ["#7C6EF7", "#4A6CF7"] : ["#ccc", "#ccc"]}
@@ -170,6 +232,12 @@ export default function DuressPin() {
           </LinearGradient>
         </TouchableOpacity>
       </View>
+      <ErrorModal
+        title="Duress PIN"
+        message={error}
+        visible={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+      />
     </ScrollView>
   );
 }

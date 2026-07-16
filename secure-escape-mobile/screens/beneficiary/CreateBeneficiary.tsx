@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -26,17 +27,58 @@ export default function CreateBeneficiary() {
   const [accountNumber, setAccountNumber] = useState("");
   const [reference, setReference] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
   const [createdBeneficiary, setCreatedBeneficiary] =
     useState<BeneficiaryResponse | null>(null);
 
+  const showError = (message: string) => {
+    setError(message);
+    setShowErrorModal(true);
+  };
+
+  const getValidationMessage = () => {
+    const missingFields = [];
+
+    if (!name.trim()) {
+      missingFields.push("beneficiary name");
+    }
+
+    if (!bankName.trim()) {
+      missingFields.push("bank name");
+    }
+
+    if (!accountNumber.trim()) {
+      missingFields.push("account number");
+    }
+
+    if (missingFields.length === 1) {
+      return `Please enter the ${missingFields[0]}.`;
+    }
+
+    if (missingFields.length > 1) {
+      const lastField = missingFields.pop();
+      return `Please enter the ${missingFields.join(", ")} and ${lastField}.`;
+    }
+
+    if (accountNumber.trim().length > 30) {
+      return "Account number cannot be more than 30 characters.";
+    }
+
+    return null;
+  };
+
   const handleSubmit = async () => {
-    if (!name.trim() || !bankName.trim() || !accountNumber.trim()) {
-      Alert.alert("Missing details", "Please complete the required fields.");
+    const validationMessage = getValidationMessage();
+
+    if (validationMessage) {
+      showError(validationMessage);
       return;
     }
 
     try {
       setSaving(true);
+      setError(null);
 
       const created = await addBeneficiary({
         name: name.trim(),
@@ -47,10 +89,10 @@ export default function CreateBeneficiary() {
 
       setCreatedBeneficiary(created);
     } catch (err) {
-      Alert.alert(
-        "Could not add beneficiary",
-        err instanceof Error ? err.message : "Please try again.",
-      );
+      const message =
+        err instanceof Error ? err.message : "Please try again.";
+
+      showError(message);
     } finally {
       setSaving(false);
     }
@@ -75,7 +117,11 @@ export default function CreateBeneficiary() {
           <TextInput
             style={styles.input}
             value={name}
-            onChangeText={setName}
+            onChangeText={(value) => {
+              setName(value);
+              setError(null);
+              setShowErrorModal(false);
+            }}
             placeholder="e.g. Thabo Nkosi"
             placeholderTextColor="#A0A4B8"
           />
@@ -84,7 +130,11 @@ export default function CreateBeneficiary() {
           <TextInput
             style={styles.input}
             value={bankName}
-            onChangeText={setBankName}
+            onChangeText={(value) => {
+              setBankName(value);
+              setError(null);
+              setShowErrorModal(false);
+            }}
             placeholder="e.g. Capitec"
             placeholderTextColor="#A0A4B8"
           />
@@ -93,10 +143,15 @@ export default function CreateBeneficiary() {
           <TextInput
             style={styles.input}
             value={accountNumber}
-            onChangeText={setAccountNumber}
+            onChangeText={(value) => {
+              setAccountNumber(value);
+              setError(null);
+              setShowErrorModal(false);
+            }}
             placeholder="Enter account number"
             placeholderTextColor="#A0A4B8"
             keyboardType="number-pad"
+            maxLength={30}
           />
 
           <Text style={styles.label}>Reference</Text>
@@ -107,6 +162,17 @@ export default function CreateBeneficiary() {
             placeholder="Optional payment reference"
             placeholderTextColor="#A0A4B8"
           />
+
+          {error && (
+            <TouchableOpacity
+              style={styles.errorBanner}
+              activeOpacity={0.8}
+              onPress={() => setShowErrorModal(true)}
+            >
+              <Ionicons name="alert-circle" size={18} color="#B91C1C" />
+              <Text style={styles.errorBannerText}>{error}</Text>
+            </TouchableOpacity>
+          )}
 
           {createdBeneficiary && (
             <View style={styles.successBox}>
@@ -159,6 +225,32 @@ export default function CreateBeneficiary() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal
+        transparent
+        visible={showErrorModal && !!error}
+        animationType="fade"
+        onRequestClose={() => setShowErrorModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.errorModal}>
+            <View style={styles.modalIconCircle}>
+              <Ionicons name="alert-circle" size={30} color="#DC2626" />
+            </View>
+
+            <Text style={styles.modalTitle}>Could not continue</Text>
+            <Text style={styles.modalMessage}>{error}</Text>
+
+            <TouchableOpacity
+              style={styles.modalButton}
+              activeOpacity={0.85}
+              onPress={() => setShowErrorModal(false)}
+            >
+              <Text style={styles.modalButtonText}>Got it</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -209,6 +301,73 @@ const styles = StyleSheet.create({
   },
   disabledButton: { opacity: 0.6 },
   submitText: { color: "#fff", fontWeight: "800", fontSize: 15 },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 16,
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    borderRadius: 14,
+    padding: 12,
+  },
+  errorBannerText: {
+    flex: 1,
+    color: "#991B1B",
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  errorModal: {
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 22,
+    alignItems: "center",
+  },
+  modalIconCircle: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "#FEF2F2",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: colors.navy,
+    textAlign: "center",
+  },
+  modalMessage: {
+    marginTop: 8,
+    color: colors.textSub,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+  },
+  modalButton: {
+    marginTop: 20,
+    width: "100%",
+    backgroundColor: colors.primary,
+    borderRadius: 50,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  modalButtonText: {
+    color: "#fff",
+    fontWeight: "800",
+    fontSize: 15,
+  },
 
   successBox: {
     marginTop: 22,

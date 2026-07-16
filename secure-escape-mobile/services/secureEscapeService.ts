@@ -20,6 +20,34 @@ async function getAuthorizedHeaders() {
   };
 }
 
+async function getErrorMessage(response: Response, fallback: string) {
+  const text = await response.text();
+
+  if (!text) {
+    return fallback;
+  }
+
+  try {
+    const errorBody = JSON.parse(text);
+
+    if (typeof errorBody.message === "string") {
+      return errorBody.message;
+    }
+
+    if (errorBody.errors) {
+      return Object.values(errorBody.errors).flat().join("\n");
+    }
+
+    if (typeof errorBody.title === "string") {
+      return errorBody.title;
+    }
+  } catch {
+    return text;
+  }
+
+  return fallback;
+}
+
 export async function getActiveDecoyProfile(): Promise<DecoyProfileResponse | null> {
   const response = await fetch(
     `${API_BASE_URL}/api/v1/secure-escape/decoy-profile`,
@@ -34,8 +62,9 @@ export async function getActiveDecoyProfile(): Promise<DecoyProfileResponse | nu
   }
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Failed to load Secure Escape setup.");
+    throw new Error(
+      await getErrorMessage(response, "Failed to load Secure Escape setup."),
+    );
   }
 
   return response.json();
@@ -54,8 +83,9 @@ export async function upsertDecoyProfile(
   );
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Failed to save Secure Escape setup.");
+    throw new Error(
+      await getErrorMessage(response, "Failed to save Secure Escape setup."),
+    );
   }
 
   return response.json();
@@ -74,8 +104,9 @@ export async function setDuressPin(
   );
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Failed to update duress PIN.");
+    throw new Error(
+      await getErrorMessage(response, "Failed to update duress PIN."),
+    );
   }
 
   return response.json();
