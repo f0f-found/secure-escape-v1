@@ -11,17 +11,14 @@ import {
   freezeSessionAccounts,
   dispatchSessionNotifications,
 } from "../services/sessionService";
-
-const CASE_STATUSES = ["Open", "Investigating", "Resolved", "FalseAlarm"];
-const ACTION_TYPES = [
-  "Viewed",
-  "Assigned",
-  "CalledUser",
-  "FrozeAccount",
-  "ContactedAuthorities",
-  "MarkedFalseAlarm",
-  "Resolved",
-];
+import {
+  ACTION_TYPES,
+  CASE_STATUSES,
+  cleanText,
+  validateActionType,
+  validateCaseStatus,
+  validateOptionalNotes,
+} from "../utils/validation";
 
 export default function SessionDetail() {
   const { id } = useParams<{ id: string }>();
@@ -34,10 +31,12 @@ export default function SessionDetail() {
   const [statusNotes, setStatusNotes] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [statusFormError, setStatusFormError] = useState("");
 
   const [actionType, setActionType] = useState("");
   const [actionNotes, setActionNotes] = useState("");
   const [addingAction, setAddingAction] = useState(false);
+  const [actionFormError, setActionFormError] = useState("");
 
   const [freezingAccounts, setFreezingAccounts] = useState(false);
   const [dispatchingNotifications, setDispatchingNotifications] =
@@ -67,12 +66,20 @@ export default function SessionDetail() {
   const handleStatusUpdate = async () => {
     if (!selectedStatus || !id) return;
 
+    const cleanedNotes = cleanText(statusNotes);
+    const validationError =
+      validateCaseStatus(selectedStatus) || validateOptionalNotes(cleanedNotes);
+
+    setStatusFormError(validationError);
+
+    if (validationError) return;
+
     try {
       setUpdatingStatus(true);
       const updatedSession = await updateCaseStatus(
         id,
         selectedStatus,
-        statusNotes,
+        cleanedNotes,
       );
 
       setSession(updatedSession);
@@ -88,9 +95,17 @@ export default function SessionDetail() {
   const handleAddAction = async () => {
     if (!actionType || !id) return;
 
+    const cleanedNotes = cleanText(actionNotes);
+    const validationError =
+      validateActionType(actionType) || validateOptionalNotes(cleanedNotes);
+
+    setActionFormError(validationError);
+
+    if (validationError) return;
+
     try {
       setAddingAction(true);
-      const updatedSession = await addCaseAction(id, actionType, actionNotes);
+      const updatedSession = await addCaseAction(id, actionType, cleanedNotes);
 
       setSession(updatedSession);
       setActionType("");
@@ -485,7 +500,10 @@ export default function SessionDetail() {
               <h2 className="text-white font-semibold mb-4">Case Status</h2>
               <select
                 value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
+                onChange={(e) => {
+                  setSelectedStatus(e.target.value);
+                  setStatusFormError("");
+                }}
                 className="w-full bg-gray-800 text-white border border-gray-700 rounded-xl px-4 py-3 text-sm mb-3 focus:outline-none focus:border-indigo-500"
               >
                 {CASE_STATUSES.map((s) => (
@@ -496,14 +514,28 @@ export default function SessionDetail() {
               </select>
               <textarea
                 value={statusNotes}
-                onChange={(e) => setStatusNotes(e.target.value)}
+                onChange={(e) => {
+                  setStatusNotes(e.target.value);
+                  setStatusFormError("");
+                }}
                 placeholder="Notes (optional)"
                 rows={3}
+                maxLength={500}
                 className="w-full bg-gray-800 text-white border border-gray-700 rounded-xl px-4 py-3 text-sm mb-3 resize-none focus:outline-none focus:border-indigo-500 placeholder-gray-500"
               />
+              <div className="flex justify-between gap-3 mb-3">
+                {statusFormError ? (
+                  <p className="text-red-400 text-xs">{statusFormError}</p>
+                ) : (
+                  <span />
+                )}
+                <p className="text-gray-500 text-xs">
+                  {statusNotes.length}/500
+                </p>
+              </div>
               <button
                 onClick={handleStatusUpdate}
-                disabled={updatingStatus}
+                disabled={updatingStatus || !selectedStatus}
                 className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold rounded-xl py-3 text-sm transition-colors"
               >
                 {updatingStatus ? "Updating..." : "Update Status"}
@@ -521,7 +553,10 @@ export default function SessionDetail() {
               <h2 className="text-white font-semibold mb-4">Record Action</h2>
               <select
                 value={actionType}
-                onChange={(e) => setActionType(e.target.value)}
+                onChange={(e) => {
+                  setActionType(e.target.value);
+                  setActionFormError("");
+                }}
                 className="w-full bg-gray-800 text-white border border-gray-700 rounded-xl px-4 py-3 text-sm mb-3 focus:outline-none focus:border-indigo-500"
               >
                 <option value="">Select action type</option>
@@ -533,11 +568,25 @@ export default function SessionDetail() {
               </select>
               <textarea
                 value={actionNotes}
-                onChange={(e) => setActionNotes(e.target.value)}
+                onChange={(e) => {
+                  setActionNotes(e.target.value);
+                  setActionFormError("");
+                }}
                 placeholder="Notes"
                 rows={3}
+                maxLength={500}
                 className="w-full bg-gray-800 text-white border border-gray-700 rounded-xl px-4 py-3 text-sm mb-3 resize-none focus:outline-none focus:border-indigo-500 placeholder-gray-500"
               />
+              <div className="flex justify-between gap-3 mb-3">
+                {actionFormError ? (
+                  <p className="text-red-400 text-xs">{actionFormError}</p>
+                ) : (
+                  <span />
+                )}
+                <p className="text-gray-500 text-xs">
+                  {actionNotes.length}/500
+                </p>
+              </div>
               <button
                 onClick={handleAddAction}
                 disabled={addingAction || !actionType}
