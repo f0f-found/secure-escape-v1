@@ -19,6 +19,34 @@ async function getAuthorizedHeaders() {
   };
 }
 
+async function getErrorMessage(response: Response, fallback: string) {
+  const text = await response.text();
+
+  if (!text) {
+    return fallback;
+  }
+
+  try {
+    const errorBody = JSON.parse(text);
+
+    if (typeof errorBody.message === "string") {
+      return errorBody.message;
+    }
+
+    if (errorBody.errors) {
+      return Object.values(errorBody.errors).flat().join("\n");
+    }
+
+    if (typeof errorBody.title === "string") {
+      return errorBody.title;
+    }
+  } catch {
+    return text;
+  }
+
+  return fallback;
+}
+
 export async function getBeneficiaries(): Promise<BeneficiaryResponse[]> {
   const response = await fetch(`${API_BASE_URL}/api/v1/beneficiaries`, {
     method: "GET",
@@ -26,8 +54,9 @@ export async function getBeneficiaries(): Promise<BeneficiaryResponse[]> {
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Failed to load beneficiaries.");
+    throw new Error(
+      await getErrorMessage(response, "Failed to load beneficiaries."),
+    );
   }
 
   return response.json();
@@ -43,8 +72,7 @@ export async function addBeneficiary(
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Failed to add beneficiary.");
+    throw new Error(await getErrorMessage(response, "Failed to add beneficiary."));
   }
 
   return response.json();
@@ -57,7 +85,8 @@ export async function deleteBeneficiary(id: string): Promise<void> {
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Failed to delete beneficiary.");
+    throw new Error(
+      await getErrorMessage(response, "Failed to delete beneficiary."),
+    );
   }
 }

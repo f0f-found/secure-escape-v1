@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/utils/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { upsertDecoyProfile } from "@/services/secureEscapeService";
+import { ErrorBanner, ErrorModal } from "@/components/FormErrorMessage";
 
 export default function EmergencyBudgetScreen() {
   const router = useRouter();
@@ -27,6 +28,8 @@ export default function EmergencyBudgetScreen() {
   const [tier2, setTier2] = useState(20000);
   const [agreed, setAgreed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
   const fadeAnim = useState(new Animated.Value(0))[0];
 
   // Animation for the icon
@@ -78,20 +81,55 @@ export default function EmergencyBudgetScreen() {
     type: "low" | "tier1" | "tier2",
   ) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    clearError();
     if (type === "low") setLowAmount(value);
     if (type === "tier1") setTier1(value);
     if (type === "tier2") setTier2(value);
   };
 
-  const handleContinue = async () => {
+  const showError = (message: string) => {
+    setError(message);
+    setShowErrorModal(true);
+  };
+
+  const clearError = () => {
+    setError(null);
+    setShowErrorModal(false);
+  };
+
+  const getValidationMessage = () => {
+    if (profileType !== "LowProfile" && profileType !== "Custom") {
+      return "Please choose a Secure Escape mode before setting your emergency budget.";
+    }
+
     if (!agreed) {
+      return "Please agree to the Terms and Conditions before continuing.";
+    }
+
+    const values =
+      mode === "LowProfile"
+        ? [lowAmount]
+        : [displayBalance, tier1, tier2];
+
+    if (values.some((value) => value < 0 || value > 1000000)) {
+      return "Secure Escape amounts must be between R0 and R1,000,000.";
+    }
+
+    return null;
+  };
+
+  const handleContinue = async () => {
+    const validationMessage = getValidationMessage();
+
+    if (validationMessage) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      alert("Please agree to the Terms and Conditions");
+      showError(validationMessage);
       return;
     }
 
     try {
       setIsSaving(true);
+      clearError();
 
       await upsertDecoyProfile({
         profileType: profileType ?? "LowProfile",
@@ -106,7 +144,7 @@ export default function EmergencyBudgetScreen() {
       router.push("/secure-escape/duress-pin");
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      alert(
+      showError(
         error instanceof Error
           ? error.message
           : "Failed to save Secure Escape setup",
@@ -138,6 +176,7 @@ export default function EmergencyBudgetScreen() {
           value={displayBalance}
           onValueChange={(v: number) => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            clearError();
             setDisplayBalance(v);
           }}
           minimumTrackTintColor={colors.primary}
@@ -290,7 +329,10 @@ export default function EmergencyBudgetScreen() {
         {/* Checkbox with terms */}
         <TouchableOpacity
           style={styles.checkRow}
-          onPress={() => setAgreed(!agreed)}
+          onPress={() => {
+            setAgreed(!agreed);
+            clearError();
+          }}
           activeOpacity={0.7}
         >
           <View style={[styles.checkbox, agreed && styles.checked]} />
@@ -305,13 +347,18 @@ export default function EmergencyBudgetScreen() {
           </Text>
         </TouchableOpacity>
 
+        <ErrorBanner
+          message={error}
+          onPress={() => setShowErrorModal(true)}
+        />
+
         <TouchableOpacity
           style={[
             styles.continueButton,
             (!agreed || isSaving) && styles.disabledButton,
           ]}
           onPress={handleContinue}
-          disabled={!agreed || isSaving}
+          disabled={isSaving}
         >
           <LinearGradient
             colors={agreed ? ["#7C6EF7", "#4A6CF7"] : ["#ccc", "#ccc"]}
@@ -323,6 +370,12 @@ export default function EmergencyBudgetScreen() {
           </LinearGradient>
         </TouchableOpacity>
       </View>
+      <ErrorModal
+        title="Secure Escape setup"
+        message={error}
+        visible={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+      />
     </ScrollView>
   );
 }

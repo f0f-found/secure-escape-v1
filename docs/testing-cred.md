@@ -1,24 +1,100 @@
-Email: test@secureescape.com
-Password: Password123
-Normal PIN: 1234
-Duress PIN: 0000
+# Secure Escape Testing Credentials
 
-thabo.nkosi@email.co.za
-Password123
-1234
-9999
+This document contains the default testing credentials for the Secure Escape mobile application and fraud dashboard.
 
-amara.dlamini@email.co.za
-Password@123
-2222
-8888
-
-
-3333
-7777
-Admin
 ---
-kagiso.moyo@zenithbank.co.za
-Admin@123
 
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6ImMxMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMSIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWUiOiJUaGFibyBOa29zaSIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL2VtYWlsYWRkcmVzcyI6InRoYWJvLm5rb3NpQGVtYWlsLmNvLnphIiwiYmFua0ludGVncmF0aW9uSWQiOiJhMTAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDEiLCJ1c2VyU2Vzc2lvbklkIjoiNjUyMDRiMDEtNGZmMi00ZjA1LWJlNmQtNTBkYjE4OWU4MjM3Iiwic2Vzc2lvbk1vZGUiOiJOb3JtYWwiLCJleHAiOjE3ODI1NTg1NjQsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTExNiIsImF1ZCI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTExNiJ9.8hIv2nV9PFzFUIMd50RGjIsUh5dqp3rPU0vhJ9-098M
+# Mobile Banking Users
+
+**Default Password:** `Password@123`
+
+| Customer       | Bank               | Email    | Password | Normal PIN | Duress PIN |
+|----------------|--------------------|-------   |----------|------------|------------|
+| Thabo Nkosi    | Zenith Bank Africa | thabo.nkosi@email.co.za    | Password@123 | 1234 | 9999 |
+| Amara Dlamini  | Zenith Bank Africa | amara.dlamini@email.co.za  | Password@123 | 2222 | 8888 |
+| Lerato Mokoena | Zenith Bank Africa | lerato.mokoena@email.co.za | Password@123 | 3333 | 7777 |
+| Sipho Zulu     | Savanna Bank       | sipho.zulu@email.co.za     | Password@123 | 4444 | 6666 |
+| Naledi Khumalo | Savanna Bank       | naledi.khumalo@email.co.za | Password@123 | 5555 | 0000 |
+
+---
+
+# Fraud Dashboard Administrators
+
+**Default Password:** `Admin@123`
+
+| Name | Organisation | Role | Email | Password |
+|------|--------------|------|-------|----------|
+| Naledi Vilakazi | Secure Escape | Secure Escape Administrator | admin@secureescape.co.za | Admin@123 |
+| Sipho Mahlangu | Zenith Bank Africa | Fraud Analyst | sipho.mahlangu@zenithbank.co.za | Admin@123 |
+| Lindiwe Khoza | Zenith Bank Africa | System Administrator | lindiwe.khoza@zenithbank.co.za | Admin@123 |
+| Kagiso Moyo | Zenith Bank Africa | Fraud Manager | kagiso.moyo@zenithbank.co.za | Admin@123 |
+| Mpho Sithole | Savanna Bank | Fraud Manager | mpho.sithole@savannabank.co.za | Admin@123 |
+| Zanele Dube | Savanna Bank | Fraud Analyst | zanele.dube@savannabank.co.za | Admin@123 |
+
+---
+
+# Test Scenarios
+
+## Standard Login
+
+**User**
+
+- Email: `thabo.nkosi@email.co.za`
+- Password: `Password@123`
+- PIN: `1234`
+
+**Expected Result**
+
+- User logs in successfully.
+- Banking dashboard loads normally.
+- No fraud alert is created.
+
+---
+
+## Duress Login
+
+**User**
+
+- Email: `thabo.nkosi@email.co.za`
+- Password: `Password@123`
+- PIN: `9999`
+
+**Expected Result**
+
+- User is authenticated successfully.
+- Duress mode is activated.
+- A high-priority fraud alert is generated.
+- Transactions performed during the session are monitored.
+- The alert appears in the Fraud Dashboard.
+
+---
+
+## Bank Administrator Access
+
+**Login**
+
+- Email: `sipho.mahlangu@zenithbank.co.za`
+- Password: `Admin@123`
+
+**Expected Result**
+
+- Access is restricted to Zenith Bank Africa.
+- Only Zenith Bank customers, alerts, sessions, and transactions are visible.
+- No data from Savanna Bank is accessible.
+
+---
+
+## Secure Escape Administrator Access
+
+**Login**
+
+- Email: `admin@secureescape.co.za`
+- Password: `Admin@123`
+
+**Expected Result**
+
+- Access to all participating banks.
+- View all fraud alerts.
+- View all customers.
+- View all audit logs.
+- Manage bank integrations and platform administration.

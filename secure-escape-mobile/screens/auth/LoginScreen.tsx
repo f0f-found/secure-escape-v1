@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Switch,
-  Alert,
+  Modal,
 } from "react-native";
 import { colors } from "@/utils/theme";
 import { login } from "@/services/authService";
@@ -26,6 +26,47 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [biometricsEnabled, setBiometricsEnabled] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+
+  const showError = (message: string) => {
+    setError(message);
+    setShowErrorModal(true);
+  };
+
+  const clearError = () => {
+    setError(null);
+    setShowErrorModal(false);
+  };
+
+  const getValidationMessage = () => {
+    const missingFields = [];
+
+    if (!email.trim()) {
+      missingFields.push("email");
+    }
+
+    if (!password.trim()) {
+      missingFields.push("password");
+    }
+
+    if (!pin.trim()) {
+      missingFields.push("PIN");
+    } else if (pin.length < 4) {
+      return "Please enter at least 4 digits for your app PIN.";
+    }
+
+    if (missingFields.length === 0) {
+      return null;
+    }
+
+    if (missingFields.length === 1) {
+      return `Please enter your ${missingFields[0]}.`;
+    }
+
+    const lastField = missingFields.pop();
+    return `Please enter your ${missingFields.join(", ")} and ${lastField}.`;
+  };
 
   const getLoginContext = async () => {
     let latitude: number | undefined;
@@ -54,16 +95,16 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   };
 
   const handleSubmit = async () => {
-    if (!email || !password || pin.length < 4) {
-      Alert.alert(
-        "Missing details",
-        "Please enter your email, password, and PIN.",
-      );
+    const validationMessage = getValidationMessage();
+
+    if (validationMessage) {
+      showError(validationMessage);
       return;
     }
 
     try {
       setIsSubmitting(true);
+      clearError();
       const loginContext = await getLoginContext();
       const response = await login({
         email,
@@ -81,10 +122,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
       onLoginSuccess?.();
     } catch (error) {
-      Alert.alert(
-        "Login failed",
-        error instanceof Error ? error.message : "Please try again.",
-      );
+      showError(error instanceof Error ? error.message : "Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -113,7 +151,10 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           autoCapitalize="none"
           keyboardType="email-address"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(value) => {
+            setEmail(value);
+            clearError();
+          }}
         />
         <View style={styles.pinLabelRow}>
           <Text>Password</Text>
@@ -123,7 +164,10 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           style={styles.textInput}
           secureTextEntry
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(value) => {
+            setPassword(value);
+            clearError();
+          }}
         />
 
         <View style={styles.pinLabelRow}>
@@ -137,8 +181,22 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           maxLength={6}
           keyboardType="numeric"
           value={pin}
-          onChangeText={setPin}
+          onChangeText={(value) => {
+            setPin(value);
+            clearError();
+          }}
         />
+
+        {error && (
+          <TouchableOpacity
+            style={styles.errorBanner}
+            activeOpacity={0.8}
+            onPress={() => setShowErrorModal(true)}
+          >
+            <Text style={styles.errorIcon}>!</Text>
+            <Text style={styles.errorBannerText}>{error}</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={[styles.submitButton, isSubmitting && styles.disabledButton]}
@@ -176,6 +234,32 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           <Text>Don&apos;t show me this again</Text>
         </View>
       </View>
+
+      <Modal
+        transparent
+        visible={showErrorModal && !!error}
+        animationType="fade"
+        onRequestClose={() => setShowErrorModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.errorModal}>
+            <View style={styles.modalIconCircle}>
+              <Text style={styles.modalIcon}>!</Text>
+            </View>
+
+            <Text style={styles.modalTitle}>Could not sign in</Text>
+            <Text style={styles.modalMessage}>{error}</Text>
+
+            <TouchableOpacity
+              style={styles.modalButton}
+              activeOpacity={0.85}
+              onPress={() => setShowErrorModal(false)}
+            >
+              <Text style={styles.modalButtonText}>Got it</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -249,5 +333,93 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.6,
+  },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    borderRadius: 14,
+    padding: 12,
+  },
+  errorIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#DC2626",
+    color: "#fff",
+    textAlign: "center",
+    lineHeight: 20,
+    fontWeight: "900",
+  },
+  errorBannerText: {
+    flex: 1,
+    color: "#991B1B",
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  errorModal: {
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 22,
+    alignItems: "center",
+  },
+  modalIconCircle: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "#FEF2F2",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  modalIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#DC2626",
+    color: "#fff",
+    textAlign: "center",
+    lineHeight: 30,
+    fontWeight: "900",
+    fontSize: 18,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: colors.navy,
+    textAlign: "center",
+  },
+  modalMessage: {
+    marginTop: 8,
+    color: colors.textSub,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+  },
+  modalButton: {
+    marginTop: 20,
+    width: "100%",
+    backgroundColor: colors.primary,
+    borderRadius: 50,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  modalButtonText: {
+    color: "#fff",
+    fontWeight: "800",
+    fontSize: 15,
   },
 });

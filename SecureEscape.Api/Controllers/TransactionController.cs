@@ -44,8 +44,14 @@ public class TransactionController : ControllerBase
     public async Task<ActionResult<CashSendResponseDto>> CreateCashSend(
         [FromBody] CreateCashSendRequestDto request)
     {
-        var result = await _service.CreateCashSendAsync(request);
-
-        return Ok(result);
+        try
+        {
+            var result = await _service.CreateCashSendAsync(request);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }

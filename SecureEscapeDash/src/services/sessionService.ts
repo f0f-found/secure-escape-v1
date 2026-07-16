@@ -5,6 +5,12 @@ import type {
   DuressSessionDetail,
 } from "../types/session";
 import { getToken } from "../utils/tokenStore";
+import {
+  cleanText,
+  validateActionType,
+  validateCaseStatus,
+  validateOptionalNotes,
+} from "../utils/validation";
 
 async function handleError(response: Response, fallbackMessage: string) {
   let details = "";
@@ -51,12 +57,20 @@ export async function updateCaseStatus(
   caseStatus: string,
   notes: string,
 ): Promise<DuressSessionDetail> {
+  const cleanedNotes = cleanText(notes);
+  const validationError =
+    validateCaseStatus(caseStatus) || validateOptionalNotes(cleanedNotes);
+
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
   const response = await fetch(
     `${API_BASE_URL}/api/v1/admin/duress-sessions/${id}/case-status`,
     {
       method: "PATCH",
       headers: getHeaders(),
-      body: JSON.stringify({ caseStatus, notes }),
+      body: JSON.stringify({ caseStatus, notes: cleanedNotes }),
     },
   );
   if (!response.ok) throw new Error("Failed to update case status.");
@@ -68,12 +82,20 @@ export async function addCaseAction(
   actionType: string,
   notes: string,
 ): Promise<DuressSessionDetail> {
+  const cleanedNotes = cleanText(notes);
+  const validationError =
+    validateActionType(actionType) || validateOptionalNotes(cleanedNotes);
+
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
   const response = await fetch(
     `${API_BASE_URL}/api/v1/admin/duress-sessions/${id}/actions`,
     {
       method: "POST",
       headers: getHeaders(),
-      body: JSON.stringify({ actionType, notes }),
+      body: JSON.stringify({ actionType, notes: cleanedNotes }),
     },
   );
   if (!response.ok) throw new Error("Failed to add action.");

@@ -2,21 +2,42 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { adminLogin } from "../services/authService";
 import { saveToken, saveAdminUser } from "../utils/tokenStore";
+import { cleanText, validateEmail, validatePassword } from "../utils/validation";
 
 export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({
+    email: "",
+    password: "",
+  });
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    const cleanedEmail = cleanText(email);
+    const nextFieldErrors = {
+      email: validateEmail(cleanedEmail),
+      password: validatePassword(password),
+    };
+
+    setFieldErrors(nextFieldErrors);
+
+    if (nextFieldErrors.email || nextFieldErrors.password) {
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response = await adminLogin({ email, password });
+      const response = await adminLogin({
+        email: cleanedEmail,
+        password,
+      });
       saveToken(response.token);
       saveAdminUser(response);
       navigate("/dashboard");
@@ -65,11 +86,24 @@ export default function Login() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setFieldErrors((current) => ({ ...current, email: "" }));
+                }}
                 required
-                className="w-full bg-gray-800 text-white border border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                aria-invalid={Boolean(fieldErrors.email)}
+                className={`w-full bg-gray-800 text-white border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 ${
+                  fieldErrors.email
+                    ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                    : "border-gray-700 focus:border-indigo-500 focus:ring-indigo-500"
+                }`}
                 placeholder="you@bank.co.za"
               />
+              {fieldErrors.email && (
+                <p className="text-red-400 text-xs mt-1">
+                  {fieldErrors.email}
+                </p>
+              )}
             </div>
 
             <div>
@@ -79,11 +113,25 @@ export default function Login() {
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setFieldErrors((current) => ({ ...current, password: "" }));
+                }}
                 required
-                className="w-full bg-gray-800 text-white border border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                minLength={8}
+                aria-invalid={Boolean(fieldErrors.password)}
+                className={`w-full bg-gray-800 text-white border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 ${
+                  fieldErrors.password
+                    ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                    : "border-gray-700 focus:border-indigo-500 focus:ring-indigo-500"
+                }`}
                 placeholder="••••••••"
               />
+              {fieldErrors.password && (
+                <p className="text-red-400 text-xs mt-1">
+                  {fieldErrors.password}
+                </p>
+              )}
             </div>
 
             {error && <p className="text-red-400 text-sm">{error}</p>}

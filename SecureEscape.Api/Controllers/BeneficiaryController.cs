@@ -32,7 +32,7 @@ public class BeneficiaryController : ControllerBase
         try
         {
             var beneficiary = await _service.AddAsync(request);
-            return CreatedAtAction(nameof(GetAll), beneficiary);
+            return Created($"/api/v1/beneficiaries/{beneficiary.Id}", beneficiary);
         }
         catch (InvalidOperationException ex)
         {

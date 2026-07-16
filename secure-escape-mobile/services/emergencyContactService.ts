@@ -15,6 +15,34 @@ async function getAuthorizedHeaders() {
   };
 }
 
+async function getErrorMessage(response: Response, fallback: string) {
+  const text = await response.text();
+
+  if (!text) {
+    return fallback;
+  }
+
+  try {
+    const errorBody = JSON.parse(text);
+
+    if (typeof errorBody.message === "string") {
+      return errorBody.message;
+    }
+
+    if (errorBody.errors) {
+      return Object.values(errorBody.errors).flat().join("\n");
+    }
+
+    if (typeof errorBody.title === "string") {
+      return errorBody.title;
+    }
+  } catch {
+    return text;
+  }
+
+  return fallback;
+}
+
 export async function getEmergencyContacts(): Promise<
   EmergencyContactResponse[]
 > {
@@ -24,8 +52,9 @@ export async function getEmergencyContacts(): Promise<
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Failed to load emergency contacts.");
+    throw new Error(
+      await getErrorMessage(response, "Failed to load emergency contacts."),
+    );
   }
 
   return response.json();
@@ -41,8 +70,9 @@ export async function addEmergencyContact(
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Failed to add emergency contact.");
+    throw new Error(
+      await getErrorMessage(response, "Failed to add emergency contact."),
+    );
   }
 
   return response.json();
@@ -58,7 +88,8 @@ export async function deleteEmergencyContact(id: string): Promise<void> {
   );
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Failed to delete emergency contact.");
+    throw new Error(
+      await getErrorMessage(response, "Failed to delete emergency contact."),
+    );
   }
 }

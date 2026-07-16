@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   Animated,
   ScrollView,
-  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
@@ -16,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/utils/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { addEmergencyContact } from "@/services/emergencyContactService";
+import { ErrorBanner, ErrorModal } from "@/components/FormErrorMessage";
 
 type LocalContact = {
   id: string;
@@ -40,7 +40,19 @@ export default function EmergencyContact() {
     },
   ]);
   const [validContactAdded, setValidContactAdded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
   const buttonScale = useRef(new Animated.Value(1)).current;
+
+  const showError = (message: string) => {
+    setError(message);
+    setShowErrorModal(true);
+  };
+
+  const clearError = () => {
+    setError(null);
+    setShowErrorModal(false);
+  };
 
   const checkValidContacts = (contactsList: LocalContact[]) => {
     const hasValid = contactsList.some(
@@ -55,7 +67,7 @@ export default function EmergencyContact() {
 
   const removeContact = (id: string) => {
     if (contacts.length === 1) {
-      Alert.alert("Cannot remove", "You need at least one emergency contact.");
+      showError("You need at least one emergency contact.");
       return;
     }
     const newContacts = contacts.filter((c) => c.id !== id);
@@ -73,16 +85,64 @@ export default function EmergencyContact() {
       contact.id === id ? { ...contact, [field]: value } : contact,
     );
     setContacts(newContacts);
+    clearError();
     checkValidContacts(newContacts);
   };
 
+  const getValidationMessage = () => {
+    const completeContacts = contacts.filter(
+      (c) => c.name.trim() && c.surname.trim() && c.phone.trim(),
+    );
+
+    if (completeContacts.length === 0) {
+      const firstContact = contacts[0];
+      const missingFields = [];
+
+      if (!firstContact.name.trim()) {
+        missingFields.push("name");
+      }
+
+      if (!firstContact.surname.trim()) {
+        missingFields.push("surname");
+      }
+
+      if (!firstContact.phone.trim()) {
+        missingFields.push("phone number");
+      }
+
+      if (missingFields.length === 1) {
+        return `Please enter the emergency contact ${missingFields[0]}.`;
+      }
+
+      const lastField = missingFields.pop();
+      return `Please enter the emergency contact ${missingFields.join(", ")} and ${lastField}.`;
+    }
+
+    for (const contact of completeContacts) {
+      const fullName = `${contact.name.trim()} ${contact.surname.trim()}`;
+
+      if (fullName.length > 100) {
+        return "Emergency contact full name cannot be more than 100 characters.";
+      }
+
+      if (contact.phone.trim().length > 30) {
+        return "Emergency contact phone number cannot be more than 30 characters.";
+      }
+
+      if (contact.relationship.trim().length > 50) {
+        return "Emergency contact relationship cannot be more than 50 characters.";
+      }
+    }
+
+    return null;
+  };
+
   const handleContinue = async () => {
-    if (!validContactAdded) {
+    const validationMessage = getValidationMessage();
+
+    if (validationMessage) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
-        "Missing information",
-        "Please fill in at least one complete emergency contact.",
-      );
+      showError(validationMessage);
       return;
     }
 
@@ -109,8 +169,7 @@ export default function EmergencyContact() {
       }
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
-        "Error",
+      showError(
         error instanceof Error ? error.message : "Failed to save contacts.",
       );
     }
@@ -134,7 +193,7 @@ export default function EmergencyContact() {
 
   const addContact = () => {
     if (contacts.length >= 5) {
-      Alert.alert("Limit reached", "You can add up to 5 emergency contacts.");
+      showError("You can add up to 5 emergency contacts.");
       return;
     }
     const newContact: LocalContact = {
@@ -204,6 +263,7 @@ export default function EmergencyContact() {
                 style={styles.input}
                 value={contact.name}
                 onChangeText={(text) => updateContact(contact.id, "name", text)}
+                maxLength={50}
                 placeholder="First name"
                 placeholderTextColor="#aaa"
               />
@@ -216,6 +276,7 @@ export default function EmergencyContact() {
                 onChangeText={(text) =>
                   updateContact(contact.id, "surname", text)
                 }
+                maxLength={50}
                 placeholder="Last name"
                 placeholderTextColor="#aaa"
               />
@@ -228,6 +289,7 @@ export default function EmergencyContact() {
                 onChangeText={(text) =>
                   updateContact(contact.id, "phone", text)
                 }
+                maxLength={30}
                 keyboardType="phone-pad"
                 placeholder="+27 XX XXX XXXX"
                 placeholderTextColor="#aaa"
@@ -241,6 +303,7 @@ export default function EmergencyContact() {
                 onChangeText={(text) =>
                   updateContact(contact.id, "relationship", text)
                 }
+                maxLength={50}
                 placeholder="e.g. Mother, Friend"
                 placeholderTextColor="#aaa"
               />
@@ -277,9 +340,13 @@ export default function EmergencyContact() {
               handleContinue();
             } else {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              const validationMessage = getValidationMessage();
+              if (validationMessage) {
+                showError(validationMessage);
+              }
             }
           }}
-          disabled={!validContactAdded}
+          disabled={false}
         >
           <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
             <LinearGradient
@@ -292,7 +359,18 @@ export default function EmergencyContact() {
             </LinearGradient>
           </Animated.View>
         </TouchableOpacity>
+
+        <ErrorBanner
+          message={error}
+          onPress={() => setShowErrorModal(true)}
+        />
       </View>
+      <ErrorModal
+        title="Emergency contact"
+        message={error}
+        visible={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+      />
     </ScrollView>
   );
 }
