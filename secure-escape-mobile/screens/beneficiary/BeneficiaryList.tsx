@@ -51,9 +51,23 @@ export default function BeneficiaryList() {
 
   const visibleList = showAll ? beneficiaries : beneficiaries.slice(0, 5);
 
-  const filteredData = visibleList.filter((item) =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const filteredData = visibleList.filter((item) => {
+    const query = searchQuery.trim().toLowerCase();
+
+    if (!query) {
+      return true;
+    }
+
+    return [
+      item.name,
+      item.bankName,
+      item.accountNumber,
+      item.reference,
+      item.status,
+    ]
+      .filter(Boolean)
+      .some((value) => value.toLowerCase().includes(query));
+  });
 
   const renderItem = ({ item }: { item: BeneficiaryResponse }) => (
     <TouchableOpacity
@@ -110,11 +124,16 @@ export default function BeneficiaryList() {
             />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search beneficiaries"
+              placeholder="Search name, bank, account or reference"
               placeholderTextColor="#aaa"
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
+            {!!searchQuery && (
+              <TouchableOpacity onPress={() => setSearchQuery("")}>
+                <Ionicons name="close-circle" size={18} color="#aaa" />
+              </TouchableOpacity>
+            )}
           </View>
           <TouchableOpacity
             style={styles.addButton}
@@ -187,7 +206,11 @@ export default function BeneficiaryList() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No beneficiaries found</Text>
+            <Text style={styles.emptyText}>
+              {searchQuery.trim()
+                ? "No beneficiaries match your search"
+                : "No beneficiaries found"}
+            </Text>
           }
         />
       </View>
