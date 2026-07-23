@@ -223,7 +223,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.greyBg },
   scrollContent: {
-    paddingTop: 20,
+    paddingTop: 48,
     paddingBottom: 40, // extra space at bottom
   },
   headerComponent: {

@@ -131,7 +131,6 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
-        <View style={styles.pill} />
         <View style={{ width: 24 }} />
       </View>
 
@@ -172,7 +171,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
         <View style={styles.pinLabelRow}>
           <Text>Enter app PIN</Text>
-          <Text style={styles.forgotPin}>Forgot PIN</Text>
+          {/* <Text style={styles.forgotPin}>Forgot PIN</Text> */}
         </View>
 
         <TextInput
@@ -224,15 +223,6 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
             trackColor={{ false: "#ccc", true: colors.primary }}
           />
         </View>
-
-        <View style={styles.dontShowRow}>
-          <Switch
-            value={dontShowAgain}
-            onValueChange={setDontShowAgain}
-            trackColor={{ false: "#ccc", true: colors.primary }}
-          />
-          <Text>Don&apos;t show me this again</Text>
-        </View>
       </View>
 
       <Modal
@@ -269,7 +259,7 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: 16,
+    padding: 36,
   },
   backArrow: { fontSize: 20, color: "#555" },
   pill: { width: 130, height: 5, backgroundColor: "#ccc", borderRadius: 10 },
