@@ -122,6 +122,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   scrollContent: {
+    paddingTop: 40,
     paddingBottom: 40, // space at bottom
   },
   header: {
