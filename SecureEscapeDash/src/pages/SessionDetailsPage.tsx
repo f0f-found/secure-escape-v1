@@ -19,6 +19,7 @@ import {
   validateCaseStatus,
   validateOptionalNotes,
 } from "../utils/validation";
+import SessionMap from "../components/SessionMap";
 
 export default function SessionDetail() {
   const { id } = useParams<{ id: string }>();
@@ -433,10 +434,11 @@ export default function SessionDetail() {
             {/* Location Events */}
             {session.locations.length > 0 && (
               <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-                <h2 className="text-white font-semibold mb-4">
-                  Location Events
-                </h2>
-                <div className="space-y-2">
+                <h2 className="text-white font-semibold mb-4">Location</h2>
+
+                <SessionMap locations={session.locations} />
+
+                <div className="mt-6 space-y-2">
                   {session.locations.map((loc) => (
                     <div
                       key={loc.id}
@@ -446,10 +448,12 @@ export default function SessionDetail() {
                         <span className="text-white font-mono">
                           {loc.latitude}, {loc.longitude}
                         </span>
+
                         <span className="text-gray-500 ml-3 text-xs">
                           ±{loc.accuracyMeters}m · {loc.locationSource}
                         </span>
                       </div>
+
                       <span className="text-gray-400 text-xs">
                         {new Date(loc.capturedAt).toLocaleString()}
                       </span>

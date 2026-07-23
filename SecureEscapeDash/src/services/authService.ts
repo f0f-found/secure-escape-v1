@@ -1,12 +1,17 @@
 import { API_BASE_URL } from "../constants/api";
 import type { AdminLoginRequest, AdminLoginResponse } from "../types/auth";
-import { cleanText, validateEmail, validatePassword } from "../utils/validation";
+import {
+  cleanText,
+  validateEmail,
+  validatePassword,
+} from "../utils/validation";
 
 export async function adminLogin(
   request: AdminLoginRequest,
 ): Promise<AdminLoginResponse> {
   const email = cleanText(request.email);
-  const validationError = validateEmail(email) || validatePassword(request.password);
+  const validationError =
+    validateEmail(email) || validatePassword(request.password);
 
   if (validationError) {
     throw new Error(validationError);

@@ -5,11 +5,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
-  ScrollView,
   StatusBar,
   Animated,
   SectionList,
-  FlatList,
+  TextInput,
 } from "react-native";
 import { useRouter } from "expo-router";
 
@@ -131,6 +130,8 @@ export default function AccountDetailScreen({
 }: AccountDetailScreenProps) {
   const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchVisible, setSearchVisible] = useState(false);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
   const defaultAccount: Account = {
@@ -175,12 +176,33 @@ export default function AccountDetailScreen({
     }));
   };
 
-  const filteredTransactions =
-    selectedFilter === "all"
-      ? mockTransactions
-      : mockTransactions.filter(
-          (t) => t.type === (selectedFilter === "in" ? "in" : "out"),
-        );
+  const filteredTransactions = mockTransactions.filter((transaction) => {
+    const matchesFilter =
+      selectedFilter === "all" ||
+      selectedFilter === "track" ||
+      transaction.type === (selectedFilter === "in" ? "in" : "out");
+
+    const query = searchQuery.trim().toLowerCase();
+
+    if (!matchesFilter) {
+      return false;
+    }
+
+    if (!query) {
+      return true;
+    }
+
+    return [
+      transaction.merchant,
+      transaction.category,
+      transaction.date,
+      transaction.time,
+      transaction.type,
+      transaction.status ?? "",
+      Math.abs(transaction.amount).toFixed(2),
+      `R${Math.abs(transaction.amount).toFixed(2)}`,
+    ].some((value) => value.toLowerCase().includes(query));
+  });
 
   const sections = groupTransactionsByMonth(filteredTransactions);
 
@@ -248,14 +270,41 @@ export default function AccountDetailScreen({
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{currentAccount.name}</Text>
           <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.headerAction}>
-              <Text style={styles.actionIcon}>🔍</Text>
+            <TouchableOpacity
+              style={styles.headerAction}
+              onPress={() => {
+                setSearchVisible(!searchVisible);
+                if (searchVisible) {
+                  setSearchQuery("");
+                }
+              }}
+            >
+              <Text style={styles.actionIcon}>{searchVisible ? "✕" : "🔍"}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.headerAction}>
               <Text style={styles.actionIcon}>⋯</Text>
             </TouchableOpacity>
           </View>
         </View>
+
+        {searchVisible && (
+          <View style={styles.searchContainer}>
+            <Text style={styles.searchIcon}>🔍</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search merchant, category, amount or date"
+              placeholderTextColor="rgba(255, 255, 255, 0.65)"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+            />
+            {!!searchQuery && (
+              <TouchableOpacity onPress={() => setSearchQuery("")}>
+                <Text style={styles.clearSearch}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         {/* Balance Section */}
         <View style={styles.balanceSection}>
@@ -328,6 +377,13 @@ export default function AccountDetailScreen({
           scrollEnabled={true}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>
+              {searchQuery.trim()
+                ? "No transactions match your search"
+                : "No transactions found"}
+            </Text>
+          }
         />
       </Animated.View>
     </SafeAreaView>
@@ -377,6 +433,35 @@ const styles = StyleSheet.create({
   },
   actionIcon: {
     fontSize: 20,
+  },
+  searchContainer: {
+    marginHorizontal: 16,
+    marginBottom: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.16)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  searchIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: colors.surface,
+    fontSize: 14,
+    fontWeight: "600",
+    paddingVertical: 4,
+  },
+  clearSearch: {
+    color: colors.surface,
+    fontSize: 16,
+    fontWeight: "800",
+    paddingHorizontal: 4,
   },
 
   // Balance Section
@@ -474,6 +559,13 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 16,
+  },
+  emptyText: {
+    marginTop: 28,
+    textAlign: "center",
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: "600",
   },
 
   // Month Header
