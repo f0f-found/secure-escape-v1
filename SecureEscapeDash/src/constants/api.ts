@@ -1,6 +1,5 @@
-export const API_BASE_URL = "http://192.168.8.153:5116";
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // ("http://192.168.1.103:5116");
 
-//IP:192.168.8.1
 //192.168.8.153
