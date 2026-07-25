@@ -1,6 +1,7 @@
 import { API_BASE_URL } from "@/constants/api";
 import { LoginRequest, LoginResponse } from "@/types/auth";
 import { clearAuthToken, getAuthToken, setLastActivityNow } from "./tokenStore";
+import { getAuthorizedHeaders } from "./transactionServices";
 
 async function getErrorMessage(response: Response, fallback: string) {
   const text = await response.text();
@@ -65,4 +66,18 @@ export async function logout(): Promise<void> {
   }
 
   await clearAuthToken();
+}
+
+export async function verifyPin(pin: string): Promise<{ verified: boolean }> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/verify-pin`, {
+    method: "POST",
+    headers: await getAuthorizedHeaders(),
+    body: JSON.stringify({ pin }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Verification failed."));
+  }
+
+  return response.json();
 }

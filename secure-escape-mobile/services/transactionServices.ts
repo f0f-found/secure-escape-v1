@@ -7,7 +7,7 @@ import {
   TransactionResponse,
 } from "@/types/transaction";
 
-async function getAuthorizedHeaders() {
+export async function getAuthorizedHeaders() {
   const token = await getAuthToken();
 
   if (!token) {
@@ -59,7 +59,9 @@ export async function createTransfer(
   });
 
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to create transfer."));
+    throw new Error(
+      await getErrorMessage(response, "Failed to create transfer."),
+    );
   }
 
   return response.json();
@@ -80,6 +82,21 @@ export async function createCashSend(
   if (!response.ok) {
     throw new Error(
       await getErrorMessage(response, "Failed to create cash send."),
+    );
+  }
+
+  return response.json();
+}
+
+export async function getTransactions(): Promise<TransactionResponse[]> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/transactions`, {
+    method: "GET",
+    headers: await getAuthorizedHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response, "Failed to load transactions."),
     );
   }
 

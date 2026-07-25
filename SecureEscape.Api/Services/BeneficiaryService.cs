@@ -70,7 +70,7 @@ public class BeneficiaryService : IBeneficiaryService
 
         await _repository.UpdateAsync(beneficiary);
         await _unitOfWork.SaveChangesAsync();
-        
+
         return true;
     }
 
@@ -82,6 +82,7 @@ public class BeneficiaryService : IBeneficiaryService
         AccountNumber = b.AccountNumber,
         Reference = b.Reference,
         Status = b.Status,
-        CreatedAt = b.CreatedAt
+        CreatedAt = b.CreatedAt,
+        LastPaidAt = b.LastPaidAt,
     };
 }

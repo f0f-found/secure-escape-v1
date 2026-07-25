@@ -33,6 +33,14 @@ public class AuthController : ControllerBase
         return Ok(response);
     }
 
+    [HttpPost("verify-pin")]
+    [Authorize]
+    public async Task<ActionResult<VerifyPinResponseDto>> VerifyPin(VerifyPinRequestDto request)
+    {
+        var verified = await _authService.VerifyPinAsync(request.Pin);
+        return Ok(new VerifyPinResponseDto { Verified = verified });
+    }
+
     [HttpPost("logout")]
     [Authorize]
     public async Task<IActionResult> Logout()

@@ -79,6 +79,7 @@ public class TransactionService : ITransactionService
         if (beneficiary == null)
             throw new InvalidOperationException("Beneficiary not found.");
 
+
         var bankReference = $"TXN-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}"[..24].ToUpper();
 
         var bankTransaction = new BankTransaction
@@ -96,6 +97,8 @@ public class TransactionService : ITransactionService
             CreatedAt = DateTime.UtcNow
         };
 
+
+
         await _transactionRepository.AddAsync(bankTransaction);
 
         if (currentUser.SessionMode == SessionMode.Duress)
@@ -109,6 +112,7 @@ public class TransactionService : ITransactionService
             await _bankAccountRepository.UpdateAsync(account);
         }
 
+        beneficiary.LastPaidAt = DateTime.Now;
         await _unitOfWork.SaveChangesAsync();
 
         await _auditService.LogAsync(
@@ -255,6 +259,7 @@ public class TransactionService : ITransactionService
 
                 transaction.Status = TransactionStatus.Approved;
                 transaction.SecureEscapeCode = $"SE-{userSessionId:N}-{DateTime.UtcNow:yyyyMMddHHmmss}";
+
             }
             else
             {

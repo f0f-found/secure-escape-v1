@@ -11,4 +11,5 @@ public class BeneficiaryResponseDto
     public string Reference { get; set; } = string.Empty;
     public BeneficiaryStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateTime? LastPaidAt { get; set; }
 }

@@ -1,9 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-
 import { getToken } from "./utils/tokenStore";
 import "./App.css";
+import AnalystDashboard from "./pages/AnalystDashboard";
+import ManagerDashboard from "./pages/ManagerDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
+import RoleRedirect from "./components/RoleRedirect";
 import SessionDetail from "./pages/SessionDetailsPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -17,10 +19,28 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route
-          path="/dashboard"
+          path="/analyst"
           element={
             <ProtectedRoute>
-              <Dashboard />
+              <AnalystDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/manager"
+          element={
+            <ProtectedRoute>
+              <ManagerDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <AdminDashboard />
             </ProtectedRoute>
           }
         />
@@ -32,7 +52,14 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route
+          path="*"
+          element={
+            <ProtectedRoute>
+              <RoleRedirect />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

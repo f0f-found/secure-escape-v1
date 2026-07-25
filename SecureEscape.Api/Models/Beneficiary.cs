@@ -36,6 +36,7 @@ namespace SecureEscape.Api.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }
+        public DateTime? LastPaidAt { get; set; }
 
         public User? User { get; set; }
 

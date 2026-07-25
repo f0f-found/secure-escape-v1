@@ -8,6 +8,7 @@ namespace SecureEscape.Api.Enums
         LoginFailed = 4,
         SessionCreated = 5,
         TransactionCreated = 6,
+        DuressPinMatchedStepUp,
         TransactionEvaluated = 7,
         AlertCreated = 8,
         AlertStatusUpdated = 9,

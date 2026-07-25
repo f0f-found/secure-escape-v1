@@ -36,22 +36,26 @@ export default function SettingsScreen() {
   }, []);
   const isDuress = profile?.sessionMode === "Duress";
   const menuItems = [
-    { title: "My information", subtitle: "view and update information" },
-
     {
-      title: "My app settings",
-      subtitle: "update personal and security settings",
-    },
-
-    {
-      title: "Personalise my app",
-      subtitle: "Display what matters most to you",
-    },
-
-    {
-      title: "My Security center",
+      title: "My information",
       subtitle: "view and update information",
+      isProfile: true,
     },
+
+    // {
+    //   title: "My app settings",
+    //   subtitle: "update personal and security settings",
+    // },
+
+    // {
+    //   title: "Personalise my app",
+    //   subtitle: "Display what matters most to you",
+    // },
+
+    // {
+    //   title: "My Security center",
+    //   subtitle: "view and update information",
+    // },
 
     // ONLY show if NOT in duress mode
     ...(isDuress
@@ -94,7 +98,9 @@ export default function SettingsScreen() {
             key={idx}
             style={styles.menuRow}
             onPress={async () => {
-              if (item.isSecureEscape) {
+              if (item.isProfile) {
+                router.push("/settings/profile-details");
+              } else if (item.isSecureEscape) {
                 const profile = await getActiveDecoyProfile();
                 if (profile) {
                   router.push("/secure-escape/manage-secure-escape");
@@ -104,7 +110,6 @@ export default function SettingsScreen() {
               } else if (item.isLogout) {
                 await logoutButton();
               }
-              // other actions later
             }}
           >
             <View>
@@ -128,7 +133,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 20, // increased from 52 → 48 (more natural)
+    paddingTop: 10, // increased from 52 → 48 (more natural)
     paddingHorizontal: 24,
     gap: 12,
   },

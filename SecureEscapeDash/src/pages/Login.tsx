@@ -2,7 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { adminLogin } from "../services/authService";
 import { saveToken, saveAdminUser } from "../utils/tokenStore";
-import { cleanText, validateEmail, validatePassword } from "../utils/validation";
+import {
+  cleanText,
+  validateEmail,
+  validatePassword,
+} from "../utils/validation";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -40,7 +44,24 @@ export default function Login() {
       });
       saveToken(response.token);
       saveAdminUser(response);
-      navigate("/dashboard");
+
+      switch (response.adminRole) {
+        case "Analyst":
+          navigate("/analyst");
+          break;
+
+        case "Manager":
+          navigate("/manager");
+          break;
+
+        case "Admin":
+          navigate("/admin");
+          break;
+
+        default:
+          navigate("/analyst");
+          break;
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed.");
     } finally {
@@ -100,9 +121,7 @@ export default function Login() {
                 placeholder="you@bank.co.za"
               />
               {fieldErrors.email && (
-                <p className="text-red-400 text-xs mt-1">
-                  {fieldErrors.email}
-                </p>
+                <p className="text-red-400 text-xs mt-1">{fieldErrors.email}</p>
               )}
             </div>
 

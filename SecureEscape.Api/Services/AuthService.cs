@@ -43,7 +43,7 @@ public class AuthService : IAuthService
             .Include(x => x.BankIntegration)
             .FirstOrDefaultAsync(x => x.Email == request.Email);
 
-        
+
         if (user == null || user.AuthCredential == null)
         {
             await _auditService.LogAsync(
@@ -85,33 +85,16 @@ public class AuthService : IAuthService
             return null;
         }
 
-        var passwordValid = _hashingService.Verify(
-            request.Password,
-            user.AuthCredential.PasswordHash);
-
-        
-        if (!passwordValid)
-        {
-            await _auditService.LogAsync(
-                AuditEventType.LoginFailed,
-                entityType: "User",
-                entityId: user.Id,
-                userId: user.Id,
-                metadataJson: "{\"reason\":\"Invalid password\"}");
-
-            return null;
-        }
-
         var normalPinValid = _hashingService.Verify(
             request.Pin,
             user.AuthCredential.NormalPinHash);
 
-        
+
         var duressPinValid = _hashingService.Verify(
             request.Pin,
             user.AuthCredential.DuressPinHash);
 
-        
+
         if (!normalPinValid && !duressPinValid)
         {
             await _auditService.LogAsync(
@@ -215,7 +198,7 @@ public class AuthService : IAuthService
             }
         }
 
-        
+
 
         if (request.Latitude.HasValue && request.Longitude.HasValue)
         {
@@ -246,7 +229,7 @@ public class AuthService : IAuthService
             userId: user.Id,
             userSessionId: session.Id);
 
-        
+
         await _auditService.LogAsync(
             AuditEventType.SessionCreated,
             entityType: "UserSession",
@@ -267,6 +250,174 @@ public class AuthService : IAuthService
             IsDuress = session.Mode == SessionMode.Duress
         };
     }
+
+    private async Task TriggerDuressAlertAsync(User user, Guid userSessionId)
+    {
+        var riskAssessment = _riskService.AssessDuressLogin();
+        var alert = new Alert
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            UserSessionId = userSessionId,
+            Type = AlertType.DuressLogin,
+            Severity = riskAssessment.RiskLevel,
+            Status = AlertStatus.Open,
+            Description = "User entered duress PIN during step-up verification.",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _context.Alerts.AddAsync(alert);
+
+        var riskEvaluation = new RiskEvaluation
+        {
+            Id = Guid.NewGuid(),
+            UserSessionId = userSessionId,
+            Score = riskAssessment.Score,
+            RiskLevel = riskAssessment.RiskLevel,
+            ReasonsJson = riskAssessment.ReasonsJson,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _context.RiskEvaluations.AddAsync(riskEvaluation);
+
+        var notificationAttempt = new NotificationAttempt
+        {
+            Id = Guid.NewGuid(),
+            AlertId = alert.Id,
+            Channel = NotificationChannel.Webhook,
+            Destination = "Fraud team webhook",
+            Status = NotificationStatus.Pending,
+            AttemptedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _context.NotificationAttempts.AddAsync(notificationAttempt);
+
+        var emergencyContacts = await _emergencyContactRepository.GetAllByUserIdAsync(user.Id);
+
+        foreach (var contact in emergencyContacts)
+        {
+            var emergencyContactNotification = new NotificationAttempt
+            {
+                Id = Guid.NewGuid(),
+                AlertId = alert.Id,
+                Channel = NotificationChannel.Sms,
+                Destination = contact.PhoneNumber,
+                MessageBody = $"Secure Escape alert: {user.FullName} may be in danger.",
+                Status = NotificationStatus.Pending,
+                AttemptedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow,
+                ResponseMessage = $"Emergency contact notification queued for {contact.FullName}."
+            };
+
+            await _context.NotificationAttempts.AddAsync(emergencyContactNotification);
+        }
+    }
+
+    public async Task<bool> VerifyPinAsync(string pin)
+    {
+        var currentUser = _currentUserService.GetCurrentUser();
+
+        var user = await _context.Users
+            .Include(x => x.AuthCredential)
+            .FirstOrDefaultAsync(x => x.Id == currentUser.UserId);
+
+        if (user == null || user.AuthCredential == null)
+        {
+            return false;
+        }
+
+        var session = await _context.UserSessions
+            .FirstOrDefaultAsync(x => x.Id == currentUser.UserSessionId);
+
+        if (session == null)
+        {
+            return false;
+        }
+
+        if (session.Mode == SessionMode.Duress)
+        {
+            // Duress session: ONLY the duress PIN is valid here. Anything else —
+            // including the correct normal PIN — is just "wrong PIN". No new
+            // alert fires; the session already signaled duress at login, and
+            // firing again here would just add noise without new information.
+            var duressPinValid = _hashingService.Verify(pin, user.AuthCredential.DuressPinHash);
+
+            if (duressPinValid)
+            {
+                await _auditService.LogAsync(
+                    AuditEventType.DuressPinMatchedStepUp,
+                    entityType: "User",
+                    entityId: user.Id,
+                    userId: user.Id,
+                    userSessionId: currentUser.UserSessionId,
+                    metadataJson: "{\"context\":\"step-up verification\",\"sessionMode\":\"Duress\"}");
+
+                return true;
+            }
+
+            await _auditService.LogAsync(
+                AuditEventType.LoginFailed,
+                entityType: "User",
+                entityId: user.Id,
+                userId: user.Id,
+                userSessionId: currentUser.UserSessionId,
+                metadataJson: "{\"reason\":\"Invalid PIN\",\"context\":\"step-up verification\",\"sessionMode\":\"Duress\"}");
+
+            return false;
+        }
+
+        // Normal session: normal PIN passes verification.
+        var normalPinValid = _hashingService.Verify(pin, user.AuthCredential.NormalPinHash);
+
+        if (normalPinValid)
+        {
+            await _auditService.LogAsync(
+                AuditEventType.NormalPinMatched,
+                entityType: "User",
+                entityId: user.Id,
+                userId: user.Id,
+                userSessionId: currentUser.UserSessionId,
+                metadataJson: "{\"context\":\"step-up verification\",\"sessionMode\":\"Normal\"}");
+
+            return true;
+        }
+
+        // Normal session, duress PIN entered: this is the real signal.
+        // Silent alert fires, but the response looks identical to any other
+        // wrong-PIN case so nothing on screen gives it away.
+        var duressPinValidInNormalSession = _hashingService.Verify(pin, user.AuthCredential.DuressPinHash);
+
+        if (duressPinValidInNormalSession)
+        {
+            await TriggerDuressAlertAsync(user, currentUser.UserSessionId);
+            session.HadStepUpDuressEvent = true;
+            session.UpdatedAt = DateTime.UtcNow;
+
+            await _auditService.LogAsync(
+                AuditEventType.DuressPinMatchedStepUp,
+                entityType: "User",
+                entityId: user.Id,
+                userId: user.Id,
+                userSessionId: currentUser.UserSessionId,
+                metadataJson: "{\"context\":\"step-up verification\",\"sessionMode\":\"Normal\"}");
+
+            await _context.SaveChangesAsync();
+
+            return false;
+        }
+
+        await _auditService.LogAsync(
+            AuditEventType.LoginFailed,
+            entityType: "User",
+            entityId: user.Id,
+            userId: user.Id,
+            userSessionId: currentUser.UserSessionId,
+            metadataJson: "{\"reason\":\"Invalid PIN\",\"context\":\"step-up verification\",\"sessionMode\":\"Normal\"}");
+
+        return false;
+    }
+
 
     public async Task LogoutAsync()
     {

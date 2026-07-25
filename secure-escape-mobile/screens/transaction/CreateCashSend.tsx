@@ -19,11 +19,13 @@ import { createCashSend } from "@/services/transactionServices";
 import { AccountResponse } from "@/types/account";
 import { CashSendResponse } from "@/types/transaction";
 import { colors } from "@/utils/theme";
+import VerifyPinModal from "@/components/VerifyPinModal";
 
 export default function CreateCashSend() {
   const router = useRouter();
   const { reference } = useLocalSearchParams<{ reference?: string }>();
 
+  const [verifyVisible, setVerifyVisible] = useState(false);
   const [accounts, setAccounts] = useState<AccountResponse[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [amount, setAmount] = useState("");
@@ -76,7 +78,7 @@ export default function CreateCashSend() {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     const numericAmount = Number(amount);
 
     if (!selectedAccountId) {
@@ -114,12 +116,18 @@ export default function CreateCashSend() {
       return;
     }
 
+    setVerifyVisible(true);
+  };
+
+  const handleVerifiedSubmit = async () => {
+    setVerifyVisible(false);
+
     try {
       setSaving(true);
       clearError();
       const cashSend = await createCashSend({
         bankAccountId: selectedAccountId,
-        amount: numericAmount,
+        amount: Number(amount),
         voucherPin,
         description: description.trim(),
       });
@@ -273,7 +281,12 @@ export default function CreateCashSend() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-
+      <VerifyPinModal
+        visible={verifyVisible}
+        onCancel={() => setVerifyVisible(false)}
+        onVerified={handleVerifiedSubmit}
+        subtitle="Enter your PIN to send this cash send"
+      />
       <Modal
         transparent
         visible={showErrorModal && !!error}

@@ -6,6 +6,7 @@ export type BeneficiaryResponse = {
   reference: string;
   status: string;
   createdAt: string;
+  lastPaidAt: string;
 };
 
 export type AddBeneficiaryRequest = {

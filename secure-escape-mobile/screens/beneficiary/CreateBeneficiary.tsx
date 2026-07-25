@@ -18,17 +18,22 @@ import { useRouter } from "expo-router";
 import { addBeneficiary } from "@/services/beneficiaryService";
 import { BeneficiaryResponse } from "@/types/beneficiary";
 import { colors } from "@/utils/theme";
+import VerifyPinModal from "@/components/VerifyPinModal";
 
 export default function CreateBeneficiary() {
   const router = useRouter();
+
+  const [verifyVisible, setVerifyVisible] = useState(false);
 
   const [name, setName] = useState("");
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [reference, setReference] = useState("");
   const [saving, setSaving] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const [showErrorModal, setShowErrorModal] = useState(false);
+
   const [createdBeneficiary, setCreatedBeneficiary] =
     useState<BeneficiaryResponse | null>(null);
 
@@ -68,13 +73,19 @@ export default function CreateBeneficiary() {
     return null;
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     const validationMessage = getValidationMessage();
 
     if (validationMessage) {
       showError(validationMessage);
       return;
     }
+
+    setVerifyVisible(true);
+  };
+
+  const handleVerifiedSubmit = async () => {
+    setVerifyVisible(false);
 
     try {
       setSaving(true);
@@ -89,9 +100,7 @@ export default function CreateBeneficiary() {
 
       setCreatedBeneficiary(created);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Please try again.";
-
+      const message = err instanceof Error ? err.message : "Please try again.";
       showError(message);
     } finally {
       setSaving(false);
@@ -225,7 +234,12 @@ export default function CreateBeneficiary() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-
+      <VerifyPinModal
+        visible={verifyVisible}
+        onCancel={() => setVerifyVisible(false)}
+        onVerified={handleVerifiedSubmit}
+        subtitle="Enter your PIN to add this beneficiary"
+      />
       <Modal
         transparent
         visible={showErrorModal && !!error}

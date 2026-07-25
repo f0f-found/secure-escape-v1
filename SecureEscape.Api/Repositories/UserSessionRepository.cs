@@ -21,6 +21,7 @@ public class UserSessionRepository : IUserSessionRepository
             .AsNoTracking()
             .Include(x => x.User)
             .Include(x => x.Alerts)
+            .Include(s => s.AssignedAdminUser)
             .Where(x => x.Mode == SessionMode.Duress)
             .AsQueryable();
 
