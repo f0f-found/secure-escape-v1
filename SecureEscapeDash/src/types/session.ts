@@ -18,6 +18,9 @@ export type DuressSessionSummary = {
   alertCount: number;
   highestSeverity: string;
   alertTypes: string[];
+  assignedAdminUserId?: string;
+  assignedAdminName?: string;
+  assignedAt?: string;
 };
 
 export type SessionAlertLog = {
@@ -57,4 +60,7 @@ export type DuressSessionDetail = {
   transactions: AlertTransaction[];
   locations: AlertLocation[];
   actions: AlertAction[];
+  assignedAdminUserId?: string;
+  assignedAdminName?: string;
+  assignedAt?: string;
 };

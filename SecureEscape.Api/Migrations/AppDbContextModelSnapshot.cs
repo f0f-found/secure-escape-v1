@@ -502,6 +502,9 @@ namespace SecureEscape.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<DateTime?>("LastPaidAt")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -855,6 +858,12 @@ namespace SecureEscape.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid?>("AssignedAdminUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("AssignedAt")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<string>("BankSessionId")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -876,6 +885,9 @@ namespace SecureEscape.Api.Migrations
 
                     b.Property<DateTime?>("EndedAt")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("HadStepUpDuressEvent")
+                        .HasColumnType("tinyint(1)");
 
                     b.Property<string>("IpAddress")
                         .IsRequired()
@@ -905,6 +917,8 @@ namespace SecureEscape.Api.Migrations
                         .HasColumnType("char(36)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AssignedAdminUserId");
 
                     b.HasIndex("BankSessionId");
 
@@ -1163,11 +1177,18 @@ namespace SecureEscape.Api.Migrations
 
             modelBuilder.Entity("SecureEscape.Api.Models.UserSession", b =>
                 {
+                    b.HasOne("SecureEscape.Api.Models.AdminUser", "AssignedAdminUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedAdminUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("SecureEscape.Api.Models.User", "User")
                         .WithMany("Sessions")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("AssignedAdminUser");
 
                     b.Navigation("User");
                 });

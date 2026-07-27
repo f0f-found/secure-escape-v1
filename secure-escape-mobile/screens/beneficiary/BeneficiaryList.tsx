@@ -1,4 +1,3 @@
-// screens/Screen11_BeneficiaryList.js – with BottomNav, no SafeAreaView
 import React, { useCallback, useState } from "react";
 import {
   View,
@@ -21,11 +20,14 @@ export default function BeneficiaryList() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("Frequent");
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("Recently paid");
+
   const [showAll, setShowAll] = useState(true);
   const [beneficiaries, setBeneficiaries] = useState<BeneficiaryResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  type SortOption = "Recently paid" | "Recently added";
+  const [sortBy, setSortBy] = useState<SortOption>("Recently paid");
 
   const loadBeneficiaries = async () => {
     try {
@@ -51,7 +53,18 @@ export default function BeneficiaryList() {
 
   const visibleList = showAll ? beneficiaries : beneficiaries.slice(0, 5);
 
-  const filteredData = visibleList.filter((item) => {
+  const sortedData = [...visibleList].sort((a, b) => {
+    if (sortBy === "Recently added") {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }
+
+    return (
+      new Date(b.lastPaidAt ?? 0).getTime() -
+      new Date(a.lastPaidAt ?? 0).getTime()
+    );
+  });
+
+  const filteredData = sortedData.filter((item) => {
     const query = searchQuery.trim().toLowerCase();
 
     if (!query) {
@@ -68,6 +81,32 @@ export default function BeneficiaryList() {
       .filter(Boolean)
       .some((value) => value.toLowerCase().includes(query));
   });
+
+  const formatLastPaid = (lastPaidAt?: string | null) => {
+    if (!lastPaidAt) {
+      return "Never paid";
+    }
+
+    const paidDate = new Date(lastPaidAt);
+    const now = new Date();
+
+    const diffMs = now.getTime() - paidDate.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return "Paid today";
+    }
+
+    if (diffDays === 1) {
+      return "Paid yesterday";
+    }
+
+    if (diffDays < 7) {
+      return `Paid ${diffDays} days ago`;
+    }
+
+    return `Last paid ${paidDate.toLocaleDateString()}`;
+  };
 
   const renderItem = ({ item }: { item: BeneficiaryResponse }) => (
     <TouchableOpacity
@@ -98,6 +137,7 @@ export default function BeneficiaryList() {
         <Text style={styles.lastPaid}>
           {item.bankName} • {item.accountNumber}
         </Text>
+        <Text style={styles.lastPaid}>{formatLastPaid(item.lastPaidAt)}</Text>
       </View>
       <Ionicons name="chevron-forward" size={20} color="#ccc" />
     </TouchableOpacity>
@@ -146,18 +186,18 @@ export default function BeneficiaryList() {
         <View style={styles.sortRow}>
           <View style={styles.sortItem}>
             <Text style={styles.sortLabel}>Sort by:</Text>
-            <TouchableOpacity style={styles.sortValue}>
-              <Text style={styles.sortText}>{sortBy}</Text>
-              <Ionicons name="chevron-down" size={16} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.sortItem}>
-            <Text style={styles.sortLabel}>Show all</Text>
             <TouchableOpacity
               style={styles.sortValue}
-              onPress={() => setShowAll(!showAll)}
+              onPress={() =>
+                setSortBy((current) =>
+                  current === "Recently paid"
+                    ? "Recently added"
+                    : "Recently paid",
+                )
+              }
             >
-              <Text style={styles.sortText}>{showAll ? "▼" : "▶"}</Text>
+              <Text style={styles.sortText}>{sortBy}</Text>
+              <Ionicons name="swap-vertical" size={16} color={colors.primary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -176,23 +216,7 @@ export default function BeneficiaryList() {
                 activeTab === "Frequent" && styles.activeTabText,
               ]}
             >
-              Frequent
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === "One time" && styles.activeTab]}
-            onPress={() => {
-              setActiveTab("One time");
-              setShowAll(true);
-            }}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === "One time" && styles.activeTabText,
-              ]}
-            >
-              One time
+              All
             </Text>
           </TouchableOpacity>
         </View>
@@ -298,7 +322,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#E5E5E5",
     marginBottom: 16,
   },
-  tab: { flex: 1, paddingVertical: 12, alignItems: "center" },
+  tab: { flex: 1, paddingVertical: 12, alignItems: "flex-start" },
   activeTab: { borderBottomWidth: 2, borderBottomColor: colors.primary },
   tabText: { fontSize: 14, fontWeight: "600", color: "#888" },
   activeTabText: { color: colors.primary },

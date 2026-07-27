@@ -298,6 +298,12 @@ namespace SecureEscape.Api.Data
                 .HasForeignKey(x => x.UserSessionId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            modelBuilder.Entity<UserSession>()
+                .HasOne(s => s.AssignedAdminUser)
+                .WithMany()
+                .HasForeignKey(s => s.AssignedAdminUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             modelBuilder.Entity<BankTransaction>()
                 .HasOne(x => x.User)
                 .WithMany()

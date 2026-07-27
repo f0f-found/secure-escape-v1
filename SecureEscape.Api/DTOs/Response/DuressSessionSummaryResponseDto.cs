@@ -17,4 +17,9 @@ public class DuressSessionSummaryResponseDto
     public int AlertCount { get; set; }
     public RiskLevel HighestSeverity { get; set; }
     public List<string> AlertTypes { get; set; } = new();
+    public Guid? AssignedAdminUserId { get; set; }
+
+    public string? AssignedAdminName { get; set; }
+
+    public DateTime? AssignedAt { get; set; }
 }

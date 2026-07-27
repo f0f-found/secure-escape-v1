@@ -1,3 +1,5 @@
+import type { AdminLoginResponse } from "../types/auth";
+
 const TOKEN_KEY = "secure_escape_admin_token";
 const ADMIN_KEY = "secure_escape_admin_user";
 
@@ -20,5 +22,5 @@ export function saveAdminUser(user: object) {
 
 export function getAdminUser() {
   const data = localStorage.getItem(ADMIN_KEY);
-  return data ? JSON.parse(data) : null;
+  return data ? (JSON.parse(data) as AdminLoginResponse) : null;
 }

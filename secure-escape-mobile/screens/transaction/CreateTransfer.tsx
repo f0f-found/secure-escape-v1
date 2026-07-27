@@ -19,6 +19,7 @@ import { createTransfer } from "@/services/transactionServices";
 import { AccountResponse } from "@/types/account";
 import { TransactionResponse } from "@/types/transaction";
 import { colors } from "@/utils/theme";
+import VerifyPinModal from "@/components/VerifyPinModal";
 
 export default function CreateTransfer() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function CreateTransfer() {
     reference?: string;
   }>();
 
+  const [verifyVisible, setVerifyVisible] = useState(false);
   const [accounts, setAccounts] = useState<AccountResponse[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [amount, setAmount] = useState("");
@@ -79,7 +81,7 @@ export default function CreateTransfer() {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     const numericAmount = Number(amount);
 
     if (!beneficiaryId) {
@@ -112,13 +114,19 @@ export default function CreateTransfer() {
       return;
     }
 
+    setVerifyVisible(true);
+  };
+
+  const handleVerifiedSubmit = async () => {
+    setVerifyVisible(false);
+
     try {
       setSaving(true);
       clearError();
       const transaction = await createTransfer({
         bankAccountId: selectedAccountId,
-        beneficiaryId,
-        amount: numericAmount,
+        beneficiaryId: beneficiaryId!,
+        amount: Number(amount),
         description: description.trim(),
       });
 
@@ -269,7 +277,12 @@ export default function CreateTransfer() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-
+      <VerifyPinModal
+        visible={verifyVisible}
+        onCancel={() => setVerifyVisible(false)}
+        onVerified={handleVerifiedSubmit}
+        subtitle="Enter your PIN to send this transfer"
+      />
       <Modal
         transparent
         visible={showErrorModal && !!error}

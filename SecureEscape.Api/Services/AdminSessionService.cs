@@ -75,6 +75,8 @@ public class AdminSessionService : IAdminSessionService
         return MapToDetail(session);
     }
 
+    //Assign Analyst to Session
+
     public async Task<DuressSessionDetailResponseDto?> DispatchSessionNotificationsAsync(
         Guid sessionId,
         Guid? bankIntegrationId)
@@ -113,6 +115,11 @@ public class AdminSessionService : IAdminSessionService
         if (bankIntegrationId.HasValue && detail?.User?.BankIntegrationId != bankIntegrationId.Value)
         {
             return null;
+        }
+
+        if (session.AssignedAdminUserId == null)
+        {
+            session.AssignedAdminUserId = adminUserId;
         }
 
         session.CaseStatus = request.CaseStatus;
@@ -266,7 +273,10 @@ public class AdminSessionService : IAdminSessionService
             EndedAt = session.EndedAt,
             AlertCount = session.Alerts.Count,
             HighestSeverity = highestSeverity,
-            AlertTypes = session.Alerts.Select(a => a.Type.ToString()).Distinct().ToList()
+            AlertTypes = session.Alerts.Select(a => a.Type.ToString()).Distinct().ToList(),
+            AssignedAdminUserId = session.AssignedAdminUserId,
+            AssignedAdminName = session.AssignedAdminUser?.FullName,
+            AssignedAt = session.AssignedAt,
         };
     }
 
@@ -282,6 +292,9 @@ public class AdminSessionService : IAdminSessionService
             Mode = session.Mode,
             Status = session.Status,
             CaseStatus = session.CaseStatus,
+            AssignedAdminName = session.AssignedAdminUser?.FullName,
+            AssignedAdminUserId = session.AssignedAdminUserId,
+            AssignedAt = session.AssignedAt,
             IpAddress = session.IpAddress,
             DeviceInfo = session.DeviceInfo,
             StartedAt = session.StartedAt,

@@ -6,5 +6,6 @@ namespace SecureEscape.Api.Interfaces;
 public interface IAuthService
 {
     Task<LoginResponseDto?> LoginAsync(LoginRequestDto request);
+    Task<bool> VerifyPinAsync(string pin);
     Task LogoutAsync();
 }

@@ -98,3 +98,8 @@ This document contains the default testing credentials for the Secure Escape mob
 - View all customers.
 - View all audit logs.
 - Manage bank integrations and platform administration.
+
+EvidencePanel.tsx
+CaseManagement.tsx
+Timeline.tsx
+Finally, the new SessionDetail.tsx

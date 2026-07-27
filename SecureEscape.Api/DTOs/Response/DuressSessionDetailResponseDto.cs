@@ -13,6 +13,12 @@ public class DuressSessionDetailResponseDto
     public SessionMode Mode { get; set; }
     public SessionStatus Status { get; set; }
     public CaseStatus CaseStatus { get; set; }
+
+    public Guid? AssignedAdminUserId { get; set; }
+
+    public string? AssignedAdminName { get; set; }
+
+    public DateTime? AssignedAt { get; set; }
     public string IpAddress { get; set; } = string.Empty;
     public string DeviceInfo { get; set; } = string.Empty;
     public DateTime StartedAt { get; set; }

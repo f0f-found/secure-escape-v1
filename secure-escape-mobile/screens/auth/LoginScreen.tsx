@@ -21,7 +21,6 @@ interface LoginScreenProps {
 
 export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const [email, setEmail] = useState("thabo.nkosi@email.co.za");
-  const [password, setPassword] = useState("Password@123");
   const [pin, setPin] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [biometricsEnabled, setBiometricsEnabled] = useState(false);
@@ -44,10 +43,6 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
     if (!email.trim()) {
       missingFields.push("email");
-    }
-
-    if (!password.trim()) {
-      missingFields.push("password");
     }
 
     if (!pin.trim()) {
@@ -108,7 +103,6 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       const loginContext = await getLoginContext();
       const response = await login({
         email,
-        password,
         pin,
         ...loginContext,
       });
@@ -155,19 +149,8 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
             clearError();
           }}
         />
-        <View style={styles.pinLabelRow}>
-          <Text>Password</Text>
-        </View>
 
-        <TextInput
-          style={styles.textInput}
-          secureTextEntry
-          value={password}
-          onChangeText={(value) => {
-            setPassword(value);
-            clearError();
-          }}
-        />
+
 
         <View style={styles.pinLabelRow}>
           <Text>Enter app PIN</Text>

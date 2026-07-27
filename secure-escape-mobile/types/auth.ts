@@ -1,6 +1,5 @@
 export type LoginRequest = {
   email: string;
-  password: string;
   pin: string;
   deviceInfo?: string;
   ipAddress?: string;
