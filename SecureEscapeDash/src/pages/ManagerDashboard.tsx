@@ -1,8 +1,8 @@
-import React from "react";
 
-type Props = {};
 
-const ManagerDashboard = (props: Props) => {
+
+
+const ManagerDashboard = () => {
   return <div>ManagerDashboard</div>;
 };
 
