@@ -38,6 +38,7 @@ export default function CaseOverview({
         <div className="flex gap-3">
           <StatusBadge status={session.status} />
           <SeverityBadge severity={session.highestSeverity} />
+          <ReviewStatusBadge status={session.managerReviewStatus} />
         </div>
       </div>
 
@@ -100,7 +101,9 @@ function InfoItem({ label, value }: InfoItemProps) {
         {label}
       </p>
 
-      <p className="mt-2 font-semibold text-slate-900 break-words">{value}</p>
+      <p className="mt-2 font-semibold text-slate-900 wrap-break-word">
+        {value}
+      </p>
     </div>
   );
 }
@@ -122,5 +125,29 @@ function StatCard({
 
       <p className={`mt-3 text-3xl font-bold ${valueClass}`}>{value}</p>
     </div>
+  );
+}
+
+function ReviewStatusBadge({ status }: { status: string }) {
+  if (status === "NotSubmitted") return null;
+
+  const styles: Record<string, string> = {
+    PendingReview: "bg-amber-100 text-amber-700",
+    Approved: "bg-green-100 text-green-700",
+    Rejected: "bg-red-100 text-red-700",
+  };
+
+  const labels: Record<string, string> = {
+    PendingReview: "Pending Manager Review",
+    Approved: "Manager Approved",
+    Rejected: "Manager Rejected",
+  };
+
+  return (
+    <span
+      className={`px-3 py-1 rounded-full text-xs font-semibold ${styles[status] ?? "bg-slate-100 text-slate-700"}`}
+    >
+      {labels[status] ?? status}
+    </span>
   );
 }

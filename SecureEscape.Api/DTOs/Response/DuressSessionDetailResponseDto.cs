@@ -25,6 +25,22 @@ public class DuressSessionDetailResponseDto
     public DateTime? EndedAt { get; set; }
     public DateTime? CaseResolvedAt { get; set; }
 
+    public string InvestigationSummary { get; set; } = string.Empty;
+
+    public string ResolutionSummary { get; set; } = string.Empty;
+
+    public Guid? ResolvedByAdminUserId { get; set; }
+
+    public DateTime? ResolutionSubmittedAt { get; set; }
+
+    public ManagerReviewStatus ManagerReviewStatus { get; set; }
+
+    public Guid? ManagerReviewedByAdminUserId { get; set; }
+
+    public DateTime? ManagerReviewedAt { get; set; }
+
+    public string ManagerReviewNotes { get; set; } = string.Empty;
+
     public int AlertCount { get; set; }
 
     public int TransactionCount { get; set; }

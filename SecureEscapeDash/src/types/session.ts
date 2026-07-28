@@ -14,6 +14,7 @@ export type DuressSessionSummary = {
   startedAt: string;
   endedAt: string | null;
   caseStatus: string;
+  managerReviewStatus: string;
   lastAlertAt: string | null;
   alertCount: number;
   highestSeverity: string;
@@ -48,6 +49,14 @@ export type DuressSessionDetail = {
   startedAt: string;
   endedAt: string | null;
   caseResolvedAt: string | null;
+  investigationSummary: string;
+  resolutionSummary: string;
+  resolvedByAdminUserId?: string;
+  resolutionSubmittedAt: string | null;
+  managerReviewStatus: string;
+  managerReviewedByAdminUserId?: string;
+  managerReviewedAt: string | null;
+  managerReviewNotes: string;
   alertCount: number;
   transactionCount: number;
   locationCount: number;

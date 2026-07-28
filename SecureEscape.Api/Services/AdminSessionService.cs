@@ -76,6 +76,57 @@ public class AdminSessionService : IAdminSessionService
     }
 
     //Assign Analyst to Session
+    public async Task<DuressSessionDetailResponseDto?> AssignSessionAsync(
+    Guid sessionId,
+    AssignSessionRequestDto request,
+    Guid? bankIntegrationId,
+    Guid assignedByAdminUserId)
+    {
+        var session = await _userSessionRepository.GetByIdAsync(sessionId);
+
+        if (session == null) return null;
+
+        var detail = await _userSessionRepository.GetDuressSessionDetailAsync(sessionId);
+
+        if (bankIntegrationId.HasValue && detail?.User?.BankIntegrationId != bankIntegrationId.Value)
+        {
+            return null;
+        }
+
+        session.AssignedAdminUserId = request.AdminUserId;
+        session.AssignedAt = DateTime.UtcNow;
+        session.CaseStatus = CaseStatus.Investigating;
+        session.UpdatedAt = DateTime.UtcNow;
+
+        await _userSessionRepository.UpdateAsync(session);
+
+        var action = new AlertAction
+        {
+            Id = Guid.NewGuid(),
+            UserSessionId = session.Id,
+            AdminUserId = assignedByAdminUserId,
+            ActionType = AlertActionType.Assigned,
+            Notes = string.IsNullOrWhiteSpace(request.Notes)
+                ? $"Case assigned to admin user {request.AdminUserId}."
+                : request.Notes,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _userSessionRepository.AddActionAsync(action);
+
+        await _unitOfWork.SaveChangesAsync();
+
+        await _auditService.LogAsync(
+            AuditEventType.AlertStatusUpdated,
+            entityType: "UserSession",
+            entityId: session.Id,
+            userId: session.UserId,
+            userSessionId: session.Id,
+            adminUserId: assignedByAdminUserId,
+            metadataJson: $"{{\"assignedAdminUserId\":\"{request.AdminUserId}\"}}");
+
+        return await GetDuressSessionDetailAsync(sessionId, bankIntegrationId);
+    }
 
     public async Task<DuressSessionDetailResponseDto?> DispatchSessionNotificationsAsync(
         Guid sessionId,
@@ -251,6 +302,137 @@ public class AdminSessionService : IAdminSessionService
         return await GetDuressSessionDetailAsync(sessionId, bankIntegrationId);
     }
 
+    public async Task<DuressSessionDetailResponseDto?> SubmitCaseReportAsync(
+    Guid sessionId,
+    SubmitCaseReportRequestDto request,
+    Guid? bankIntegrationId,
+    Guid adminUserId)
+    {
+        var session = await _userSessionRepository.GetByIdAsync(sessionId);
+
+        if (session == null) return null;
+
+        var detail = await _userSessionRepository.GetDuressSessionDetailAsync(sessionId);
+
+        if (bankIntegrationId.HasValue && detail?.User?.BankIntegrationId != bankIntegrationId.Value)
+        {
+            return null;
+        }
+
+        if (session.AssignedAdminUserId != adminUserId)
+        {
+            return null;
+        }
+
+        session.InvestigationSummary = request.InvestigationSummary;
+        session.ResolutionSummary = request.ResolutionSummary;
+        session.ResolvedByAdminUserId = adminUserId;
+        session.ResolutionSubmittedAt = DateTime.UtcNow;
+        session.CaseStatus = CaseStatus.Resolved;
+        session.CaseResolvedAt = DateTime.UtcNow;
+        session.ManagerReviewStatus = ManagerReviewStatus.PendingReview;
+        session.UpdatedAt = DateTime.UtcNow;
+
+        await _userSessionRepository.UpdateAsync(session);
+
+        var action = new AlertAction
+        {
+            Id = Guid.NewGuid(),
+            UserSessionId = session.Id,
+            AdminUserId = adminUserId,
+            ActionType = AlertActionType.Resolved,
+            Notes = "Analyst submitted resolution report for manager review.",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _userSessionRepository.AddActionAsync(action);
+
+        await _unitOfWork.SaveChangesAsync();
+
+        await _auditService.LogAsync(
+            AuditEventType.AlertStatusUpdated,
+            entityType: "UserSession",
+            entityId: session.Id,
+            userId: session.UserId,
+            userSessionId: session.Id,
+            adminUserId: adminUserId,
+            metadataJson: "{\"managerReviewStatus\":\"PendingReview\"}");
+
+        return await GetDuressSessionDetailAsync(sessionId, bankIntegrationId);
+    }
+
+    public async Task<DuressSessionDetailResponseDto?> ManagerReviewCaseAsync(
+        Guid sessionId,
+        ManagerReviewCaseRequestDto request,
+        Guid? bankIntegrationId,
+        Guid managerAdminUserId)
+    {
+        var session = await _userSessionRepository.GetByIdAsync(sessionId);
+
+        if (session == null) return null;
+
+        var detail = await _userSessionRepository.GetDuressSessionDetailAsync(sessionId);
+
+        if (bankIntegrationId.HasValue && detail?.User?.BankIntegrationId != bankIntegrationId.Value)
+        {
+            return null;
+        }
+
+        if (request.ReviewStatus != ManagerReviewStatus.Approved &&
+            request.ReviewStatus != ManagerReviewStatus.Rejected)
+        {
+            return null;
+        }
+
+        if (session.ManagerReviewStatus != ManagerReviewStatus.PendingReview)
+        {
+            return null;
+        }
+
+        session.ManagerReviewStatus = request.ReviewStatus;
+        session.ManagerReviewedByAdminUserId = managerAdminUserId;
+        session.ManagerReviewedAt = DateTime.UtcNow;
+        session.ManagerReviewNotes = request.ReviewNotes;
+        session.UpdatedAt = DateTime.UtcNow;
+
+        if (request.ReviewStatus == ManagerReviewStatus.Rejected)
+        {
+            session.CaseStatus = CaseStatus.Investigating;
+            session.CaseResolvedAt = null;
+        }
+
+        await _userSessionRepository.UpdateAsync(session);
+
+        var action = new AlertAction
+        {
+            Id = Guid.NewGuid(),
+            UserSessionId = session.Id,
+            AdminUserId = managerAdminUserId,
+            ActionType = request.ReviewStatus == ManagerReviewStatus.Approved
+                ? AlertActionType.Resolved
+                : AlertActionType.Assigned,
+            Notes = string.IsNullOrWhiteSpace(request.ReviewNotes)
+                ? $"Manager review: {request.ReviewStatus}."
+                : request.ReviewNotes,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _userSessionRepository.AddActionAsync(action);
+
+        await _unitOfWork.SaveChangesAsync();
+
+        await _auditService.LogAsync(
+            AuditEventType.AlertStatusUpdated,
+            entityType: "UserSession",
+            entityId: session.Id,
+            userId: session.UserId,
+            userSessionId: session.Id,
+            adminUserId: managerAdminUserId,
+            metadataJson: $"{{\"managerReviewStatus\":\"{request.ReviewStatus}\"}}");
+
+        return await GetDuressSessionDetailAsync(sessionId, bankIntegrationId);
+    }
+    
     private static DuressSessionSummaryResponseDto MapToSummary(UserSession session)
     {
         var highestSeverity = session.Alerts.Any()
@@ -277,6 +459,9 @@ public class AdminSessionService : IAdminSessionService
             AssignedAdminUserId = session.AssignedAdminUserId,
             AssignedAdminName = session.AssignedAdminUser?.FullName,
             AssignedAt = session.AssignedAt,
+            ManagerReviewStatus = session.ManagerReviewStatus,
+            ResolutionSubmittedAt = session.ResolutionSubmittedAt,
+            ManagerReviewedAt = session.ManagerReviewedAt,
         };
     }
 
@@ -300,6 +485,14 @@ public class AdminSessionService : IAdminSessionService
             StartedAt = session.StartedAt,
             EndedAt = session.EndedAt,
             CaseResolvedAt = session.CaseResolvedAt,
+            InvestigationSummary = session.InvestigationSummary,
+            ResolutionSummary = session.ResolutionSummary,
+            ResolvedByAdminUserId = session.ResolvedByAdminUserId,
+            ResolutionSubmittedAt = session.ResolutionSubmittedAt,
+            ManagerReviewStatus = session.ManagerReviewStatus,
+            ManagerReviewedByAdminUserId = session.ManagerReviewedByAdminUserId,
+            ManagerReviewedAt = session.ManagerReviewedAt,
+            ManagerReviewNotes = session.ManagerReviewNotes,
             AlertCount = session.Alerts.Count,
             TransactionCount = session.Transactions.Count,
             LocationCount = session.LocationEvents.Count,

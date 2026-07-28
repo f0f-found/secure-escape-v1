@@ -24,6 +24,11 @@ import InvestigationPanel from "../components/Session/InvestigationPanel";
 import CaseManagement from "../components/Session/CaseManagement";
 import Timeline from "../components/Session/Timeline";
 import EvidencePanel from "../components/Session/EvidencePanel";
+import { ADMIN_ROLES } from "../constants/roles";
+import { hasPermission } from "../constants/permission";
+import CaseReportForm from "../components/Session/CaseReportForm";
+import ManagerReviewForm from "../components/Session/ManagerReviewForm";
+import CaseStageTracker from "../components/Session/CaseStageTracker";
 
 export default function SessionDetail() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +38,32 @@ export default function SessionDetail() {
   const [session, setSession] = useState<DuressSessionDetail | null>(null);
   const isAssignedToMe = session?.assignedAdminUserId === admin?.adminUserId;
   const isUnassigned = !session?.assignedAdminUserId;
+  const canViewAnyCaseDetails = hasPermission(
+    admin?.adminRole,
+    "viewAnyCaseDetails",
+  );
+  const canViewAssignedCaseDetails =
+    hasPermission(admin?.adminRole, "viewAssignedCaseDetails") &&
+    isAssignedToMe;
+  const canViewFullCase = canViewAnyCaseDetails || canViewAssignedCaseDetails;
+
+  const canAssignCases = hasPermission(admin?.adminRole, "assignCases");
+  const canUpdateCaseStatus = hasPermission(
+    admin?.adminRole,
+    "updateCaseStatus",
+  );
+  const canRecordCaseAction = hasPermission(
+    admin?.adminRole,
+    "recordCaseAction",
+  );
+  const canFreezeAccounts = hasPermission(admin?.adminRole, "freezeAccounts");
+  const canDispatchNotifications = hasPermission(
+    admin?.adminRole,
+    "dispatchNotifications",
+  );
+
+  const isSecureEscapeAdmin =
+    admin?.adminRole === ADMIN_ROLES.SecureEscapeAdmin;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -161,15 +192,16 @@ export default function SessionDetail() {
 
   const handleReturnNavigate = (admin: AdminLoginResponse) => {
     switch (admin.adminRole) {
-      case "FraudAnalyst":
+      case ADMIN_ROLES.FraudAnalyst:
         navigate("/analyst");
         break;
 
-      case "FraudManager":
+      case ADMIN_ROLES.FraudManager:
         navigate("/manager");
         break;
 
-      case "SeureEscapeAdmin":
+      case ADMIN_ROLES.SecureEscapeAdmin:
+      case ADMIN_ROLES.SystemAdmin:
         navigate("/admin");
         break;
 
@@ -194,6 +226,16 @@ export default function SessionDetail() {
       </Layout>
     );
 
+  const canSubmitCaseReport =
+    admin?.adminRole === ADMIN_ROLES.FraudAnalyst &&
+    isAssignedToMe &&
+    session.caseStatus === "Investigating";
+
+  const canManagerReview =
+    (admin?.adminRole === ADMIN_ROLES.FraudManager ||
+      admin?.adminRole === ADMIN_ROLES.SystemAdmin) &&
+    session.managerReviewStatus === "PendingReview";
+
   return (
     <Layout>
       <div className="max-w-6xl mx-auto">
@@ -209,17 +251,105 @@ export default function SessionDetail() {
         <CaseOverview session={session} assignedToMe={isAssignedToMe} />
 
         <div className="mt-6">
-          {isAssignedToMe && (
-            <div className="mt-6 grid grid-cols-12 gap-6">
+          <CaseStageTracker session={session} />
+        </div>
+
+        <div className="mt-6">
+          {isUnassigned && canAssignCases && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-8">
+              <h2 className="text-xl font-semibold text-amber-900">
+                Claim Investigation
+              </h2>
+              <p className="mt-2 text-amber-700">
+                This case has not yet been assigned to an analyst.
+              </p>
+              <p className="mt-1 text-amber-700">
+                Begin the investigation to assign this case to yourself and
+                unlock customer evidence.
+              </p>
+              <button
+                onClick={() => handleStatusUpdate("Investigating")}
+                disabled={updatingStatus}
+                className="mt-6 rounded-xl bg-indigo-600 px-6 py-3 text-white font-semibold hover:bg-indigo-500 disabled:opacity-50"
+              >
+                {updatingStatus ? "Assigning..." : "Begin Investigation"}
+              </button>
+            </div>
+          )}
+
+          {isUnassigned && !canAssignCases && (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8">
+              <h2 className="text-xl font-semibold text-slate-900">
+                Awaiting Assignment
+              </h2>
+              <p className="mt-2 text-slate-600">
+                This case has not yet been assigned to an analyst.
+              </p>
+            </div>
+          )}
+
+          {!isUnassigned && !canViewFullCase && (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8">
+              <h2 className="text-xl font-semibold text-slate-900">
+                Investigation In Progress
+              </h2>
+              <p className="mt-2 text-slate-600">
+                This case is currently assigned to another fraud analyst.
+              </p>
+              <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
+                <p className="text-sm text-slate-500">Assigned To</p>
+                <p className="mt-1 font-semibold text-slate-900">
+                  {session.assignedAdminName}
+                </p>
+                {session.assignedAt && (
+                  <>
+                    <p className="mt-4 text-sm text-slate-500">Assigned At</p>
+                    <p className="mt-1 text-slate-900">
+                      {new Date(session.assignedAt).toLocaleString()}
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!isUnassigned && canViewFullCase && !isSecureEscapeAdmin && (
+            <div className="grid grid-cols-12 gap-6">
               <div className="col-span-8 space-y-6">
                 <InvestigationPanel session={session} />
-
                 <EvidencePanel session={session} />
-
                 <Timeline session={session} />
               </div>
 
-              <div className="col-span-4">
+              <div className="col-span-4 space-y-6">
+                {canSubmitCaseReport && (
+                  <CaseReportForm session={session} onSubmitted={setSession} />
+                )}
+
+                {canManagerReview && (
+                  <ManagerReviewForm
+                    session={session}
+                    onReviewed={setSession}
+                  />
+                )}
+
+                {session.managerReviewStatus === "Approved" && (
+                  <div className="bg-white rounded-2xl border border-green-200 shadow-sm p-6">
+                    <h2 className="text-lg font-semibold text-green-800">
+                      Case Resolved
+                    </h2>
+                    <p className="mt-2 text-sm text-slate-600">
+                      {session.resolutionSummary}
+                    </p>
+                    {session.managerReviewedAt && (
+                      <p className="mt-4 text-xs text-slate-500">
+                        Approved{" "}
+                        {new Date(session.managerReviewedAt).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <CaseManagement
                   session={session}
                   selectedStatus={selectedStatus}
@@ -240,70 +370,14 @@ export default function SessionDetail() {
                   actionFormError={actionFormError}
                   addingAction={addingAction}
                   handleAddAction={handleAddAction}
+                  canUpdateCaseStatus={canUpdateCaseStatus}
+                  canRecordCaseAction={canRecordCaseAction}
+                  canFreezeAccounts={canFreezeAccounts}
+                  canDispatchNotifications={canDispatchNotifications}
                   CASE_STATUSES={CASE_STATUSES}
                   ACTION_TYPES={ACTION_TYPES}
                 />
               </div>
-            </div>
-          )}
-
-          {isUnassigned && (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-8">
-              <h2 className="text-xl font-semibold text-amber-900">
-                Claim Investigation
-              </h2>
-
-              <p className="mt-2 text-amber-700">
-                This case has not yet been assigned to an analyst.
-              </p>
-
-              <p className="mt-1 text-amber-700">
-                Begin the investigation to assign this case to yourself and
-                unlock customer evidence.
-              </p>
-
-              <button
-                onClick={() => handleStatusUpdate("Investigating")}
-                disabled={updatingStatus}
-                className="mt-6 rounded-xl bg-indigo-600 px-6 py-3 text-white font-semibold hover:bg-indigo-500 disabled:opacity-50"
-              >
-                {updatingStatus ? "Assigning..." : "Begin Investigation"}
-              </button>
-            </div>
-          )}
-
-          {!isAssignedToMe && !isUnassigned && (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8">
-              <h2 className="text-xl font-semibold text-slate-900">
-                Investigation In Progress
-              </h2>
-
-              <p className="mt-2 text-slate-600">
-                This case is currently assigned to another fraud analyst.
-              </p>
-
-              <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
-                <p className="text-sm text-slate-500">Assigned To</p>
-
-                <p className="mt-1 font-semibold text-slate-900">
-                  {session.assignedAdminName}
-                </p>
-
-                {session.assignedAt && (
-                  <>
-                    <p className="mt-4 text-sm text-slate-500">Assigned At</p>
-
-                    <p className="mt-1 text-slate-900">
-                      {new Date(session.assignedAt).toLocaleString()}
-                    </p>
-                  </>
-                )}
-              </div>
-
-              <p className="mt-6 text-sm text-slate-500">
-                Only the assigned analyst can access customer evidence, perform
-                emergency actions or manage this investigation.
-              </p>
             </div>
           )}
         </div>

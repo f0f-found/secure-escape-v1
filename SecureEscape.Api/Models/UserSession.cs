@@ -48,6 +48,25 @@ namespace SecureEscape.Api.Models
 
         public DateTime? AssignedAt { get; set; }
 
+        [MaxLength(2000)]
+        public string InvestigationSummary { get; set; } = string.Empty;
+
+        [MaxLength(2000)]
+        public string ResolutionSummary { get; set; } = string.Empty;
+
+        public Guid? ResolvedByAdminUserId { get; set; }
+
+        public DateTime? ResolutionSubmittedAt { get; set; }
+
+        public ManagerReviewStatus ManagerReviewStatus { get; set; } = ManagerReviewStatus.NotSubmitted;
+
+        public Guid? ManagerReviewedByAdminUserId { get; set; }
+
+        public DateTime? ManagerReviewedAt { get; set; }
+
+        [MaxLength(2000)]
+        public string ManagerReviewNotes { get; set; } = string.Empty;
+
         public AdminUser? AssignedAdminUser { get; set; }
         public User? User { get; set; }
 
