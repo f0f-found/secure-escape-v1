@@ -7,6 +7,7 @@ import {
   validateEmail,
   validatePassword,
 } from "../utils/validation";
+import { ADMIN_ROLES } from "../constants/roles";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -46,20 +47,21 @@ export default function Login() {
       saveAdminUser(response);
 
       switch (response.adminRole) {
-        case "Analyst":
+        case ADMIN_ROLES.FraudAnalyst:
           navigate("/analyst");
           break;
 
-        case "Manager":
+        case ADMIN_ROLES.FraudManager:
           navigate("/manager");
           break;
 
-        case "Admin":
+        case ADMIN_ROLES.SecureEscapeAdmin:
+        case ADMIN_ROLES.SystemAdmin:
           navigate("/admin");
           break;
 
         default:
-          navigate("/analyst");
+          navigate("/login");
           break;
       }
     } catch (err) {

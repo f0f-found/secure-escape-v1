@@ -140,6 +140,13 @@ namespace SecureEscape.Api.Data
             modelBuilder.Entity<UserSession>()
                 .Property(x => x.Status)
                 .HasConversion<string>();
+            modelBuilder.Entity<UserSession>()
+                .Property(x => x.CaseStatus)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<UserSession>()
+                .Property(x => x.ManagerReviewStatus)
+                .HasConversion<string>();
         }
 
         private static void ConfigureIndexes(ModelBuilder modelBuilder)

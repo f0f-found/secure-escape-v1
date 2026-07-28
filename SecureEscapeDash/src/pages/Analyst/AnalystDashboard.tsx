@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 //import { useNavigate } from "react-router-dom";
-import Layout from "../components/Layout";
-import type { DuressSessionSummary } from "../types/session";
-import { getDuressSessions } from "../services/sessionService";
-import CaseQueue from "../components/Dashboard/CaseQueue";
-import CaseTable from "../components/Dashboard/CaseTable";
-import WelcomeBanner from "../components/Analyst/WelcomeBanner";
-import CaseStats from "../components/Analyst/CaseStats";
-import { getAdminUser } from "../utils/tokenStore";
+import Layout from "../../components/Layout";
+import type { DuressSessionSummary } from "../../types/session";
+import { getDuressSessions } from "../../services/sessionService";
+import CaseQueue from "../../components/Dashboard/CaseQueue";
+import CaseTable from "../../components/Dashboard/CaseTable";
+import WelcomeBanner from "../../components/Analyst/WelcomeBanner";
+import CaseStats from "../../components/Analyst/CaseStats";
+import { getAdminUser } from "../../utils/tokenStore";
 
 // const STATUS_FILTERS = ["All", "Active", "Expired", "Terminated"];
 

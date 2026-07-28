@@ -1,5 +1,6 @@
 /* eslint-disable no-useless-assignment */
 import { API_BASE_URL } from "../constants/api";
+import type { AdminUserSummary } from "../types/auth";
 import type {
   DuressSessionSummary,
   DuressSessionDetail,
@@ -132,5 +133,70 @@ export async function dispatchSessionNotifications(
   if (!response.ok)
     throw new Error("Failed to dispatch session notifications.");
 
+  return response.json();
+}
+
+export async function assignCase(
+  id: string,
+  adminUserId: string,
+  notes: string,
+): Promise<DuressSessionDetail> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/admin/duress-sessions/${id}/assign`,
+    {
+      method: "PATCH",
+      headers: getHeaders(),
+      body: JSON.stringify({ adminUserId, notes: cleanText(notes) }),
+    },
+  );
+  if (!response.ok) throw new Error("Failed to assign case.");
+  return response.json();
+}
+
+export async function submitCaseReport(
+  id: string,
+  investigationSummary: string,
+  resolutionSummary: string,
+): Promise<DuressSessionDetail> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/admin/duress-sessions/${id}/case-report`,
+    {
+      method: "PATCH",
+      headers: getHeaders(),
+      body: JSON.stringify({
+        investigationSummary: cleanText(investigationSummary),
+        resolutionSummary: cleanText(resolutionSummary),
+      }),
+    },
+  );
+  if (!response.ok) throw new Error("Failed to submit case report.");
+  return response.json();
+}
+
+export async function managerReviewCase(
+  id: string,
+  reviewStatus: "Approved" | "Rejected",
+  reviewNotes: string,
+): Promise<DuressSessionDetail> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/admin/duress-sessions/${id}/manager-review`,
+    {
+      method: "PATCH",
+      headers: getHeaders(),
+      body: JSON.stringify({
+        reviewStatus,
+        reviewNotes: cleanText(reviewNotes),
+      }),
+    },
+  );
+  if (!response.ok) throw new Error("Failed to submit manager review.");
+  return response.json();
+}
+
+export async function getAnalysts(): Promise<AdminUserSummary[]> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/admin/users/analysts`, {
+    headers: getHeaders(),
+  });
+  if (!response.ok) throw new Error("Failed to load analysts.");
   return response.json();
 }

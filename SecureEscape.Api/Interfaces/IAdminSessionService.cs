@@ -8,11 +8,17 @@ public interface IAdminSessionService
     Task<List<DuressSessionSummaryResponseDto>> GetDuressSessionsAsync(Guid? bankIntegrationId);
 
     Task<DuressSessionDetailResponseDto?> GetDuressSessionDetailAsync(Guid sessionId, Guid? bankIntegrationId);
-    
+
+    Task<DuressSessionDetailResponseDto?> AssignSessionAsync(
+    Guid sessionId,
+    AssignSessionRequestDto request,
+    Guid? bankIntegrationId,
+    Guid assignedByAdminUserId);
+
     Task<DuressSessionDetailResponseDto?> DispatchSessionNotificationsAsync(
         Guid sessionId,
         Guid? bankIntegrationId);
-    
+
     Task<DuressSessionDetailResponseDto?> UpdateCaseStatusAsync(
         Guid sessionId,
         UpdateCaseStatusRequestDto request,
@@ -29,4 +35,16 @@ public interface IAdminSessionService
         Guid sessionId,
         Guid? bankIntegrationId,
         Guid adminUserId);
+
+    Task<DuressSessionDetailResponseDto?> SubmitCaseReportAsync(
+    Guid sessionId,
+    SubmitCaseReportRequestDto request,
+    Guid? bankIntegrationId,
+    Guid adminUserId);
+
+    Task<DuressSessionDetailResponseDto?> ManagerReviewCaseAsync(
+        Guid sessionId,
+        ManagerReviewCaseRequestDto request,
+        Guid? bankIntegrationId,
+        Guid managerAdminUserId);
 }

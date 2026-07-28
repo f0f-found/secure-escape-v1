@@ -11,3 +11,9 @@ export type AdminLoginResponse = {
   bankName: string;
   token: string;
 };
+
+export type AdminUserSummary = {
+  id: string;
+  fullName: string;
+  email: string;
+};

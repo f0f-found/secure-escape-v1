@@ -22,4 +22,10 @@ public class DuressSessionSummaryResponseDto
     public string? AssignedAdminName { get; set; }
 
     public DateTime? AssignedAt { get; set; }
+
+    public ManagerReviewStatus ManagerReviewStatus { get; set; }
+
+    public DateTime? ResolutionSubmittedAt { get; set; }
+
+    public DateTime? ManagerReviewedAt { get; set; }
 }
