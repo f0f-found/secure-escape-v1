@@ -17,7 +17,8 @@ type Permission =
   | "approveResolvedCases"
   | "viewPlatformStats"
   | "viewAuditLogs"
-  | "manageUsers";
+  | "manageUsers"
+  | "claimCases";
 
 export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
   [ADMIN_ROLES.FraudAnalyst]: [
@@ -28,6 +29,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
     "recordCaseAction",
     "dispatchNotifications",
     "submitResolutionWriteUp",
+    "claimCases",
   ],
 
   [ADMIN_ROLES.FraudManager]: [

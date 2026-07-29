@@ -130,7 +130,7 @@ export default function AssignmentTable({
                           [session.id]: e.target.value,
                         }))
                       }
-                      className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                      className="  border border-slate-300 px-3 py-2 text-sm"
                     >
                       <option value="">Select analyst...</option>
                       {analysts.map((a) => (
@@ -144,7 +144,7 @@ export default function AssignmentTable({
                       disabled={
                         !selectedAnalyst[session.id] || assigning === session.id
                       }
-                      className="rounded-lg bg-indigo-600 px-3 py-2 text-sm text-white font-semibold hover:bg-indigo-500 disabled:opacity-50"
+                      className="  bg-indigo-600 px-3 py-2 text-sm text-white font-semibold hover:bg-indigo-500 disabled:opacity-50"
                     >
                       {assigning === session.id ? "Assigning..." : "Assign"}
                     </button>
@@ -154,7 +154,7 @@ export default function AssignmentTable({
               <td className="px-6 py-5 text-right">
                 <button
                   onClick={() => navigate(`/sessions/${session.id}`)}
-                  className="bg-[#12355B] hover:bg-[#0B2545] text-white px-4 py-2 rounded-lg transition"
+                  className="bg-[#12355B] hover:bg-[#0B2545] text-white px-4 py-2   transition"
                 >
                   Open Case
                 </button>

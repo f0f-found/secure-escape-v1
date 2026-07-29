@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   Animated,
   Dimensions,
+  Modal,
+  ScrollView,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
@@ -22,6 +24,7 @@ export default function SecureEscapeSplashPage() {
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [infoModalVisible, setInfoModalVisible] = React.useState(false);
 
   useEffect(() => {
     // Entrance animations
@@ -135,7 +138,7 @@ export default function SecureEscapeSplashPage() {
           Set a duress PIN to silently alert the bank and police if you&apos;re
           ever forced to transact under threat.
         </Text>
-        <TouchableOpacity onPress={() => {}}>
+        <TouchableOpacity onPress={() => setInfoModalVisible(true)}>
           <Text style={styles.learnMore}>Learn more →</Text>
         </TouchableOpacity>
       </Animated.View>
@@ -144,6 +147,64 @@ export default function SecureEscapeSplashPage() {
       <TouchableOpacity style={styles.arrowButton} onPress={handlePress}>
         <Text style={styles.arrow}>→</Text>
       </TouchableOpacity>
+      <Modal
+        transparent
+        visible={infoModalVisible}
+        animationType="fade"
+        onRequestClose={() => setInfoModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setInfoModalVisible(false)}
+            >
+              <Ionicons name="close" size={22} color={colors.navy} />
+            </TouchableOpacity>
+
+            <View style={styles.modalIconWrapper}>
+              <Ionicons
+                name="shield-checkmark"
+                size={40}
+                color={colors.primary}
+              />
+            </View>
+
+            <Text style={styles.modalTitle}>About Secure Escape</Text>
+
+            <ScrollView
+              style={styles.modalScroll}
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.modalParagraph}>
+                Secure Escape lets you set a second, secret PIN alongside your
+                normal PIN. If you&apos;re ever forced to make a transaction
+                under threat, entering your duress PIN instead of your normal
+                one silently alerts the bank and your emergency contacts —
+                without changing anything visible on your screen.
+              </Text>
+
+              <Text style={styles.modalParagraph}>
+                The app continues to work exactly as normal for anyone watching.
+                No alarms, no visible warnings, no sudden changes — just a quiet
+                signal sent in the background so help can be sent your way.
+              </Text>
+
+              <Text style={styles.modalParagraph}>
+                You can set up your duress PIN and manage your Secure Escape
+                settings from this screen at any time.
+              </Text>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.modalDoneButton}
+              onPress={() => setInfoModalVisible(false)}
+            >
+              <Text style={styles.modalDoneText}>Got it</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -242,5 +303,72 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: colors.navy,
     fontWeight: "600",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.55)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalContent: {
+    width: "100%",
+    maxHeight: height * 0.7,
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 24,
+    alignItems: "center",
+  },
+  modalCloseButton: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#F0F0F5",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+  },
+  modalIconWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#F0EFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: colors.navy,
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  modalScroll: {
+    width: "100%",
+    marginBottom: 20,
+  },
+  modalParagraph: {
+    fontSize: 14,
+    color: colors.textSub,
+    lineHeight: 21,
+    marginBottom: 14,
+    textAlign: "left",
+  },
+  modalDoneButton: {
+    width: "100%",
+    backgroundColor: colors.primary,
+    borderRadius: 50,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  modalDoneText: {
+    color: "#fff",
+    fontWeight: "800",
+    fontSize: 15,
   },
 });

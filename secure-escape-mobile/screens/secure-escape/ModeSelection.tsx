@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Animated,
   ScrollView,
+  Modal,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
@@ -17,6 +18,7 @@ import { useRouter } from "expo-router";
 export default function ModeSelection() {
   const router = useRouter();
   const [selectedMode, setSelectedMode] = useState<string>();
+  const [riskModalVisible, setRiskModalVisible] = useState(false);
   const [scaleLow] = useState(new Animated.Value(1));
   const [scaleReal] = useState(new Animated.Value(1));
 
@@ -118,7 +120,7 @@ export default function ModeSelection() {
         <Text style={styles.sub}>
           Hello there, Select the mode that matches your risk level
         </Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => setRiskModalVisible(true)}>
           <Text style={styles.link}>I dont know my risk level?</Text>
         </TouchableOpacity>
 
@@ -210,6 +212,63 @@ export default function ModeSelection() {
           </LinearGradient>
         </TouchableOpacity>
       </View>
+      <Modal
+        transparent
+        visible={riskModalVisible}
+        animationType="fade"
+        onRequestClose={() => setRiskModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setRiskModalVisible(false)}
+            >
+              <Ionicons name="close" size={22} color={colors.navy} />
+            </TouchableOpacity>
+
+            <View style={styles.modalIconWrapper}>
+              <Ionicons
+                name="shield-checkmark"
+                size={40}
+                color={colors.primary}
+              />
+            </View>
+
+            <Text style={styles.modalTitle}>Which mode is right for me?</Text>
+
+            <ScrollView
+              style={styles.modalScroll}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.modalModeBlock}>
+                <Text style={styles.modalModeTitle}>Low Profile Mode</Text>
+                <Text style={styles.modalParagraph}>
+                  Good for most people. If someone forces you to open the app,
+                  they&apos;ll see a near-empty balance — nothing to take,
+                  nothing to question. Simple and effective for everyday
+                  situations.
+                </Text>
+              </View>
+
+              <View style={styles.modalModeBlock}>
+                <Text style={styles.modalModeTitle}>Realistic Decoy Mode</Text>
+                <Text style={styles.modalParagraph}>
+                  Better if you&apos;re at higher risk of being watched closely
+                  — for example, if someone forcing you already knows roughly
+                  how much money you have. Shows a believable balance based on
+                  your actual spending patterns instead of an empty account, so
+                  nothing looks obviously staged.
+                </Text>
+              </View>
+
+              <Text style={styles.modalHint}>
+                Not sure? Low Profile Mode is the safer default for most people.
+              </Text>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -338,5 +397,99 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.55)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalContent: {
+    width: "100%",
+    maxHeight: "80%",
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 24,
+    alignItems: "center",
+  },
+  modalCloseButton: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#F0F0F5",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+  },
+  modalIconWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#F0EFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: colors.navy,
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  modalScroll: {
+    width: "100%",
+    marginBottom: 16,
+  },
+  modalModeBlock: {
+    marginBottom: 18,
+  },
+  modalModeTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.primary,
+    marginBottom: 6,
+  },
+  modalParagraph: {
+    fontSize: 14,
+    color: colors.textSub,
+    lineHeight: 21,
+    textAlign: "left",
+  },
+  modalHint: {
+    fontSize: 12,
+    color: colors.textSub,
+    fontStyle: "italic",
+    textAlign: "center",
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  modalDoneButton: {
+    width: "100%",
+    backgroundColor: colors.primary,
+    borderRadius: 50,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  modalDoneText: {
+    color: "#fff",
+    fontWeight: "800",
+    fontSize: 15,
+  },
+  modalSecondaryButton: {
+    width: "100%",
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  modalSecondaryText: {
+    color: colors.primary,
+    fontWeight: "700",
+    fontSize: 15,
   },
 });

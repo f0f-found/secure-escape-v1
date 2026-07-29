@@ -112,14 +112,24 @@ export default function HomeScreen() {
       bg: "#E6FAF8",
       link: "/transactions/create-cash-send",
     },
-    // { label: "Buy Prepaid", icon: "phone-portrait", bg: "#FFFBEB" },
-    // { label: "Pay the bill", icon: "document-text", bg: "#F0FDF4" },
-    // { label: "Credit card", icon: "card", bg: "#FFF5F5" },
     {
       label: "Transaction report",
       icon: "stats-chart",
       bg: "#EEEEFF",
       link: "/transactions/report",
+    },
+    // { label: "Buy Prepaid", icon: "phone-portrait", bg: "#FFFBEB" },
+    {
+      label: "Financial Advice",
+      icon: "document-text",
+      bg: "#F0FDF4",
+      link: "/advice/financial-advice",
+    },
+    {
+      label: "Security Tips",
+      icon: "card",
+      bg: "#FFF5F5",
+      link: "/advice/security-tips",
     },
   ];
 

@@ -76,7 +76,7 @@ export default function Login() {
       <div className="w-full max-w-md">
         {/* Logo / Title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16   bg-indigo-600 mb-4">
             <svg
               className="w-8 h-8 text-white"
               fill="none"
@@ -96,7 +96,7 @@ export default function Login() {
         </div>
 
         {/* Card */}
-        <div className="bg-gray-900 rounded-2xl p-8 border border-gray-800">
+        <div className="bg-gray-900   p-8 border border-gray-800">
           <h2 className="text-lg font-semibold text-white mb-6">
             Sign in to your account
           </h2>
@@ -115,7 +115,7 @@ export default function Login() {
                 }}
                 required
                 aria-invalid={Boolean(fieldErrors.email)}
-                className={`w-full bg-gray-800 text-white border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 ${
+                className={`w-full bg-gray-800 text-white border   px-4 py-3 text-sm focus:outline-none focus:ring-1 ${
                   fieldErrors.email
                     ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                     : "border-gray-700 focus:border-indigo-500 focus:ring-indigo-500"
@@ -141,7 +141,7 @@ export default function Login() {
                 required
                 minLength={8}
                 aria-invalid={Boolean(fieldErrors.password)}
-                className={`w-full bg-gray-800 text-white border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 ${
+                className={`w-full bg-gray-800 text-white border   px-4 py-3 text-sm focus:outline-none focus:ring-1 ${
                   fieldErrors.password
                     ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                     : "border-gray-700 focus:border-indigo-500 focus:ring-indigo-500"
@@ -160,7 +160,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold rounded-xl py-3 text-sm transition-colors"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold   py-3 text-sm transition-colors"
             >
               {loading ? "Signing in..." : "Sign in"}
             </button>

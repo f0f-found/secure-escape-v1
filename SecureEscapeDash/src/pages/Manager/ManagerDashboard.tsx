@@ -77,7 +77,11 @@ export default function ManagerDashboard() {
         />
       </StatsGrid>
 
-      <CaseQueue sessions={unassignedCases.slice(0, 5)} />
+      <CaseQueue
+        sessions={sessions
+          .filter((session) => session.status === "Active")
+          .slice(0, 5)}
+      />
 
       <CaseTable sessions={highRiskCases} loading={loading} error={error} />
     </Layout>

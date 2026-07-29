@@ -14,13 +14,28 @@ export default function CaseOverview({
   const started = new Date(session.startedAt);
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+    <div className="bg-white   border border-slate-200 shadow-sm">
       {/* Header */}
       <div className="flex items-start justify-between p-8 border-b border-slate-200">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
-            Fraud Case
-          </p>
+          <div className="flex items-center gap-2">
+            {session.status === "Active" && (
+              <span className="relative flex h-3 w-3">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                <span className="relative inline-flex h-3 w-3 rounded-full bg-red-600" />
+              </span>
+            )}
+
+            <p
+              className={`text-sm font-semibold uppercase tracking-wide ${
+                session.status === "Active" ? "text-red-600" : "text-indigo-600"
+              }`}
+            >
+              {session.status === "Active"
+                ? "Live Duress Session"
+                : "Fraud Case"}
+            </p>
+          </div>
 
           <h1 className="mt-2 text-3xl font-bold text-slate-900">
             {session.customerName}
@@ -49,7 +64,11 @@ export default function CaseOverview({
         <InfoItem
           label="Assigned To"
           value={
-            session.assignedAdminName ?? (assignedToMe ? "You" : "Unassigned")
+            session.assignedAdminName
+              ? assignedToMe
+                ? "You"
+                : ""
+              : session.assignedAdminUserId
           }
         />
 
@@ -120,7 +139,7 @@ function StatCard({
   valueClass = "text-slate-900",
 }: StatCardProps) {
   return (
-    <div className="rounded-xl border border-slate-200 p-5">
+    <div className="  border border-slate-200 p-5">
       <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
 
       <p className={`mt-3 text-3xl font-bold ${valueClass}`}>{value}</p>

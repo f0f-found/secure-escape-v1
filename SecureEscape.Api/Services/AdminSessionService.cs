@@ -128,6 +128,59 @@ public class AdminSessionService : IAdminSessionService
         return await GetDuressSessionDetailAsync(sessionId, bankIntegrationId);
     }
 
+    public async Task<DuressSessionDetailResponseDto?> ClaimSessionAsync(
+        Guid sessionId,
+        Guid? bankIntegrationId,
+        Guid adminUserId)
+    {
+        var session = await _userSessionRepository.GetByIdAsync(sessionId);
+
+        if (session == null) return null;
+
+        var detail = await _userSessionRepository.GetDuressSessionDetailAsync(sessionId);
+
+        if (bankIntegrationId.HasValue && detail?.User?.BankIntegrationId != bankIntegrationId.Value)
+        {
+            return null;
+        }
+
+        if (session.AssignedAdminUserId.HasValue)
+        {
+            return null;
+        }
+
+        session.AssignedAdminUserId = adminUserId;
+        session.AssignedAt = DateTime.UtcNow;
+        session.CaseStatus = CaseStatus.Investigating;
+        session.UpdatedAt = DateTime.UtcNow;
+
+        await _userSessionRepository.UpdateAsync(session);
+
+        var action = new AlertAction
+        {
+            Id = Guid.NewGuid(),
+            UserSessionId = session.Id,
+            AdminUserId = adminUserId,
+            ActionType = AlertActionType.Assigned,
+            Notes = "Fraud analyst claimed this case for investigation.",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _userSessionRepository.AddActionAsync(action);
+
+        await _unitOfWork.SaveChangesAsync();
+
+        await _auditService.LogAsync(
+            AuditEventType.AlertStatusUpdated,
+            entityType: "UserSession",
+            entityId: session.Id,
+            userId: session.UserId,
+            userSessionId: session.Id,
+            adminUserId: adminUserId,
+            metadataJson: $"{{\"claimedByAdminUserId\":\"{adminUserId}\"}}");
+
+        return await GetDuressSessionDetailAsync(sessionId, bankIntegrationId);
+    }
     public async Task<DuressSessionDetailResponseDto?> DispatchSessionNotificationsAsync(
         Guid sessionId,
         Guid? bankIntegrationId)
@@ -432,7 +485,7 @@ public class AdminSessionService : IAdminSessionService
 
         return await GetDuressSessionDetailAsync(sessionId, bankIntegrationId);
     }
-    
+
     private static DuressSessionSummaryResponseDto MapToSummary(UserSession session)
     {
         var highestSeverity = session.Alerts.Any()

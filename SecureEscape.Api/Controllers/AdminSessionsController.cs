@@ -62,6 +62,23 @@ public class AdminSessionsController : ControllerBase
         return Ok(updatedSession);
     }
 
+    [HttpPatch("{sessionId:guid}/claim")]
+    [Authorize(Roles = "FraudAnalyst,SystemAdmin")]
+    public async Task<IActionResult> ClaimSession(Guid sessionId)
+    {
+        var currentAdmin = _currentAdminService.GetCurrentAdmin();
+
+        var updatedSession = await _adminSessionService.ClaimSessionAsync(
+            sessionId,
+            currentAdmin.BankIntegrationId,
+            currentAdmin.AdminUserId);
+
+        if (updatedSession == null)
+            return BadRequest(new { message = "Session cannot be claimed. It may already be assigned or unavailable." });
+
+        return Ok(updatedSession);
+    }
+
     [Authorize(Roles = "FraudAnalyst,FraudManager,SystemAdmin")]
     [HttpPost("{sessionId:guid}/dispatch-notifications")]
     public async Task<IActionResult> DispatchSessionNotifications(Guid sessionId)

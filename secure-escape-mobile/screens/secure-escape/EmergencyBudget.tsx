@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Animated,
   ScrollView,
+  Modal,
 } from "react-native";
 import Slider from "@react-native-community/slider";
 import { LinearGradient } from "expo-linear-gradient";
@@ -30,6 +31,8 @@ export default function EmergencyBudgetScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showErrorModal, setShowErrorModal] = useState(false);
+  const [budgetModalVisible, setBudgetModalVisible] = useState(false);
+  const [termsModalVisible, setTermsModalVisible] = useState(false);
   const fadeAnim = useState(new Animated.Value(0))[0];
 
   // Animation for the icon
@@ -107,9 +110,7 @@ export default function EmergencyBudgetScreen() {
     }
 
     const values =
-      mode === "LowProfile"
-        ? [lowAmount]
-        : [displayBalance, tier1, tier2];
+      mode === "LowProfile" ? [lowAmount] : [displayBalance, tier1, tier2];
 
     if (values.some((value) => value < 0 || value > 1000000)) {
       return "Secure Escape amounts must be between R0 and R1,000,000.";
@@ -165,9 +166,6 @@ export default function EmergencyBudgetScreen() {
   if (profileType === "LowProfile") {
     content = (
       <Animated.View style={{ opacity: fadeAnim }}>
-        <Text style={styles.label}>
-          Display Balance <Text style={styles.range}>(R0 – R2,000)</Text>
-        </Text>
         {/* <Slider
           style={styles.slider}
           minimumValue={0}
@@ -303,7 +301,7 @@ export default function EmergencyBudgetScreen() {
         <Text style={styles.sub}>
           This amount will be available to transfer if you&apos;re under duress.
         </Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => setBudgetModalVisible(true)}>
           <Text style={styles.link}>what is the emergency budget?</Text>
         </TouchableOpacity>
 
@@ -340,17 +338,14 @@ export default function EmergencyBudgetScreen() {
             By setting an Emergency Budget you agree to our{" "}
             <Text
               style={styles.linkText}
-              onPress={() => alert("Terms & Conditions would open here")}
+              onPress={() => setTermsModalVisible(true)}
             >
               Terms and Conditions
             </Text>
           </Text>
         </TouchableOpacity>
 
-        <ErrorBanner
-          message={error}
-          onPress={() => setShowErrorModal(true)}
-        />
+        <ErrorBanner message={error} onPress={() => setShowErrorModal(true)} />
 
         <TouchableOpacity
           style={[
@@ -376,6 +371,104 @@ export default function EmergencyBudgetScreen() {
         visible={showErrorModal}
         onClose={() => setShowErrorModal(false)}
       />
+      <Modal
+        transparent
+        visible={budgetModalVisible}
+        animationType="fade"
+        onRequestClose={() => setBudgetModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setBudgetModalVisible(false)}
+            >
+              <Ionicons name="close" size={22} color={colors.navy} />
+            </TouchableOpacity>
+
+            <View style={styles.modalIconWrapper}>
+              <Ionicons name="cash-outline" size={36} color={colors.primary} />
+            </View>
+
+            <Text style={styles.modalTitle}>What is the emergency budget?</Text>
+
+            <ScrollView
+              style={styles.modalScroll}
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.modalParagraph}>
+                Your emergency budget is the amount that&apos;s allowed to leave
+                your account if you&apos;re ever forced to transact under
+                duress. It&apos;s real money and it will actually be sent — but
+                everything above that amount stays locked, out of reach.
+              </Text>
+              <Text style={styles.modalParagraph}>
+                Set it low enough that losing it wouldn&apos;t be devastating,
+                but high enough to look believable to someone demanding money
+                from you. Whatever mode you&apos;re in — Low Profile or
+                Realistic Decoy — this is the ceiling on what can actually be
+                taken.
+              </Text>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.modalDoneButton}
+              onPress={() => setBudgetModalVisible(false)}
+            >
+              <Text style={styles.modalDoneText}>Got it</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        transparent
+        visible={termsModalVisible}
+        animationType="fade"
+        onRequestClose={() => setTermsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setTermsModalVisible(false)}
+            >
+              <Ionicons name="close" size={22} color={colors.navy} />
+            </TouchableOpacity>
+
+            <Text style={styles.modalTitle}>Terms and Conditions</Text>
+
+            <ScrollView
+              style={styles.modalScroll}
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.modalParagraph}>
+                By setting an Emergency Budget, you agree that the specified
+                amount may be transferred out of your account when your Secure
+                Escape duress PIN is used. This transfer is real and
+                irreversible through the app.
+              </Text>
+              <Text style={styles.modalParagraph}>
+                Secure Escape is designed to help in situations of coercion or
+                threat. Misuse of this feature, including setting it up to
+                disguise unrelated transactions, is not supported and may affect
+                your account standing.
+              </Text>
+              <Text style={styles.modalParagraph}>
+                You can update your emergency budget and Secure Escape settings
+                at any time from the Secure Escape section of your app.
+              </Text>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.modalDoneButton}
+              onPress={() => setTermsModalVisible(false)}
+            >
+              <Text style={styles.modalDoneText}>I Understand</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -506,5 +599,74 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.5,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.55)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalContent: {
+    width: "100%",
+    maxHeight: "80%",
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 24,
+    alignItems: "center",
+  },
+  modalCloseButton: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#F0F0F5",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+  },
+  modalIconWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#F0EFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: colors.navy,
+    marginBottom: 16,
+    marginTop: 8,
+    textAlign: "center",
+  },
+  modalScroll: {
+    width: "100%",
+    marginBottom: 16,
+  },
+  modalParagraph: {
+    fontSize: 14,
+    color: colors.textSub,
+    lineHeight: 21,
+    marginBottom: 14,
+    textAlign: "left",
+  },
+  modalDoneButton: {
+    width: "100%",
+    backgroundColor: colors.primary,
+    borderRadius: 50,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  modalDoneText: {
+    color: "#fff",
+    fontWeight: "800",
+    fontSize: 15,
   },
 });

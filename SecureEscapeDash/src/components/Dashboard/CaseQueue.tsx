@@ -41,23 +41,35 @@ export default function CaseQueue({ sessions }: CaseQueueProps) {
         {sessions.map((session) => (
           <div
             key={session.id}
-            className="border border-slate-200 rounded-xl p-5 hover:border-orange-300 hover:shadow-md transition-all"
+            className="border border-slate-200   p-5 hover:border-orange-300 hover:shadow-md transition-all"
           >
             <div className="flex justify-between items-start">
               <div>
-                <h3 className="font-semibold text-slate-900">
-                  {session.customerName}
-                </h3>
+                <div className="flex items-center gap-2">
+                  {session.status === "Active" && (
+                    <span className="relative flex h-3 w-3">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                      <span className="relative inline-flex h-3 w-3 rounded-full bg-red-600" />
+                    </span>
+                  )}
+
+                  <h3 className="font-semibold text-slate-900">
+                    {session.customerName}
+                  </h3>
+                </div>
 
                 <p className="text-sm text-slate-500 mt-1">
                   {session.customerEmail}
+                </p>
+                <p className="text-sm text-red-600 font-medium mt-2">
+                  Live duress session
                 </p>
 
                 <div className="flex gap-2 mt-3 flex-wrap">
                   {session.alertTypes.map((alert) => (
                     <span
                       key={alert}
-                      className="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded-lg"
+                      className="bg-slate-100 text-slate-700 text-xs px-2 py-1  "
                     >
                       {alert}
                     </span>
@@ -75,7 +87,7 @@ export default function CaseQueue({ sessions }: CaseQueueProps) {
 
               <button
                 onClick={() => navigate(`/sessions/${session.id}`)}
-                className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors"
+                className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2   transition-colors"
               >
                 Investigate
               </button>

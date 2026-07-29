@@ -15,6 +15,11 @@ public interface IAdminSessionService
     Guid? bankIntegrationId,
     Guid assignedByAdminUserId);
 
+    Task<DuressSessionDetailResponseDto?> ClaimSessionAsync(
+    Guid sessionId,
+    Guid? bankIntegrationId,
+    Guid adminUserId);
+
     Task<DuressSessionDetailResponseDto?> DispatchSessionNotificationsAsync(
         Guid sessionId,
         Guid? bankIntegrationId);

@@ -31,7 +31,7 @@ export default function ManagerReviewForm({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+    <div className="bg-white   border border-slate-200 shadow-sm">
       <div className="p-6 border-b border-slate-200">
         <h2 className="text-lg font-semibold text-slate-900">Manager Review</h2>
         <p className="text-sm text-slate-500 mt-1">
@@ -53,7 +53,7 @@ export default function ManagerReviewForm({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Review notes (optional)..."
-          className="w-full rounded-xl border border-slate-300 px-4 py-3 resize-none focus:border-indigo-500 focus:outline-none"
+          className="w-full   border border-slate-300 px-4 py-3 resize-none focus:border-indigo-500 focus:outline-none"
         />
 
         {error && <p className="text-sm text-red-600">{error}</p>}
@@ -62,14 +62,14 @@ export default function ManagerReviewForm({
           <button
             onClick={() => handleReview("Approved")}
             disabled={submitting !== null}
-            className="flex-1 rounded-xl bg-green-600 py-3 text-white font-semibold hover:bg-green-500 disabled:opacity-50"
+            className="flex-1   bg-green-600 py-3 text-white font-semibold hover:bg-green-500 disabled:opacity-50"
           >
             {submitting === "Approved" ? "Approving..." : "Approve"}
           </button>
           <button
             onClick={() => handleReview("Rejected")}
             disabled={submitting !== null}
-            className="flex-1 rounded-xl bg-red-600 py-3 text-white font-semibold hover:bg-red-500 disabled:opacity-50"
+            className="flex-1   bg-red-600 py-3 text-white font-semibold hover:bg-red-500 disabled:opacity-50"
           >
             {submitting === "Rejected" ? "Rejecting..." : "Reject"}
           </button>

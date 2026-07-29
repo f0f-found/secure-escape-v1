@@ -16,6 +16,7 @@ import { colors } from "@/utils/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { addEmergencyContact } from "@/services/emergencyContactService";
 import { ErrorBanner, ErrorModal } from "@/components/FormErrorMessage";
+import * as Contacts from "expo-contacts";
 
 type LocalContact = {
   id: string;
@@ -210,6 +211,63 @@ export default function EmergencyContact() {
     checkValidContacts(newContacts);
   };
 
+  const importFromContacts = async () => {
+    try {
+      const { status } = await Contacts.requestPermissionsAsync();
+
+      if (status !== "granted") {
+        showError("Contacts permission is needed to import a contact.");
+        return;
+      }
+
+      const picked = await Contacts.presentContactPickerAsync();
+
+      if (!picked) return; // user cancelled the picker
+
+      const phoneNumber = picked.phoneNumbers?.[0]?.number?.trim() ?? "";
+      const firstName = picked.firstName?.trim() ?? "";
+      const lastName = picked.lastName?.trim() ?? "";
+
+      const firstEmptyIndex = contacts.findIndex(
+        (c) => !c.name.trim() && !c.surname.trim() && !c.phone.trim(),
+      );
+
+      let newContacts: LocalContact[];
+
+      if (firstEmptyIndex !== -1) {
+        newContacts = contacts.map((c, i) =>
+          i === firstEmptyIndex
+            ? { ...c, name: firstName, surname: lastName, phone: phoneNumber }
+            : c,
+        );
+      } else {
+        if (contacts.length >= 5) {
+          showError("You can add up to 5 emergency contacts.");
+          return;
+        }
+
+        newContacts = [
+          ...contacts,
+          {
+            id: Date.now().toString(),
+            name: firstName,
+            surname: lastName,
+            phone: phoneNumber,
+            relationship: "",
+            isPrimary: false,
+          },
+        ];
+      }
+
+      setContacts(newContacts);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      checkValidContacts(newContacts);
+      clearError();
+    } catch (err) {
+      showError("Failed to import contact. Please try adding it manually.");
+    }
+  };
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: "#fff" }}
@@ -323,6 +381,17 @@ export default function EmergencyContact() {
           </View>
         ))}
 
+        <TouchableOpacity
+          style={styles.importButton}
+          onPress={importFromContacts}
+        >
+          <Ionicons
+            name="phone-portrait-outline"
+            size={22}
+            color={colors.primary}
+          />
+          <Text style={styles.importButtonText}>Import from Contacts</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.addButton} onPress={addContact}>
           <Ionicons
             name="add-circle-outline"
@@ -360,10 +429,7 @@ export default function EmergencyContact() {
           </Animated.View>
         </TouchableOpacity>
 
-        <ErrorBanner
-          message={error}
-          onPress={() => setShowErrorModal(true)}
-        />
+        <ErrorBanner message={error} onPress={() => setShowErrorModal(true)} />
       </View>
       <ErrorModal
         title="Emergency contact"
@@ -504,5 +570,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.5,
+  },
+
+  importButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    marginBottom: 12,
+    backgroundColor: "#F0EFFF",
+    borderRadius: 40,
+  },
+  importButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.primary,
   },
 });

@@ -8,6 +8,7 @@ export type NavItem = {
 export const navigation: Record<AdminRole, NavItem[]> = {
   [ADMIN_ROLES.FraudAnalyst]: [
     { label: "Dashboard", path: "/analyst" },
+    { label: "Open Cases", path: "/analyst/open-cases" },
     { label: "My Cases", path: "/analyst/cases" },
     { label: "Search Cases", path: "/analyst/search" },
   ],

@@ -8,18 +8,29 @@ interface InvestigationPanelProps {
 export default function InvestigationPanel({
   session,
 }: InvestigationPanelProps) {
+  const isLiveSession = session.status === "Active";
   return (
     <div className="space-y-6">
       {/* Alert Timeline */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+      <div className="bg-white   border border-slate-200 shadow-sm">
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">
-              Alert Timeline
+            <h2
+              className={`text-lg font-semibold ${
+                isLiveSession ? "text-red-900" : "text-slate-900"
+              }`}
+            >
+              {isLiveSession ? "Live Alert Feed" : "Alert Timeline"}
             </h2>
 
-            <p className="text-sm text-slate-500 mt-1">
-              Chronological list of alerts generated during this session.
+            <p
+              className={`text-sm mt-1 ${
+                isLiveSession ? "text-red-700" : "text-slate-500"
+              }`}
+            >
+              {isLiveSession
+                ? "Active alerts generated while the customer may still be in danger."
+                : "Chronological list of alerts generated during this session."}
             </p>
           </div>
 
@@ -77,7 +88,7 @@ export default function InvestigationPanel({
                             {alert.notificationAttempts.map((notification) => (
                               <div
                                 key={notification.id}
-                                className="flex items-center justify-between rounded-lg border border-slate-200 px-4 py-3"
+                                className="flex items-center justify-between   border border-slate-200 px-4 py-3"
                               >
                                 <div>
                                   <p className="font-medium text-slate-900">
@@ -125,7 +136,11 @@ export default function InvestigationPanel({
       </div>
 
       {/* Session Details */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+      <div
+        className={`bg-white   border shadow-sm ${
+          isLiveSession ? "border-red-200" : "border-slate-200"
+        }`}
+      >
         <div className="p-6 border-b border-slate-200">
           <h2 className="text-lg font-semibold text-slate-900">
             Session Details
