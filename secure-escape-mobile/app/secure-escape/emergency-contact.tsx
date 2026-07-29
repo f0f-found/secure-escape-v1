@@ -30,9 +30,24 @@ const validateName = (name: string): boolean => {
 };
 
 const validatePhone = (phone: string): boolean => {
-  // Strip all non-digits and check length === 10
-  const digits = phone.replace(/\D/g, "");
-  return digits.length === 10;
+  const trimmed = phone.trim();
+  if (trimmed === "") return false;
+
+  // Check prefix
+  const startsWith0 = trimmed.startsWith("0");
+  const startsWith27 = trimmed.startsWith("+27");
+
+  if (!startsWith0 && !startsWith27) return false;
+
+  // Strip all non-digits
+  const digits = trimmed.replace(/\D/g, "");
+
+  // If starts with 0, must be exactly 10 digits (0 + 9 digits)
+  if (startsWith0) return digits.length === 10;
+  // If starts with +27, digits must be exactly 11 (27 + 9 digits)
+  if (startsWith27) return digits.length === 11;
+
+  return false;
 };
 
 export default function EmergencyContact() {
@@ -80,7 +95,6 @@ export default function EmergencyContact() {
     field: "name" | "surname" | "phone",
     value: string
   ) => {
-    // For phone, we allow spaces/dashes but we'll validate later
     const newContacts = contacts.map((contact) =>
       contact.id === id ? { ...contact, [field]: value } : contact
     );
@@ -100,11 +114,23 @@ export default function EmergencyContact() {
         error = "Only letters, spaces, hyphens, and apostrophes allowed";
       }
     } else if (field === "phone") {
-      const digits = value.replace(/\D/g, "");
-      if (value.trim() === "") {
+      const trimmed = value.trim();
+      if (trimmed === "") {
         error = "Phone number is required";
-      } else if (digits.length !== 10) {
-        error = "Must be exactly 10 digits (e.g., 0821234567)";
+      } else {
+        // Check prefix
+        const startsWith0 = trimmed.startsWith("0");
+        const startsWith27 = trimmed.startsWith("+27");
+        if (!startsWith0 && !startsWith27) {
+          error = "Must start with 0 or +27";
+        } else {
+          const digits = trimmed.replace(/\D/g, "");
+          if (startsWith0 && digits.length !== 10) {
+            error = "Must have 10 digits (e.g., 0821234567)";
+          } else if (startsWith27 && digits.length !== 11) {
+            error = "Must have 9 digits after +27 (e.g., +27 82 123 4567)";
+          }
+        }
       }
     }
 
@@ -133,7 +159,6 @@ export default function EmergencyContact() {
     };
     const newContacts = [...contacts, newContact];
     setContacts(newContacts);
-    // Initialize errors for this contact (no errors yet)
     setErrors((prev) => ({
       ...prev,
       [newContact.id]: {},
@@ -152,7 +177,6 @@ export default function EmergencyContact() {
     }
     const newContacts = contacts.filter((c) => c.id !== id);
     setContacts(newContacts);
-    // Remove errors for this contact
     const newErrors = { ...errors };
     delete newErrors[id];
     setErrors(newErrors);
