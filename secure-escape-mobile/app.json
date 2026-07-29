@@ -19,7 +19,12 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.READ_CONTACTS",
+        "android.permission.WRITE_CONTACTS"
+      ],
+      "package": "com.secureescape.app"
     },
     "web": {
       "output": "static",
@@ -45,11 +50,18 @@
         {
           "contactsPermission": "Allow Secure Escape to access your contacts so you can add emergency contacts."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c1215499-653d-4efa-9d11-a258458df4f4"
+      }
     }
   }
 }
