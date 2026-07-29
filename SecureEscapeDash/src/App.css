@@ -1,68 +1,68 @@
 @import "tailwindcss";
 
 :root {
-    /* Brand */
-    --brand: #12355B;
-    --brand-dark: #0B2545;
-    --accent: #F97316;
+  /* Brand */
+  --brand: #12355b;
+  --brand-dark: #0b2545;
+  --accent: #f97316;
 
-    /* Background */
-    --background: #F8FAFC;
-    --surface: #FFFFFF;
+  /* Background */
+  --background: #f8fafc;
+  --surface: #ffffff;
 
-    /* Text */
-    --text: #0F172A;
-    --text-secondary: #64748B;
+  /* Text */
+  --text: #0f172a;
+  --text-secondary: #64748b;
 
-    /* Status */
-    --success: #22C55E;
-    --warning: #F59E0B;
-    --danger: #DC2626;
+  /* Status */
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #dc2626;
 
-    /* Border */
-    --border: #E2E8F0;
+  /* Border */
+  --border: #e2e8f0;
 }
 
 /* Page */
 
 .page {
-    @apply max-w-7xl mx-auto px-8 py-8;
+  @apply max-w-7xl mx-auto px-8 py-8;
 }
 
 /* Cards */
 
 .dashboard-card {
-    @apply bg-white rounded-2xl border border-slate-200 shadow-sm;
+  @apply bg-white   border border-slate-200 shadow-sm;
 }
 
 .dashboard-card-body {
-    @apply p-6;
+  @apply p-6;
 }
 
 /* Titles */
 
 .dashboard-title {
-    @apply text-3xl font-bold text-slate-900;
+  @apply text-3xl font-bold text-slate-900;
 }
 
 .dashboard-subtitle {
-    @apply text-slate-500 mt-2;
+  @apply text-slate-500 mt-2;
 }
 
 .section-title {
-    @apply text-lg font-semibold text-slate-800;
+  @apply text-lg font-semibold text-slate-800;
 }
 
 .kpi-title {
-    @apply text-sm text-slate-500;
+  @apply text-sm text-slate-500;
 }
 
 .kpi-value {
-    @apply text-4xl font-bold text-slate-900 mt-2;
+  @apply text-4xl font-bold text-slate-900 mt-2;
 }
 
 /* Tables */
 
 .dashboard-table {
-    @apply bg-white rounded-2xl border border-slate-200 overflow-hidden;
+  @apply bg-white   border border-slate-200 overflow-hidden;
 }

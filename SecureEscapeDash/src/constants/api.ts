@@ -1,4 +1,4 @@
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+export const API_BASE_URL = "http://localhost:5116";
 
 //Home
 // ("http://192.168.1.103:5116");

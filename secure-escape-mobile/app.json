@@ -39,7 +39,13 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow Secure Escape to access your contacts so you can add emergency contacts."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

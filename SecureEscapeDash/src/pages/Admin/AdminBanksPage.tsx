@@ -52,7 +52,7 @@ export default function AdminBanksPage() {
       </p>
 
       {error && (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+        <div className="mb-6   border border-red-200 bg-red-50 p-4 text-red-700">
           {error}
         </div>
       )}
@@ -78,7 +78,7 @@ export default function AdminBanksPage() {
       <div className="dashboard-card dashboard-card-body">
         <h2 className="section-title">Bank Integration Overview</h2>
 
-        <div className="mt-6 overflow-hidden rounded-xl border border-slate-200">
+        <div className="mt-6 overflow-hidden   border border-slate-200">
           <table className="w-full">
             <thead className="bg-slate-50">
               <tr>

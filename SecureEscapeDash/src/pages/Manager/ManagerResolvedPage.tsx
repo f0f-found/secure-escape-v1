@@ -33,7 +33,7 @@ export default function ManagerResolvedPage() {
     const query = search.trim().toLowerCase();
 
     return sessions.filter((session) => {
-      const isResolved = session.caseStatus === "Resolved";
+      const isResolved = session.managerReviewStatus === "PendingReview";
 
       const matchesSearch =
         !query ||
@@ -48,9 +48,9 @@ export default function ManagerResolvedPage() {
 
   return (
     <Layout>
-      <h1 className="dashboard-title">Resolved Reviews</h1>
+      <h1 className="dashboard-title">Pending Resolution Reviews</h1>
       <p className="dashboard-subtitle mb-8">
-        Review cases marked resolved by analysts before final manager approval.
+        Review analyst-submitted case reports waiting for manager approval.{" "}
       </p>
 
       <div className="mb-6">

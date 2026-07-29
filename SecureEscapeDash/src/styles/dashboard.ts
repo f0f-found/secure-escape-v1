@@ -5,7 +5,7 @@ export const dashboard = {
 
   card: `
         bg-white
-        rounded-2xl
+         
         border
         border-slate-200
         shadow-sm
@@ -14,7 +14,7 @@ export const dashboard = {
 
   table: `
         bg-white
-        rounded-2xl
+         
         border
         border-slate-200
         overflow-hidden

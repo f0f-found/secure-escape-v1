@@ -20,24 +20,17 @@ export default function AnalystDashboard() {
   const [error, setError] = useState("");
   //const [search, setSearch] = useState("");
 
-  const activeDuressSessions = sessions.filter(
-    (s) => s.status === "Active",
-  ).length;
+  const liveSessions = sessions.filter((s) => s.status === "Active");
+  const activeDuressSessions = liveSessions.length;
 
   const resolvedCases = sessions.filter(
     (s) => s.caseStatus === "Resolved",
   ).length;
 
-  const investigationQueue = [...sessions]
-    .filter((s) => s.status === "Active" || s.caseStatus === "Open")
-    .sort(
-      (a, b) =>
-        new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
-    )
-    .slice(0, 5);
+  const investigationQueue = [...liveSessions];
 
-  const filteredSessions =
-    filter === "All" ? sessions : sessions.filter((s) => s.status === filter);
+  // const filteredSessions =
+  //   filter === "All" ? sessions : sessions.filter((s) => s.status === filter);
 
   const assignedToMe = sessions.filter(
     (s) => s.assignedAdminUserId === admin?.adminUserId,
@@ -75,7 +68,7 @@ export default function AnalystDashboard() {
 
       <CaseQueue sessions={investigationQueue} />
 
-      <CaseTable sessions={filteredSessions} loading={loading} error={error} />
+      <CaseTable sessions={liveSessions} loading={loading} error={error} />
     </Layout>
   );
 }

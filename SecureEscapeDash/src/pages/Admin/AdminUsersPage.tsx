@@ -48,16 +48,16 @@ export default function AdminUsersPage() {
           <input
             type="text"
             placeholder="Full name"
-            className="rounded-xl border border-slate-300 px-4 py-3"
+            className="  border border-slate-300 px-4 py-3"
           />
 
           <input
             type="email"
             placeholder="Email address"
-            className="rounded-xl border border-slate-300 px-4 py-3"
+            className="  border border-slate-300 px-4 py-3"
           />
 
-          <select className="rounded-xl border border-slate-300 px-4 py-3">
+          <select className="  border border-slate-300 px-4 py-3">
             <option value={ADMIN_ROLES.FraudAnalyst}>Fraud Analyst</option>
             <option value={ADMIN_ROLES.FraudManager}>Fraud Manager</option>
             <option value={ADMIN_ROLES.SecureEscapeAdmin}>
@@ -68,11 +68,11 @@ export default function AdminUsersPage() {
           <input
             type="password"
             placeholder="Temporary password"
-            className="rounded-xl border border-slate-300 px-4 py-3"
+            className="  border border-slate-300 px-4 py-3"
           />
 
           <div className="md:col-span-2">
-            <button className="rounded-xl bg-indigo-600 px-6 py-3 font-semibold text-white hover:bg-indigo-500">
+            <button className="  bg-indigo-600 px-6 py-3 font-semibold text-white hover:bg-indigo-500">
               Create User
             </button>
           </div>
@@ -119,7 +119,7 @@ export default function AdminUsersPage() {
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <button className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50">
+                  <button className="  border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50">
                     Delete
                   </button>
                 </td>

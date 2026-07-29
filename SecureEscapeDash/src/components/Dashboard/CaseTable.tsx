@@ -103,7 +103,7 @@ export default function CaseTable({
                   {session.alertTypes.map((alert) => (
                     <span
                       key={alert}
-                      className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-xs"
+                      className="bg-slate-100 text-slate-700 px-2 py-1   text-xs"
                     >
                       {alert}
                     </span>
@@ -128,7 +128,7 @@ export default function CaseTable({
               <td className="px-6 py-5 text-right">
                 <button
                   onClick={() => navigate(`/sessions/${session.id}`)}
-                  className="bg-[#12355B] hover:bg-[#0B2545] text-white px-4 py-2 rounded-lg transition"
+                  className="bg-[#12355B] hover:bg-[#0B2545] text-white px-4 py-2   transition"
                 >
                   Open Case
                 </button>

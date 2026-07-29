@@ -26,7 +26,7 @@ export default function Sidebar({ admin, onLogout }: SidebarProps) {
       <div className="p-4 border-t border-slate-200">
         <button
           onClick={onLogout}
-          className="w-full rounded-xl border border-slate-200 py-3 text-slate-600 hover:bg-slate-50 transition"
+          className="w-full   border border-slate-200 py-3 text-slate-600 hover:bg-slate-50 transition"
         >
           Sign out
         </button>

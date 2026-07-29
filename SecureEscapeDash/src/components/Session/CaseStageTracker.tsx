@@ -33,7 +33,7 @@ export default function CaseStageTracker({ session }: CaseStageTrackerProps) {
   const wasRejected = session.managerReviewStatus === "Rejected";
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <div className="bg-white   border border-slate-200 shadow-sm p-6">
       <div className="flex items-center">
         {STAGES.map((stage, index) => {
           const isDone = index < currentIndex;
@@ -80,7 +80,7 @@ export default function CaseStageTracker({ session }: CaseStageTrackerProps) {
       </div>
 
       {wasRejected && (
-        <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+        <div className="mt-5   border border-red-200 bg-red-50 px-4 py-3">
           <p className="text-sm font-semibold text-red-800">
             Manager rejected the previous report — case returned to
             Investigation.

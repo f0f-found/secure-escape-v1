@@ -68,7 +68,7 @@ export default function Timeline({ session }: TimelineProps) {
   events.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+    <div className="bg-white   border border-slate-200 shadow-sm">
       <div className="p-6 border-b border-slate-200">
         <h2 className="text-lg font-semibold text-slate-900">
           Investigation Timeline

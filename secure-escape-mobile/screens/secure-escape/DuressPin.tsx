@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Animated,
   ScrollView,
+  Modal,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
@@ -25,6 +26,8 @@ export default function DuressPin() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [showErrorModal, setShowErrorModal] = useState(false);
+  const [duressInfoModalVisible, setDuressInfoModalVisible] = useState(false);
+  const [termsModalVisible, setTermsModalVisible] = useState(false);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const showError = (message: string) => {
@@ -147,7 +150,7 @@ export default function DuressPin() {
         <Text style={styles.sub}>
           This is the PIN you should use ONLY when in duress
         </Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => setDuressInfoModalVisible(true)}>
           <Text style={styles.link}>What is a Duress PIN?</Text>
         </TouchableOpacity>
 
@@ -208,14 +211,16 @@ export default function DuressPin() {
           />
           <Text style={styles.checkText}>
             By creating Duress PIN you agree to our{" "}
-            <Text style={styles.linkText}>Terms and Conditions</Text>
+            <Text
+              style={styles.linkText}
+              onPress={() => setTermsModalVisible(true)}
+            >
+              Terms and Conditions
+            </Text>
           </Text>
         </TouchableOpacity>
 
-        <ErrorBanner
-          message={error}
-          onPress={() => setShowErrorModal(true)}
-        />
+        <ErrorBanner message={error} onPress={() => setShowErrorModal(true)} />
 
         <TouchableOpacity
           style={[styles.enableButton, !isEnabled && styles.disabledButton]}
@@ -238,6 +243,102 @@ export default function DuressPin() {
         visible={showErrorModal}
         onClose={() => setShowErrorModal(false)}
       />
+      <Modal
+        transparent
+        visible={duressInfoModalVisible}
+        animationType="fade"
+        onRequestClose={() => setDuressInfoModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setDuressInfoModalVisible(false)}
+            >
+              <Text style={styles.modalCloseIcon}>✕</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.modalTitle}>What is a Duress PIN?</Text>
+
+            <ScrollView
+              style={styles.modalScroll}
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.modalParagraph}>
+                A Duress PIN is a second PIN, separate from your normal one. It
+                exists for situations where you&apos;re forced to open the app
+                or send money against your will.
+              </Text>
+              <Text style={styles.modalParagraph}>
+                Entering it works exactly like your normal PIN on the surface —
+                nothing on screen looks different, nothing warns whoever&apos;s
+                watching. But in the background it lets your bank know something
+                is wrong.
+              </Text>
+              <Text style={styles.modalParagraph}>
+                Choose a PIN that&apos;s easy for you to remember under
+                pressure, but different enough from your normal PIN that you
+                won&apos;t mix them up by accident in everyday use.
+              </Text>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.modalDoneButton}
+              onPress={() => setDuressInfoModalVisible(false)}
+            >
+              <Text style={styles.modalDoneText}>Got it</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        transparent
+        visible={termsModalVisible}
+        animationType="fade"
+        onRequestClose={() => setTermsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setTermsModalVisible(false)}
+            >
+              <Text style={styles.modalCloseIcon}>✕</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.modalTitle}>Terms and Conditions</Text>
+
+            <ScrollView
+              style={styles.modalScroll}
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.modalParagraph}>
+                By creating a Duress PIN, you agree that using it will trigger
+                account safety measures, including notifying your bank and,
+                where configured, your emergency contacts.
+              </Text>
+              <Text style={styles.modalParagraph}>
+                Your Duress PIN should be kept just as confidential as your
+                normal PIN. Do not share it with anyone, including people you
+                trust, as doing so may compromise its effectiveness in a genuine
+                emergency.
+              </Text>
+              <Text style={styles.modalParagraph}>
+                You can update or disable your Duress PIN at any time from the
+                Secure Escape section of your app.
+              </Text>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.modalDoneButton}
+              onPress={() => setTermsModalVisible(false)}
+            >
+              <Text style={styles.modalDoneText}>I Understand</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -318,5 +419,69 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.5,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.55)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalContent: {
+    width: "100%",
+    maxHeight: "80%",
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 24,
+    alignItems: "center",
+  },
+  modalCloseButton: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#F0F0F5",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+  },
+  modalCloseIcon: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.navy,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: colors.navy,
+    marginBottom: 16,
+    marginTop: 8,
+    textAlign: "center",
+  },
+  modalScroll: {
+    width: "100%",
+    marginBottom: 16,
+  },
+  modalParagraph: {
+    fontSize: 14,
+    color: colors.textSub,
+    lineHeight: 21,
+    marginBottom: 14,
+    textAlign: "left",
+  },
+  modalDoneButton: {
+    width: "100%",
+    backgroundColor: colors.primary,
+    borderRadius: 50,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  modalDoneText: {
+    color: "#fff",
+    fontWeight: "800",
+    fontSize: 15,
   },
 });

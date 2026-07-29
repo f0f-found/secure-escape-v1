@@ -200,3 +200,36 @@ export async function getAnalysts(): Promise<AdminUserSummary[]> {
   if (!response.ok) throw new Error("Failed to load analysts.");
   return response.json();
 }
+
+export async function claimSession(id: string): Promise<DuressSessionDetail> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/admin/duress-sessions/${id}/claim`,
+    {
+      method: "PATCH",
+      headers: getHeaders(),
+    },
+  );
+
+  if (!response.ok) throw new Error("Failed to claim session.");
+
+  return response.json();
+}
+
+export async function assignSession(
+  id: string,
+  adminUserId: string,
+  notes: string,
+): Promise<DuressSessionDetail> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/admin/duress-sessions/${id}/assign`,
+    {
+      method: "PATCH",
+      headers: getHeaders(),
+      body: JSON.stringify({ adminUserId, notes }),
+    },
+  );
+
+  if (!response.ok) throw new Error("Failed to assign session.");
+
+  return response.json();
+}
