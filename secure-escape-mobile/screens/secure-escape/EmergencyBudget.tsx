@@ -1,3 +1,4 @@
+// app/secure-escape/emergency-budget.tsx
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -29,6 +30,9 @@ export default function EmergencyBudgetScreen() {
   const [lowAmount, setLowAmount] = useState(200);
   const [tier1, setTier1] = useState(2000);
   const [tier2, setTier2] = useState(20000);
+  const fadeAnim = useState(new Animated.Value(0))[0];
+
+  // Protection Amount modal
   // Display balance no longer has its own slider in this design — for
   // Custom mode we default it to Tier 1 (the amount an attacker would
   // initially see as available). Flagging this as an assumption; adjust
@@ -55,6 +59,7 @@ export default function EmergencyBudgetScreen() {
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 500,
@@ -63,39 +68,20 @@ export default function EmergencyBudgetScreen() {
 
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ]),
+        Animated.timing(pulseAnim, { toValue: 1.1, duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+      ])
     ).start();
 
     Animated.loop(
       Animated.sequence([
-        Animated.timing(rotateAnim, {
-          toValue: 0.05,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(rotateAnim, {
-          toValue: -0.05,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-      ]),
+        Animated.timing(rotateAnim, { toValue: 0.05, duration: 1500, useNativeDriver: true }),
+        Animated.timing(rotateAnim, { toValue: -0.05, duration: 1500, useNativeDriver: true }),
+      ])
     ).start();
   }, []);
 
-  const handleSliderChange = (
-    value: number,
-    type: "low" | "tier1" | "tier2",
-  ) => {
+  const handleSliderChange = (value: number, type: "low" | "tier1" | "tier2") => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     clearError();
     if (type === "low") setLowAmount(value);
@@ -106,6 +92,53 @@ export default function EmergencyBudgetScreen() {
     if (type === "tier2") setTier2(value);
   };
 
+  // Main Continue: open T&C modal (no validation needed, sliders always valid)
+  const handleContinue = () => {
+    openTermsModal();
+  };
+
+  // Modal handlers for Protection Amount
+  const openProtectionModal = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setProtectionModalVisible(true);
+    Animated.parallel([
+      Animated.timing(protectionFadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.spring(protectionScaleAnim, { toValue: 1, friction: 6, tension: 40, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const closeProtectionModal = () => {
+    Animated.parallel([
+      Animated.timing(protectionFadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+      Animated.spring(protectionScaleAnim, { toValue: 0.9, friction: 6, tension: 40, useNativeDriver: true }),
+    ]).start(() => setProtectionModalVisible(false));
+  };
+
+  // T&C modal handlers
+  const openTermsModal = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setModalAgreed(false);
+    setTermsModalVisible(true);
+    Animated.parallel([
+      Animated.timing(termsFadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.spring(termsScaleAnim, { toValue: 1, friction: 6, tension: 40, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const closeTermsModal = () => {
+    Animated.parallel([
+      Animated.timing(termsFadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+      Animated.spring(termsScaleAnim, { toValue: 0.9, friction: 6, tension: 40, useNativeDriver: true }),
+    ]).start(() => setTermsModalVisible(false));
+  };
+
+  // Confirm from modal: navigate to DuressPin
+  const handleConfirm = () => {
+    if (modalAgreed) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      closeTermsModal();
+      router.push("/secure-escape/duress-pin");
+    }
   const showError = (message: string) => {
     setError(message);
     setShowErrorModal(true);
@@ -249,7 +282,6 @@ export default function EmergencyBudgetScreen() {
   };
 
   const formatCurrency = (value: number) => `R ${value.toLocaleString()}`;
-
   const rotateInterpolate = rotateAnim.interpolate({
     inputRange: [-0.05, 0.05],
     outputRange: ["-5deg", "5deg"],
@@ -277,16 +309,13 @@ export default function EmergencyBudgetScreen() {
           <Text style={styles.valueLabel}>Suggested: R200</Text>
           <Text style={styles.value}>{formatCurrency(lowAmount)}</Text>
         </View>
-        <Text style={styles.hint}>
-          This is the amount an attacker can force you to send. The money will
-          actually leave your account, but the rest will be locked.
-        </Text>
       </Animated.View>
     );
   } else {
     content = (
       <Animated.View style={{ opacity: fadeAnim }}>
         <Text style={styles.label}>
+          Protection Amount – Tier 1 <Text style={styles.range}>(R500 – R5,000)</Text>
           Protection Amount – Tier 1{" "}
           <Text style={styles.range}>(R500 – R5,000)</Text>
         </Text>
@@ -305,8 +334,8 @@ export default function EmergencyBudgetScreen() {
           <Text style={styles.valueLabel}>Instant transfer amount</Text>
           <Text style={styles.value}>{formatCurrency(tier1)}</Text>
         </View>
-
         <Text style={[styles.label, { marginTop: 20 }]}>
+          Protection Amount – Tier 2 <Text style={styles.range}>(up to R50,000)</Text>
           Protection Amount – Tier 2{" "}
           <Text style={styles.range}>(up to R50,000)</Text>
         </Text>
@@ -325,10 +354,6 @@ export default function EmergencyBudgetScreen() {
           <Text style={styles.valueLabel}>Delayed transfer amount</Text>
           <Text style={styles.value}>{formatCurrency(tier2)}</Text>
         </View>
-        <Text style={styles.hint}>
-          Tier 1 is immediately available. Tier 2 is delayed by 24 hours to give
-          authorities time. The rest of your funds are frozen.
-        </Text>
       </Animated.View>
     );
   }
@@ -353,6 +378,10 @@ export default function EmergencyBudgetScreen() {
         <Text style={styles.mainTitle}>Secure Escape,</Text>
         <Text style={styles.sub}>Set your protection amount</Text>
         <Text style={styles.subDescription}>
+          This amount is fully insured by the bank. If you&apos;re forced to transact under duress, this is the maximum that can leave your account.
+        </Text>
+        <TouchableOpacity onPress={openProtectionModal}>
+          <Text style={styles.link}>What is the protection amount?</Text>
           This amount is fully insured by the bank. If you&apos;re forced to
           transact under duress, this is the maximum that can leave your
           account.
@@ -364,9 +393,7 @@ export default function EmergencyBudgetScreen() {
         <Animated.View
           style={[
             styles.iconContainer,
-            {
-              transform: [{ scale: pulseAnim }, { rotate: rotateInterpolate }],
-            },
+            { transform: [{ scale: pulseAnim }, { rotate: rotateInterpolate }] },
           ]}
         >
           <LinearGradient
@@ -380,6 +407,11 @@ export default function EmergencyBudgetScreen() {
         {content}
 
         <View style={styles.noteBox}>
+          <Ionicons name="information-circle" size={20} color={colors.primary} style={styles.noteIcon} />
+          <Text style={styles.noteText}>
+            <Text style={styles.boldText}>Note:</Text> This is the amount an attacker can force you to send. It will leave your account, but it&apos;s fully insured and guaranteed to be refunded by the bank. Your safety is the priority.
+          </Text>
+        </View>
           <Ionicons
             name="information-circle"
             size={20}
@@ -396,6 +428,7 @@ export default function EmergencyBudgetScreen() {
 
         <ErrorBanner message={error} onPress={() => setShowErrorModal(true)} />
 
+        {/* Continue button – opens T&C modal */}
         <TouchableOpacity
           style={styles.continueButton}
           onPress={handleContinue}
@@ -426,6 +459,10 @@ export default function EmergencyBudgetScreen() {
       >
         <TouchableWithoutFeedback onPress={closeProtectionModal}>
           <Animated.View
+            style={[
+              styles.modalOverlay,
+              { opacity: protectionFadeAnim },
+            ]}
             style={[styles.modalOverlay, { opacity: protectionFadeAnim }]}
           >
             <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
@@ -435,6 +472,7 @@ export default function EmergencyBudgetScreen() {
                   { transform: [{ scale: protectionScaleAnim }] },
                 ]}
               >
+                <TouchableOpacity style={styles.closeButton} onPress={closeProtectionModal}>
                 <TouchableOpacity
                   style={styles.closeButton}
                   onPress={closeProtectionModal}
@@ -444,12 +482,34 @@ export default function EmergencyBudgetScreen() {
 
                 <Text style={styles.modalTitle}>Protection Amount</Text>
                 <Text style={styles.modalSubtitle}>
+                  This is the amount that will be available to transfer if youre forced to transact.
                   This is the amount that will be available to transfer if
                   you&apos;re forced to transact.
                 </Text>
 
                 <View style={styles.bulletList}>
                   <View style={styles.bulletItem}>
+                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                    <Text style={styles.bulletText}>
+                      It is <Text style={styles.boldText}>guaranteed by the bank</Text>. You will be <Text style={styles.boldText}>refunded within 72 hours</Text> of reporting the incident with a police case number.
+                    </Text>
+                  </View>
+                  <View style={styles.bulletItem}>
+                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                    <Text style={styles.bulletText}>
+                      It <Text style={styles.boldText}>satisfies the attacker</Text>. The money <Text style={styles.boldText}>actually leaves your account</Text>, so the attacker believes theyve succeeded – keeping you safe.
+                    </Text>
+                  </View>
+                  <View style={styles.bulletItem}>
+                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                    <Text style={styles.bulletText}>
+                      <Text style={styles.boldText}>The rest is locked</Text>. Everything above this amount is frozen and protected.
+                    </Text>
+                  </View>
+                  <View style={styles.bulletItem}>
+                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                    <Text style={styles.bulletText}>
+                      The <Text style={styles.boldText}>bank and police are silently alerted</Text> the moment your duress PIN is used.
                     <Ionicons
                       name="checkmark-circle"
                       size={20}
@@ -682,10 +742,12 @@ const styles = StyleSheet.create({
     padding: 24,
     marginTop: -20,
   },
-  mainTitle: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: colors.primary,
+  mainTitle: { fontSize: 28, fontWeight: "800", color: colors.primary, marginBottom: 6 },
+  sub: { fontSize: 15, fontWeight: "600", color: colors.navy, marginBottom: 4, lineHeight: 22 },
+  subDescription: {
+    fontSize: 14,
+    color: colors.textSub,
+    lineHeight: 20,
     marginBottom: 6,
   },
   sub: {
@@ -739,14 +801,15 @@ const styles = StyleSheet.create({
   },
   valueLabel: { fontSize: 13, color: colors.textSub },
   value: { fontSize: 18, fontWeight: "800", color: colors.primary },
-  hint: {
-    fontSize: 12,
-    color: colors.textSub,
-    backgroundColor: "#F8F9FC",
+  noteBox: {
+    flexDirection: "row",
+    backgroundColor: "#F5F3FF",
     padding: 14,
-    borderRadius: 16,
+    borderRadius: 12,
     marginTop: 8,
-    lineHeight: 18,
+    marginBottom: 20,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
   },
   noteBox: {
     flexDirection: "row",
