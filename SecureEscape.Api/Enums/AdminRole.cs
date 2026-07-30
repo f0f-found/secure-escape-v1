@@ -4,6 +4,7 @@ namespace SecureEscape.Api.Enums
     {
         FraudAnalyst = 1,
         FraudManager = 2,
-        SystemAdmin = 3
+        SystemAdmin = 3,
+        SecureEscapeAdmin= 4,
     }
 }

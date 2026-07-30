@@ -33,7 +33,7 @@ namespace SecureEscape.Api.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<Guid>("BankIntegrationId")
+                    b.Property<Guid?>("BankIntegrationId")
                         .HasColumnType("char(36)");
 
                     b.Property<DateTime>("CreatedAt")
@@ -48,6 +48,11 @@ namespace SecureEscape.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime(6)");
@@ -118,9 +123,6 @@ namespace SecureEscape.Api.Migrations
                     b.Property<Guid?>("AdminUserId")
                         .HasColumnType("char(36)");
 
-                    b.Property<Guid>("AlertId")
-                        .HasColumnType("char(36)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
@@ -129,11 +131,14 @@ namespace SecureEscape.Api.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("varchar(1000)");
 
+                    b.Property<Guid>("UserSessionId")
+                        .HasColumnType("char(36)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AdminUserId");
 
-                    b.HasIndex("AlertId");
+                    b.HasIndex("UserSessionId");
 
                     b.ToTable("AlertActions");
                 });
@@ -409,6 +414,15 @@ namespace SecureEscape.Api.Migrations
                     b.Property<bool>("Flagged")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<string>("FraudReportReference")
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("FraudReported")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime?>("FraudReportedAt")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<string>("RiskLevel")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -416,8 +430,14 @@ namespace SecureEscape.Api.Migrations
                     b.Property<decimal>("RiskScore")
                         .HasColumnType("decimal(5,2)");
 
+                    b.Property<string>("SecureEscapeCode")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("Status")
                         .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("StatusReason")
                         .HasColumnType("longtext");
 
                     b.Property<string>("TransactionType")
@@ -432,6 +452,20 @@ namespace SecureEscape.Api.Migrations
 
                     b.Property<Guid>("UserSessionId")
                         .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("VoucherExpiresAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("VoucherNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("VoucherPin")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<bool>("VoucherRedeemed")
+                        .HasColumnType("tinyint(1)");
 
                     b.HasKey("Id");
 
@@ -466,6 +500,9 @@ namespace SecureEscape.Api.Migrations
                         .HasColumnType("varchar(100)");
 
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("LastPaidAt")
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Name")
@@ -589,6 +626,52 @@ namespace SecureEscape.Api.Migrations
                     b.ToTable("DecoyProfiles");
                 });
 
+            modelBuilder.Entity("SecureEscape.Api.Models.EmergencyContact", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("NotifyOnDuress")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<string>("Relationship")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("EmergencyContacts");
+                });
+
             modelBuilder.Entity("SecureEscape.Api.Models.LocationEvent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -657,6 +740,19 @@ namespace SecureEscape.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("varchar(1000)");
+
+                    b.Property<string>("MessageBody")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
+                    b.Property<string>("ResponseMessage")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -762,10 +858,23 @@ namespace SecureEscape.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid?>("AssignedAdminUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("AssignedAt")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<string>("BankSessionId")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
+
+                    b.Property<DateTime?>("CaseResolvedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("CaseStatus")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
@@ -778,15 +887,52 @@ namespace SecureEscape.Api.Migrations
                     b.Property<DateTime?>("EndedAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<bool>("HadStepUpDuressEvent")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("InvestigationSummary")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
                     b.Property<string>("IpAddress")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
+                    b.Property<DateTime>("LastActivityAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ManagerReviewNotes")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
+                    b.Property<string>("ManagerReviewStatus")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("ManagerReviewedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid?>("ManagerReviewedByAdminUserId")
+                        .HasColumnType("char(36)");
+
                     b.Property<string>("Mode")
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("varchar(30)");
+
+                    b.Property<DateTime?>("ResolutionSubmittedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ResolutionSummary")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
+                    b.Property<Guid?>("ResolvedByAdminUserId")
+                        .HasColumnType("char(36)");
 
                     b.Property<DateTime>("StartedAt")
                         .HasColumnType("datetime(6)");
@@ -796,10 +942,15 @@ namespace SecureEscape.Api.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("varchar(30)");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("char(36)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AssignedAdminUserId");
 
                     b.HasIndex("BankSessionId");
 
@@ -813,8 +964,7 @@ namespace SecureEscape.Api.Migrations
                     b.HasOne("SecureEscape.Api.Models.BankIntegration", "BankIntegration")
                         .WithMany()
                         .HasForeignKey("BankIntegrationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("BankIntegration");
                 });
@@ -845,15 +995,15 @@ namespace SecureEscape.Api.Migrations
                         .HasForeignKey("AdminUserId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("SecureEscape.Api.Models.Alert", "Alert")
+                    b.HasOne("SecureEscape.Api.Models.UserSession", "UserSession")
                         .WithMany("AlertActions")
-                        .HasForeignKey("AlertId")
+                        .HasForeignKey("UserSessionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("AdminUser");
 
-                    b.Navigation("Alert");
+                    b.Navigation("UserSession");
                 });
 
             modelBuilder.Entity("SecureEscape.Api.Models.ApiClient", b =>
@@ -988,6 +1138,17 @@ namespace SecureEscape.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SecureEscape.Api.Models.EmergencyContact", b =>
+                {
+                    b.HasOne("SecureEscape.Api.Models.User", "User")
+                        .WithMany("EmergencyContacts")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SecureEscape.Api.Models.LocationEvent", b =>
                 {
                     b.HasOne("SecureEscape.Api.Models.Alert", "Alert")
@@ -1048,11 +1209,18 @@ namespace SecureEscape.Api.Migrations
 
             modelBuilder.Entity("SecureEscape.Api.Models.UserSession", b =>
                 {
+                    b.HasOne("SecureEscape.Api.Models.AdminUser", "AssignedAdminUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedAdminUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("SecureEscape.Api.Models.User", "User")
                         .WithMany("Sessions")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("AssignedAdminUser");
 
                     b.Navigation("User");
                 });
@@ -1066,8 +1234,6 @@ namespace SecureEscape.Api.Migrations
 
             modelBuilder.Entity("SecureEscape.Api.Models.Alert", b =>
                 {
-                    b.Navigation("AlertActions");
-
                     b.Navigation("LocationEvents");
 
                     b.Navigation("NotificationAttempts");
@@ -1113,11 +1279,15 @@ namespace SecureEscape.Api.Migrations
 
                     b.Navigation("DecoyProfiles");
 
+                    b.Navigation("EmergencyContacts");
+
                     b.Navigation("Sessions");
                 });
 
             modelBuilder.Entity("SecureEscape.Api.Models.UserSession", b =>
                 {
+                    b.Navigation("AlertActions");
+
                     b.Navigation("Alerts");
 
                     b.Navigation("AuditLogs");

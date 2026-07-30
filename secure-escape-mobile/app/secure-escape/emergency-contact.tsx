@@ -673,3 +673,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+import EmergencyContact from "@/screens/secure-escape/EmergencyContact";
+
+export default EmergencyContact;

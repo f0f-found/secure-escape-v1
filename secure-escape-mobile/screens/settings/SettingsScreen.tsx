@@ -1,4 +1,6 @@
-import React from "react";
+import { useEffect, useState } from "react";
+import { getProfileMe } from "@/services/profileService";
+import { ProfileMeResponse } from "@/types/profile";
 import {
   View,
   Text,
@@ -9,25 +11,67 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/utils/theme";
 import { useRouter } from "expo-router";
+import { getActiveDecoyProfile } from "@/services/secureEscapeService";
+import { logout } from "@/services/authService";
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const [profile, setProfile] = useState<ProfileMeResponse | null>(null);
 
+  const [error, setError] = useState<string>("");
+
+  const logoutButton = async () => {
+    try {
+      await logout();
+
+      setTimeout(() => {
+        router.replace("/(auth)");
+      }, 100);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to Logout");
+    }
+  };
+  useEffect(() => {
+    getProfileMe().then(setProfile).catch(console.error);
+  }, []);
+  const isDuress = profile?.sessionMode === "Duress";
   const menuItems = [
-    { title: "My information", subtitle: "view and update information" },
     {
-      title: "My app settings",
-      subtitle: "update personal and security settings",
+      title: "My information",
+      subtitle: "view and update information",
+      isProfile: true,
     },
+
+    // {
+    //   title: "My app settings",
+    //   subtitle: "update personal and security settings",
+    // },
+
+    // {
+    //   title: "Personalise my app",
+    //   subtitle: "Display what matters most to you",
+    // },
+
+    // {
+    //   title: "My Security center",
+    //   subtitle: "view and update information",
+    // },
+
+    // ONLY show if NOT in duress mode
+    ...(isDuress
+      ? []
+      : [
+          {
+            title: "Secure Escape",
+            subtitle: "Setup your Duress Pin",
+            isSecureEscape: true,
+          },
+        ]),
+
     {
-      title: "Personalise my app",
-      subtitle: "Display what matters most to you",
-    },
-    { title: "My Security center", subtitle: "view and update information" },
-    {
-      title: "Secure Escape",
-      subtitle: "Set Duress Pin",
-      isSecureEscape: true,
+      title: "Logout",
+      subtitle: "Logout",
+      isLogout: true,
     },
   ];
 
@@ -45,7 +89,7 @@ export default function SettingsScreen() {
         <View style={styles.avatar}>
           <Ionicons name="person-circle" size={70} color={colors.primary} />
         </View>
-        <Text style={styles.name}>Hello Naomie...</Text>
+        <Text style={styles.name}>Hello {profile?.fullName ?? "..."} !</Text>
       </View>
 
       <View style={styles.menu}>
@@ -53,11 +97,19 @@ export default function SettingsScreen() {
           <TouchableOpacity
             key={idx}
             style={styles.menuRow}
-            onPress={() => {
-              if (item.isSecureEscape) {
-                router.push("/secure-escape/intro");
+            onPress={async () => {
+              if (item.isProfile) {
+                router.push("/settings/profile-details");
+              } else if (item.isSecureEscape) {
+                const profile = await getActiveDecoyProfile();
+                if (profile) {
+                  router.push("/secure-escape/manage-secure-escape");
+                } else {
+                  router.push("/secure-escape/intro");
+                }
+              } else if (item.isLogout) {
+                await logoutButton();
               }
-              // other actions later
             }}
           >
             <View>
@@ -75,12 +127,13 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   scrollContent: {
+    paddingTop: 40,
     paddingBottom: 40, // space at bottom
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 80, // increased from 52 → 48 (more natural)
+    paddingTop: 10, // increased from 52 → 48 (more natural)
     paddingHorizontal: 24,
     gap: 12,
   },

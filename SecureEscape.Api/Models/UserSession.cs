@@ -35,9 +35,42 @@ namespace SecureEscape.Api.Models
 
         public DateTime? EndedAt { get; set; }
 
+        public DateTime LastActivityAt { get; set; } = DateTime.UtcNow;
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        public DateTime? UpdatedAt { get; set; }
+
+        public CaseStatus CaseStatus { get; set; } = CaseStatus.Open;
+        public bool HadStepUpDuressEvent { get; set; } = false;
+        public DateTime? CaseResolvedAt { get; set; }
+        public Guid? AssignedAdminUserId { get; set; }
+
+        public DateTime? AssignedAt { get; set; }
+
+        [MaxLength(2000)]
+        public string InvestigationSummary { get; set; } = string.Empty;
+
+        [MaxLength(2000)]
+        public string ResolutionSummary { get; set; } = string.Empty;
+
+        public Guid? ResolvedByAdminUserId { get; set; }
+
+        public DateTime? ResolutionSubmittedAt { get; set; }
+
+        public ManagerReviewStatus ManagerReviewStatus { get; set; } = ManagerReviewStatus.NotSubmitted;
+
+        public Guid? ManagerReviewedByAdminUserId { get; set; }
+
+        public DateTime? ManagerReviewedAt { get; set; }
+
+        [MaxLength(2000)]
+        public string ManagerReviewNotes { get; set; } = string.Empty;
+
+        public AdminUser? AssignedAdminUser { get; set; }
         public User? User { get; set; }
+
+        public ICollection<AlertAction> AlertActions { get; set; } = new List<AlertAction>();
 
         public ICollection<BankTransaction> Transactions { get; set; } = new List<BankTransaction>();
 

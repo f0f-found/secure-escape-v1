@@ -6,6 +6,7 @@ namespace SecureEscape.Api.Enums
         Email = 2,
         Push = 3,
         Webhook = 4,
-        SapsApi = 5
+        SapsApi = 5,
+        SabricApi = 6
     }
 }

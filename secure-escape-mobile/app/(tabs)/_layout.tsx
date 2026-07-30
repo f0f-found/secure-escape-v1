@@ -1,71 +1,75 @@
 import { Tabs } from "expo-router";
 import React from "react";
-import { StyleSheet } from "react-native";
-
+import { StyleSheet, Pressable } from "react-native";
+import { setLastActivityNow } from "@/services/tokenStore";
 import { HapticTab } from "@/components/haptic-tab";
 import { TabIcon } from "@/components/TabIcon";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
   const tintColor = "#3B82F6";
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: tintColor,
-        tabBarInactiveTintColor: "#A0AEC0",
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarStyle: styles.tabBar,
-        tabBarLabelStyle: styles.tabBarLabel,
-      }}
+    <Pressable
+      style={{ flex: 1 }}
+      onPress={setLastActivityNow}
+      onTouchStart={setLastActivityNow}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Home",
-          tabBarIcon: ({ color }) => (
-            <TabIcon name="home" color={color} size={24} />
-          ),
+      <Tabs
+        screenOptions={{
+          tabBarActiveTintColor: tintColor,
+          tabBarInactiveTintColor: "#A0AEC0",
+          headerShown: false,
+          tabBarButton: HapticTab,
+          tabBarStyle: styles.tabBar,
+          tabBarLabelStyle: styles.tabBarLabel,
         }}
-      />
-      <Tabs.Screen
-        name="cards"
-        options={{
-          title: "Cards",
-          tabBarIcon: ({ color }) => (
-            <TabIcon name="cards" color={color} size={24} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="transact"
-        options={{
-          title: "Transact",
-          tabBarIcon: ({ color }) => (
-            <TabIcon name="transact" color={color} size={24} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="messages"
-        options={{
-          title: "Messages",
-          tabBarIcon: ({ color }) => (
-            <TabIcon name="messages" color={color} size={24} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: "Settings",
-          tabBarIcon: ({ color }) => (
-            <TabIcon name="settings" color={color} size={24} />
-          ),
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: "Home",
+            tabBarIcon: ({ color }) => (
+              <TabIcon name="home" color={color} size={24} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="accounts"
+          options={{
+            title: "Accounts",
+            tabBarIcon: ({ color }) => (
+              <TabIcon name="cards" color={color} size={24} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="transact"
+          options={{
+            title: "Transact",
+            tabBarIcon: ({ color }) => (
+              <TabIcon name="transact" color={color} size={24} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="messages"
+          options={{
+            title: "Messages",
+            tabBarIcon: ({ color }) => (
+              <TabIcon name="messages" color={color} size={24} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="settings"
+          options={{
+            title: "Settings",
+            tabBarIcon: ({ color }) => (
+              <TabIcon name="settings" color={color} size={24} />
+            ),
+          }}
+        />
+      </Tabs>
+    </Pressable>
   );
 }
 

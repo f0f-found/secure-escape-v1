@@ -17,10 +17,15 @@ import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/utils/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { upsertDecoyProfile } from "@/services/secureEscapeService";
+import { ErrorBanner, ErrorModal } from "@/components/FormErrorMessage";
 
 export default function EmergencyBudgetScreen() {
   const router = useRouter();
-  const { mode = "low" } = useLocalSearchParams<{ mode?: string }>();
+  const { profileType } = useLocalSearchParams<{
+    profileType?: "LowProfile" | "Custom";
+  }>();
+  const mode = profileType;
 
   const [lowAmount, setLowAmount] = useState(200);
   const [tier1, setTier1] = useState(2000);
@@ -28,6 +33,18 @@ export default function EmergencyBudgetScreen() {
   const fadeAnim = useState(new Animated.Value(0))[0];
 
   // Protection Amount modal
+  // Display balance no longer has its own slider in this design — for
+  // Custom mode we default it to Tier 1 (the amount an attacker would
+  // initially see as available). Flagging this as an assumption; adjust
+  // if "what attacker sees" should be a separate, independently-set value.
+  const [displayBalance, setDisplayBalance] = useState(500);
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const fadeAnim = useState(new Animated.Value(0))[0];
+
+  // Protection Amount info modal
   const [protectionModalVisible, setProtectionModalVisible] = useState(false);
   const protectionFadeAnim = useRef(new Animated.Value(0)).current;
   const protectionScaleAnim = useRef(new Animated.Value(0.9)).current;
@@ -43,12 +60,19 @@ export default function EmergencyBudgetScreen() {
 
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 1.1, duration: 1000, useNativeDriver: true }),
         Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
       ])
     ).start();
+
     Animated.loop(
       Animated.sequence([
         Animated.timing(rotateAnim, { toValue: 0.05, duration: 1500, useNativeDriver: true }),
@@ -59,8 +83,12 @@ export default function EmergencyBudgetScreen() {
 
   const handleSliderChange = (value: number, type: "low" | "tier1" | "tier2") => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    clearError();
     if (type === "low") setLowAmount(value);
-    if (type === "tier1") setTier1(value);
+    if (type === "tier1") {
+      setTier1(value);
+      if (mode === "Custom") setDisplayBalance(value);
+    }
     if (type === "tier2") setTier2(value);
   };
 
@@ -111,6 +139,146 @@ export default function EmergencyBudgetScreen() {
       closeTermsModal();
       router.push("/secure-escape/duress-pin");
     }
+  const showError = (message: string) => {
+    setError(message);
+    setShowErrorModal(true);
+  };
+
+  const clearError = () => {
+    setError(null);
+    setShowErrorModal(false);
+  };
+
+  const getValidationMessage = () => {
+    if (profileType !== "LowProfile" && profileType !== "Custom") {
+      return "Please choose a Secure Escape mode before setting your protection amount.";
+    }
+
+    const values =
+      mode === "LowProfile" ? [lowAmount] : [displayBalance, tier1, tier2];
+
+    if (values.some((value) => value < 0 || value > 1000000)) {
+      return "Secure Escape amounts must be between R0 and R1,000,000.";
+    }
+
+    return null;
+  };
+
+  // Continue: validate sliders, then open T&C modal
+  const handleContinue = () => {
+    const validationMessage = getValidationMessage();
+
+    if (validationMessage) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showError(validationMessage);
+      return;
+    }
+
+    openTermsModal();
+  };
+
+  // Protection Amount modal handlers
+  const openProtectionModal = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setProtectionModalVisible(true);
+    Animated.parallel([
+      Animated.timing(protectionFadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.spring(protectionScaleAnim, {
+        toValue: 1,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeProtectionModal = () => {
+    Animated.parallel([
+      Animated.timing(protectionFadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.spring(protectionScaleAnim, {
+        toValue: 0.9,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setProtectionModalVisible(false));
+  };
+
+  // T&C modal handlers
+  const openTermsModal = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setModalAgreed(false);
+    setTermsModalVisible(true);
+    Animated.parallel([
+      Animated.timing(termsFadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.spring(termsScaleAnim, {
+        toValue: 1,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeTermsModal = () => {
+    Animated.parallel([
+      Animated.timing(termsFadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.spring(termsScaleAnim, {
+        toValue: 0.9,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setTermsModalVisible(false));
+  };
+
+  // Confirm & Agree inside the modal: actually saves and navigates
+  const handleConfirm = async () => {
+    if (!modalAgreed) return;
+
+    try {
+      setIsSaving(true);
+      clearError();
+
+      await upsertDecoyProfile({
+        profileType: profileType ?? "LowProfile",
+        displayBalance: mode === "LowProfile" ? lowAmount : displayBalance,
+        emergencyBudget: mode === "LowProfile" ? lowAmount : tier1,
+        tier1Limit: mode === "LowProfile" ? lowAmount : tier1,
+        tier2Limit: mode === "LowProfile" ? lowAmount : tier2,
+        tier2DelayHours: 24,
+      });
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      closeTermsModal();
+      router.push("/secure-escape/duress-pin");
+    } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      closeTermsModal();
+      showError(
+        err instanceof Error
+          ? err.message
+          : "Failed to save Secure Escape setup",
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const formatCurrency = (value: number) => `R ${value.toLocaleString()}`;
@@ -120,7 +288,7 @@ export default function EmergencyBudgetScreen() {
   });
 
   let content;
-  if (mode === "low") {
+  if (profileType === "LowProfile") {
     content = (
       <Animated.View style={{ opacity: fadeAnim }}>
         <Text style={styles.label}>
@@ -148,6 +316,8 @@ export default function EmergencyBudgetScreen() {
       <Animated.View style={{ opacity: fadeAnim }}>
         <Text style={styles.label}>
           Protection Amount – Tier 1 <Text style={styles.range}>(R500 – R5,000)</Text>
+          Protection Amount – Tier 1{" "}
+          <Text style={styles.range}>(R500 – R5,000)</Text>
         </Text>
         <Slider
           style={styles.slider}
@@ -166,6 +336,8 @@ export default function EmergencyBudgetScreen() {
         </View>
         <Text style={[styles.label, { marginTop: 20 }]}>
           Protection Amount – Tier 2 <Text style={styles.range}>(up to R50,000)</Text>
+          Protection Amount – Tier 2{" "}
+          <Text style={styles.range}>(up to R50,000)</Text>
         </Text>
         <Slider
           style={styles.slider}
@@ -192,7 +364,10 @@ export default function EmergencyBudgetScreen() {
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      <LinearGradient colors={["#5B8DEF", "#6C63FF"]} style={styles.gradientHeader}>
+      <LinearGradient
+        colors={["#5B8DEF", "#6C63FF"]}
+        style={styles.gradientHeader}
+      >
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
@@ -207,6 +382,12 @@ export default function EmergencyBudgetScreen() {
         </Text>
         <TouchableOpacity onPress={openProtectionModal}>
           <Text style={styles.link}>What is the protection amount?</Text>
+          This amount is fully insured by the bank. If you&apos;re forced to
+          transact under duress, this is the maximum that can leave your
+          account.
+        </Text>
+        <TouchableOpacity onPress={openProtectionModal}>
+          <Text style={styles.link}>What is the protection amount? </Text>
         </TouchableOpacity>
 
         <Animated.View
@@ -215,7 +396,10 @@ export default function EmergencyBudgetScreen() {
             { transform: [{ scale: pulseAnim }, { rotate: rotateInterpolate }] },
           ]}
         >
-          <LinearGradient colors={["#EDE9FE", "#DBEAFE"]} style={styles.iconCircle}>
+          <LinearGradient
+            colors={["#EDE9FE", "#DBEAFE"]}
+            style={styles.iconCircle}
+          >
             <Ionicons name="cash-outline" size={60} color={colors.primary} />
           </LinearGradient>
         </Animated.View>
@@ -228,6 +412,21 @@ export default function EmergencyBudgetScreen() {
             <Text style={styles.boldText}>Note:</Text> This is the amount an attacker can force you to send. It will leave your account, but it&apos;s fully insured and guaranteed to be refunded by the bank. Your safety is the priority.
           </Text>
         </View>
+          <Ionicons
+            name="information-circle"
+            size={20}
+            color={colors.primary}
+            style={styles.noteIcon}
+          />
+          <Text style={styles.noteText}>
+            <Text style={styles.boldText}>Note:</Text> This is the amount an
+            attacker can force you to send. It will leave your account, but
+            it&apos;s fully insured and guaranteed to be refunded by the bank.
+            Your safety is the priority.
+          </Text>
+        </View>
+
+        <ErrorBanner message={error} onPress={() => setShowErrorModal(true)} />
 
         {/* Continue button – opens T&C modal */}
         <TouchableOpacity
@@ -235,11 +434,21 @@ export default function EmergencyBudgetScreen() {
           onPress={handleContinue}
           activeOpacity={0.8}
         >
-          <LinearGradient colors={["#7C6EF7", "#4A6CF7"]} style={styles.gradientButton}>
+          <LinearGradient
+            colors={["#7C6EF7", "#4A6CF7"]}
+            style={styles.gradientButton}
+          >
             <Text style={styles.buttonText}>Continue</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>
+
+      <ErrorModal
+        title="Secure Escape setup"
+        message={error}
+        visible={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+      />
 
       {/* Modal: "What is the protection amount?" */}
       <Modal
@@ -254,6 +463,7 @@ export default function EmergencyBudgetScreen() {
               styles.modalOverlay,
               { opacity: protectionFadeAnim },
             ]}
+            style={[styles.modalOverlay, { opacity: protectionFadeAnim }]}
           >
             <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
               <Animated.View
@@ -263,12 +473,18 @@ export default function EmergencyBudgetScreen() {
                 ]}
               >
                 <TouchableOpacity style={styles.closeButton} onPress={closeProtectionModal}>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={closeProtectionModal}
+                >
                   <Ionicons name="close" size={24} color={colors.navy} />
                 </TouchableOpacity>
 
                 <Text style={styles.modalTitle}>Protection Amount</Text>
                 <Text style={styles.modalSubtitle}>
                   This is the amount that will be available to transfer if youre forced to transact.
+                  This is the amount that will be available to transfer if
+                  you&apos;re forced to transact.
                 </Text>
 
                 <View style={styles.bulletList}>
@@ -294,6 +510,65 @@ export default function EmergencyBudgetScreen() {
                     <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
                     <Text style={styles.bulletText}>
                       The <Text style={styles.boldText}>bank and police are silently alerted</Text> the moment your duress PIN is used.
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      It is{" "}
+                      <Text style={styles.boldText}>
+                        guaranteed by the bank
+                      </Text>
+                      . You will be{" "}
+                      <Text style={styles.boldText}>
+                        refunded within 72 hours
+                      </Text>{" "}
+                      of reporting the incident with a police case number.
+                    </Text>
+                  </View>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      It{" "}
+                      <Text style={styles.boldText}>
+                        satisfies the attacker
+                      </Text>
+                      . The money{" "}
+                      <Text style={styles.boldText}>
+                        actually leaves your account
+                      </Text>
+                      , so the attacker believes they&apos;ve succeeded —
+                      keeping you safe.
+                    </Text>
+                  </View>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      <Text style={styles.boldText}>The rest is locked</Text>.
+                      Everything above this amount is frozen and protected.
+                    </Text>
+                  </View>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      The{" "}
+                      <Text style={styles.boldText}>
+                        bank and police are silently alerted
+                      </Text>{" "}
+                      the moment your duress PIN is used.
                     </Text>
                   </View>
                 </View>
@@ -303,7 +578,7 @@ export default function EmergencyBudgetScreen() {
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* T&C Modal with internal checkbox and confirm navigation */}
+      {/* T&C Modal with internal checkbox and confirm-and-save */}
       <Modal
         transparent
         visible={termsModalVisible}
@@ -312,10 +587,7 @@ export default function EmergencyBudgetScreen() {
       >
         <TouchableWithoutFeedback onPress={closeTermsModal}>
           <Animated.View
-            style={[
-              styles.modalOverlay,
-              { opacity: termsFadeAnim },
-            ]}
+            style={[styles.modalOverlay, { opacity: termsFadeAnim }]}
           >
             <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
               <Animated.View
@@ -324,7 +596,10 @@ export default function EmergencyBudgetScreen() {
                   { transform: [{ scale: termsScaleAnim }] },
                 ]}
               >
-                <TouchableOpacity style={styles.closeButton} onPress={closeTermsModal}>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={closeTermsModal}
+                >
                   <Ionicons name="close" size={24} color={colors.navy} />
                 </TouchableOpacity>
 
@@ -333,65 +608,110 @@ export default function EmergencyBudgetScreen() {
 
                 <View style={styles.bulletList}>
                   <View style={styles.bulletItem}>
-                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
                     <Text style={styles.bulletText}>
-                      <Text style={styles.boldText}>Refund guarantee:</Text> Any transaction made using the duress PIN up to the protection amount will be refunded by the bank within 72 hours of the victim reporting the incident and providing a valid police case number.
+                      <Text style={styles.boldText}>Refund guarantee:</Text> Any
+                      transaction made using the duress PIN up to the protection
+                      amount will be refunded by the bank within 72 hours of the
+                      victim reporting the incident and providing a valid police
+                      case number.
                     </Text>
                   </View>
                   <View style={styles.bulletItem}>
-                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
                     <Text style={styles.bulletText}>
-                      <Text style={styles.boldText}>Fraud prevention:</Text> False claims of duress constitute fraud and will result in legal action, permanent feature ban, and potential criminal charges.
+                      <Text style={styles.boldText}>Fraud prevention:</Text>{" "}
+                      False claims of duress constitute fraud and will result in
+                      legal action, permanent feature ban, and potential
+                      criminal charges.
                     </Text>
                   </View>
                   <View style={styles.bulletItem}>
-                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
                     <Text style={styles.bulletText}>
-                      <Text style={styles.boldText}>Reporting window:</Text> The victim must report the incident within 72 hours of the duress event. Beyond this window, refunds are at the bank&apos;s discretion.
+                      <Text style={styles.boldText}>Reporting window:</Text> The
+                      victim must report the incident within 72 hours of the
+                      duress event. Beyond this window, refunds are at the
+                      bank&apos;s discretion.
                     </Text>
                   </View>
                   <View style={styles.bulletItem}>
-                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
                     <Text style={styles.bulletText}>
-                      <Text style={styles.boldText}>Bank discretion:</Text> The bank reserves the right to investigate each claim and may deny refunds if evidence suggests fraud or misrepresentation.
+                      <Text style={styles.boldText}>Bank discretion:</Text> The
+                      bank reserves the right to investigate each claim and may
+                      deny refunds if evidence suggests fraud or
+                      misrepresentation.
                     </Text>
                   </View>
                 </View>
 
                 <Text style={styles.modalFooter}>
-                  For full details, visit{' '}
+                  For full details, visit{" "}
                   <Text
                     style={[styles.linkText, { fontSize: 14 }]}
-                    onPress={() => Linking.openURL('https://www.secureescape.ai')}
+                    onPress={() =>
+                      Linking.openURL("https://www.secureescape.ai")
+                    }
                   >
                     www.secureescape.ai
                   </Text>
                 </Text>
 
-                {/* Internal checkbox */}
                 <TouchableOpacity
                   style={styles.modalCheckRow}
                   onPress={() => setModalAgreed(!modalAgreed)}
                   activeOpacity={0.7}
                 >
-                  <View style={[styles.modalCheckbox, modalAgreed && styles.modalCheckboxChecked]}>
-                    {modalAgreed && <Ionicons name="checkmark" size={18} color="#fff" />}
+                  <View
+                    style={[
+                      styles.modalCheckbox,
+                      modalAgreed && styles.modalCheckboxChecked,
+                    ]}
+                  >
+                    {modalAgreed && (
+                      <Ionicons name="checkmark" size={18} color="#fff" />
+                    )}
                   </View>
-                  <Text style={styles.modalCheckText}>I have read and agree to the Terms & Conditions</Text>
+                  <Text style={styles.modalCheckText}>
+                    I have read and agree to the Terms & Conditions
+                  </Text>
                 </TouchableOpacity>
 
-                {/* Confirm button navigates directly */}
                 <TouchableOpacity
-                  style={[styles.modalConfirmButton, !modalAgreed && styles.modalConfirmDisabled]}
+                  style={[
+                    styles.modalConfirmButton,
+                    (!modalAgreed || isSaving) && styles.modalConfirmDisabled,
+                  ]}
                   onPress={handleConfirm}
-                  disabled={!modalAgreed}
+                  disabled={!modalAgreed || isSaving}
                   activeOpacity={0.7}
                 >
                   <LinearGradient
-                    colors={modalAgreed ? ["#7C6EF7", "#4A6CF7"] : ["#ccc", "#ccc"]}
+                    colors={
+                      modalAgreed ? ["#7C6EF7", "#4A6CF7"] : ["#ccc", "#ccc"]
+                    }
                     style={styles.modalGradientButton}
                   >
-                    <Text style={styles.buttonText}>Confirm & Agree</Text>
+                    <Text style={styles.buttonText}>
+                      {isSaving ? "Saving..." : "Confirm & Agree"}
+                    </Text>
                   </LinearGradient>
                 </TouchableOpacity>
               </Animated.View>
@@ -406,7 +726,7 @@ export default function EmergencyBudgetScreen() {
 const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 40 },
   gradientHeader: {
-    paddingTop: 100,
+    paddingTop: 65,
     paddingHorizontal: 20,
     paddingBottom: 30,
     flexDirection: "row",
@@ -424,6 +744,19 @@ const styles = StyleSheet.create({
   },
   mainTitle: { fontSize: 28, fontWeight: "800", color: colors.primary, marginBottom: 6 },
   sub: { fontSize: 15, fontWeight: "600", color: colors.navy, marginBottom: 4, lineHeight: 22 },
+  subDescription: {
+    fontSize: 14,
+    color: colors.textSub,
+    lineHeight: 20,
+    marginBottom: 6,
+  },
+  sub: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.navy,
+    marginBottom: 4,
+    lineHeight: 22,
+  },
   subDescription: {
     fontSize: 14,
     color: colors.textSub,
@@ -452,7 +785,12 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 5,
   },
-  label: { fontSize: 15, fontWeight: "600", color: colors.navy, marginBottom: 8 },
+  label: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.navy,
+    marginBottom: 8,
+  },
   range: { fontWeight: "400", color: colors.textSub, fontSize: 12 },
   slider: { width: "100%", height: 40, marginBottom: 8 },
   valueContainer: {
@@ -473,6 +811,16 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: colors.primary,
   },
+  noteBox: {
+    flexDirection: "row",
+    backgroundColor: "#F5F3FF",
+    padding: 14,
+    borderRadius: 12,
+    marginTop: 8,
+    marginBottom: 20,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+  },
   noteIcon: { marginRight: 10, marginTop: 1 },
   noteText: {
     fontSize: 13,
@@ -480,6 +828,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     flex: 1,
   },
+  linkText: { color: colors.primary, textDecorationLine: "underline" },
   continueButton: {
     marginTop: 12,
     borderRadius: 50,
@@ -487,10 +836,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   gradientButton: { paddingVertical: 16, alignItems: "center" },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "700", letterSpacing: 0.5 },
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
   boldText: { fontWeight: "700" },
-
-  // Modal styles (shared)
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -554,11 +906,6 @@ const styles = StyleSheet.create({
     borderTopColor: "#eee",
     paddingTop: 14,
     marginTop: 4,
-  },
-  linkText: {
-    color: colors.primary,
-    textDecorationLine: "underline",
-    fontWeight: "600",
   },
   modalCheckRow: {
     flexDirection: "row",

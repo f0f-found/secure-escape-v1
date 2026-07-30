@@ -21,6 +21,7 @@ namespace SecureEscape.Api.Data
         public DbSet<Beneficiary> Beneficiaries { get; set; }
         public DbSet<Card> Cards { get; set; }
         public DbSet<DecoyProfile> DecoyProfiles { get; set; }
+        public DbSet<EmergencyContact> EmergencyContacts { get; set; }
         public DbSet<LocationEvent> LocationEvents { get; set; }
         public DbSet<NotificationAttempt> NotificationAttempts { get; set; }
         public DbSet<RiskEvaluation> RiskEvaluations { get; set; }
@@ -110,6 +111,8 @@ namespace SecureEscape.Api.Data
                 .Property(x => x.ProfileType)
                 .HasConversion<string>();
 
+
+
             modelBuilder.Entity<LocationEvent>()
                 .Property(x => x.LocationSource)
                 .HasConversion<string>();
@@ -136,6 +139,13 @@ namespace SecureEscape.Api.Data
 
             modelBuilder.Entity<UserSession>()
                 .Property(x => x.Status)
+                .HasConversion<string>();
+            modelBuilder.Entity<UserSession>()
+                .Property(x => x.CaseStatus)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<UserSession>()
+                .Property(x => x.ManagerReviewStatus)
                 .HasConversion<string>();
         }
 
@@ -241,6 +251,12 @@ namespace SecureEscape.Api.Data
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<User>()
+                .HasMany(x => x.EmergencyContacts)
+                .WithOne(x => x.User)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             modelBuilder.Entity<BankAccount>()
                 .HasMany(x => x.Cards)
                 .WithOne(x => x.BankAccount)
@@ -289,6 +305,12 @@ namespace SecureEscape.Api.Data
                 .HasForeignKey(x => x.UserSessionId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            modelBuilder.Entity<UserSession>()
+                .HasOne(s => s.AssignedAdminUser)
+                .WithMany()
+                .HasForeignKey(s => s.AssignedAdminUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             modelBuilder.Entity<BankTransaction>()
                 .HasOne(x => x.User)
                 .WithMany()
@@ -301,10 +323,10 @@ namespace SecureEscape.Api.Data
                 .HasForeignKey(x => x.BankTransactionId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            modelBuilder.Entity<Alert>()
+            modelBuilder.Entity<UserSession>()
                 .HasMany(x => x.AlertActions)
-                .WithOne(x => x.Alert)
-                .HasForeignKey(x => x.AlertId)
+                .WithOne(x => x.UserSession)
+                .HasForeignKey(x => x.UserSessionId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<Alert>()

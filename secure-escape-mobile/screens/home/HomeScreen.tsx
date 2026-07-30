@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,38 +8,129 @@ import {
   Dimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-
+import { getAccounts } from "@/services/accountService";
+import { AccountResponse } from "@/types/account";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, commonStyles, shadows } from "@/utils/theme";
+import { colors, shadows } from "@/utils/theme";
+import { getProfileMe } from "@/services/profileService";
+import { ProfileMeResponse } from "@/types/profile";
+import { useRouter } from "expo-router";
+import { logout } from "@/services/authService";
+import { useFocusEffect } from "@react-navigation/native";
 
 const { width } = Dimensions.get("window");
 
 export default function HomeScreen() {
-  const accountCards = [
-    {
-      name: "Main Account",
-      balance: 28840,
-      icon: "wallet",
-      gradient: ["#9F8FEF", "#7C6EF7"] as const,
-      iconBg: "#9F8FEF20",
-    },
-    {
-      name: "Savings Plans",
-      balance: 3789,
-      icon: "trending-up",
-      gradient: ["#93C5FD", "#60A5FA"] as const,
-      iconBg: "#60A5FA20",
-    },
-  ];
+  const router = useRouter();
+  const [accounts, setAccounts] = useState<AccountResponse[]>([]);
+  const [profile, setProfile] = useState<ProfileMeResponse>();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadAccounts();
+    loadProfile();
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadAccounts();
+    }, []),
+  );
+
+  const loadProfile = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const user = await getProfileMe();
+
+      setProfile(user);
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Failed to load profile.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadAccounts = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const data = await getAccounts();
+
+      setAccounts(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load accounts.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logoutButton = async () => {
+    try {
+      await logout();
+
+      router.replace("/(auth)");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to Logout");
+    }
+  };
+
+  const accountCards = accounts.map((account, index) => ({
+    id: account.id,
+    name: account.accountName,
+    balance: account.availableBalance,
+    isDecoyView: account.isDecoyView,
+    icon: index === 0 ? "wallet" : "trending-up",
+    gradient:
+      index === 0
+        ? (["#9F8FEF", "#7C6EF7"] as const)
+        : (["#93C5FD", "#60A5FA"] as const),
+    iconBg: index === 0 ? "#9F8FEF20" : "#60A5FA20",
+  }));
 
   const favourites = [
-    { label: "Pay Beneficiary", icon: "people", bg: "#EEEEFF" },
-    { label: "Transfer", icon: "swap-horizontal", bg: "#FFF0F5" },
-    { label: "Send Cash", icon: "cash", bg: "#E6FAF8" },
-    { label: "Buy Prepaid", icon: "phone-portrait", bg: "#FFFBEB" },
-    { label: "Pay the bill", icon: "document-text", bg: "#F0FDF4" },
-    { label: "Credit card", icon: "card", bg: "#FFF5F5" },
-    { label: "Transaction report", icon: "stats-chart", bg: "#EEEEFF" },
+    {
+      label: "Pay Beneficiary",
+      icon: "people",
+      bg: "#EEEEFF",
+      link: "/beneficiaries/beneficiary-list",
+    },
+    {
+      label: "Transfer",
+      icon: "swap-horizontal",
+      bg: "#FFF0F5",
+      link: "/beneficiaries/beneficiary-list",
+    },
+    {
+      label: "Send Cash",
+      icon: "cash",
+      bg: "#E6FAF8",
+      link: "/transactions/create-cash-send",
+    },
+    {
+      label: "Transaction report",
+      icon: "stats-chart",
+      bg: "#EEEEFF",
+      link: "/transactions/report",
+    },
+    // { label: "Buy Prepaid", icon: "phone-portrait", bg: "#FFFBEB" },
+    {
+      label: "Financial Advice",
+      icon: "document-text",
+      bg: "#F0FDF4",
+      link: "/advice/financial-advice",
+    },
+    {
+      label: "Security Tips",
+      icon: "card",
+      bg: "#FFF5F5",
+      link: "/advice/security-tips",
+    },
   ];
 
   return (
@@ -48,16 +139,36 @@ export default function HomeScreen() {
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.scrollContent}
     >
-      <View style={styles.header}>
-        <Text style={styles.title}>My Dashboard</Text>
-        <Text style={styles.greeting}>Good afternoon, Naomie</Text>
+      <View style={styles.headerComponent}>
+        <View style={styles.header}>
+          <Text style={styles.title}>My Dashboard</Text>
+          <Text style={styles.greeting}>
+            Good afternoon, {profile?.fullName}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          activeOpacity={0.8}
+          onPress={logoutButton}
+        >
+          <Ionicons name="log-out-outline" size={18} color={colors.white} />
+
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
       </View>
 
+      {isLoading && <Text style={styles.stateText}>Loading accounts...</Text>}
+
+      {error && (
+        <TouchableOpacity onPress={loadAccounts}>
+          <Text style={styles.errorText}>{error}</Text>
+        </TouchableOpacity>
+      )}
       {/* Account Cards with gradient background */}
       <View style={styles.cardsRow}>
         {accountCards.map((card, idx) => (
           <TouchableOpacity
-            key={idx}
+            key={card.id}
             activeOpacity={0.9}
             style={styles.cardWrapper}
           >
@@ -80,6 +191,9 @@ export default function HomeScreen() {
               <Text style={styles.accBalance}>
                 R {card.balance.toLocaleString()}
               </Text>
+              {card.isDecoyView && (
+                <Text style={styles.decoyBadge}>⚠ Decoy View</Text>
+              )}
             </LinearGradient>
           </TouchableOpacity>
         ))}
@@ -99,6 +213,11 @@ export default function HomeScreen() {
               key={idx}
               style={styles.favTile}
               activeOpacity={0.7}
+              onPress={() => {
+                if (item.link) {
+                  router.push(item.link as never);
+                }
+              }}
             >
               <View style={[styles.favIcon, { backgroundColor: item.bg }]}>
                 <Ionicons
@@ -119,11 +238,42 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.greyBg },
   scrollContent: {
+    paddingTop: 48,
     paddingBottom: 40, // extra space at bottom
+  },
+  headerComponent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+
+    backgroundColor: colors.danger,
+
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+
+    borderRadius: 14,
+
+    marginTop: 20,
+    marginRight: 20,
+
+    gap: 6,
+
+    ...shadows.medium,
+  },
+
+  logoutText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: "700",
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 80, // was 20 → now 48 (moves title down)
+    paddingTop: 20, // was 20 → now 48 (moves title down)
     paddingBottom: 16,
   },
   title: { fontSize: 28, fontWeight: "800", color: colors.navy },
@@ -148,6 +298,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
+  },
+  decoyBadge: {
+    fontSize: 10,
+    color: "rgba(255,255,255,0.7)",
+    marginTop: 4,
+    fontWeight: "600",
   },
   accName: {
     fontSize: 14,
@@ -206,5 +362,19 @@ const styles = StyleSheet.create({
     color: colors.textMain,
     textAlign: "center",
     paddingHorizontal: 4,
+  },
+  stateText: {
+    paddingHorizontal: 20,
+    marginBottom: 12,
+    color: colors.textSub,
+    fontSize: 13,
+  },
+
+  errorText: {
+    paddingHorizontal: 20,
+    marginBottom: 12,
+    color: "#DC2626",
+    fontSize: 13,
+    fontWeight: "600",
   },
 });
