@@ -1,4 +1,3 @@
-// screens/Screen6_DuressPin.js - Spacing fixed (everything moved down)
 import React, { useState, useRef } from "react";
 import {
   View,
@@ -9,9 +8,12 @@ import {
   Animated,
   ScrollView,
   Modal,
+  TouchableWithoutFeedback,
+  Linking,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/utils/theme";
 import { useRouter } from "expo-router";
 import { setDuressPin } from "@/services/secureEscapeService";
@@ -19,16 +21,23 @@ import { ErrorBanner, ErrorModal } from "@/components/FormErrorMessage";
 
 export default function DuressPin() {
   const router = useRouter();
-  const [pin1, setPin1] = useState("");
-  const [pin2, setPin2] = useState("");
-  const [agreed, setAgreed] = useState(false);
+  const [normalPin, setNormalPin] = useState("");
+  const [duressPin, setDuressPinValue] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [showErrorModal, setShowErrorModal] = useState(false);
-  const [duressInfoModalVisible, setDuressInfoModalVisible] = useState(false);
+
+  // "What is a Duress PIN?" modal
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
+  const infoFadeAnim = useRef(new Animated.Value(0)).current;
+  const infoScaleAnim = useRef(new Animated.Value(0.9)).current;
+
+  // Terms & Conditions modal
   const [termsModalVisible, setTermsModalVisible] = useState(false);
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const termsFadeAnim = useRef(new Animated.Value(0)).current;
+  const termsScaleAnim = useRef(new Animated.Value(0.9)).current;
+  const [modalAgreed, setModalAgreed] = useState(false);
 
   const showError = (message: string) => {
     setError(message);
@@ -40,62 +49,115 @@ export default function DuressPin() {
     setShowErrorModal(false);
   };
 
+  const openInfoModal = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setInfoModalVisible(true);
+    Animated.parallel([
+      Animated.timing(infoFadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.spring(infoScaleAnim, {
+        toValue: 1,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeInfoModal = () => {
+    Animated.parallel([
+      Animated.timing(infoFadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.spring(infoScaleAnim, {
+        toValue: 0.9,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setInfoModalVisible(false));
+  };
+
+  const openTermsModal = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setModalAgreed(false);
+    setTermsModalVisible(true);
+    Animated.parallel([
+      Animated.timing(termsFadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.spring(termsScaleAnim, {
+        toValue: 1,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeTermsModal = () => {
+    Animated.parallel([
+      Animated.timing(termsFadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.spring(termsScaleAnim, {
+        toValue: 0.9,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setTermsModalVisible(false));
+  };
+
   const getValidationMessage = () => {
-    if (!currentPassword.trim()) {
-      return "Please enter your current password.";
+    if (!normalPin.trim()) {
+      return "Please enter your normal PIN to confirm it's you.";
     }
 
-    if (!pin1.trim()) {
-      return "Please enter your duress PIN.";
+    if (normalPin.length < 4 || normalPin.length > 6) {
+      return "Normal PIN must be 4 to 6 digits.";
     }
 
-    if (pin1.length < 4) {
-      return "Duress PIN must be at least 4 digits.";
+    if (!duressPin.trim()) {
+      return "Please create your duress PIN.";
     }
 
-    if (pin1.length > 6) {
-      return "Duress PIN cannot be more than 6 digits.";
+    if (duressPin.length < 4 || duressPin.length > 6) {
+      return "Duress PIN must be 4 to 6 digits.";
     }
 
-    if (!pin2.trim()) {
+    if (duressPin === normalPin) {
+      return "Your duress PIN must be different from your normal PIN.";
+    }
+
+    if (!confirmPin.trim()) {
       return "Please re-enter your duress PIN.";
     }
 
-    if (pin2.length < 4) {
-      return "Confirmation PIN must be at least 4 digits.";
-    }
-
-    if (pin1 !== pin2) {
+    if (confirmPin !== duressPin) {
       return "Duress PINs do not match.";
-    }
-
-    if (!agreed) {
-      return "Please agree to the Terms and Conditions before continuing.";
     }
 
     return null;
   };
 
-  const animateCheck = () => {
-    Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 0.8,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 3,
-        tension: 200,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    clearError();
-    setAgreed(!agreed);
-  };
+  const isFormValid =
+    normalPin.length >= 4 &&
+    duressPin.length >= 4 &&
+    duressPin !== normalPin &&
+    confirmPin === duressPin;
 
-  const handleEnable = async () => {
+  // Activate button: validate, then open T&C modal
+  const handleEnable = () => {
     const validationMessage = getValidationMessage();
 
     if (validationMessage) {
@@ -104,31 +166,38 @@ export default function DuressPin() {
       return;
     }
 
+    openTermsModal();
+  };
+
+  // Confirm & Agree inside the modal: actually saves and navigates
+  const handleConfirm = async () => {
+    if (!modalAgreed) return;
+
     try {
       setIsSaving(true);
       clearError();
+
+      // NOTE: passing normalPin as the verification field here — adjust
+      // the property name once the backend contract changes from
+      // currentPassword to a PIN-based field.
       await setDuressPin({
-        currentPassword,
-        duressPin: pin1,
-      });
+        currentPin: normalPin,
+        duressPin,
+      } as Parameters<typeof setDuressPin>[0]);
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      closeTermsModal();
       router.push("/secure-escape/emergency-contact?from=onboarding");
-    } catch (error) {
+    } catch (err) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      closeTermsModal();
       showError(
-        error instanceof Error ? error.message : "Failed to set duress PIN.",
+        err instanceof Error ? err.message : "Failed to set duress PIN.",
       );
     } finally {
       setIsSaving(false);
     }
   };
-
-  const isEnabled =
-    pin1.length === 4 &&
-    pin2.length === 4 &&
-    pin1 === pin2 &&
-    agreed &&
-    currentPassword.length > 0;
 
   return (
     <ScrollView
@@ -140,204 +209,362 @@ export default function DuressPin() {
         colors={["#5B8DEF", "#6C63FF"]}
         style={styles.gradientHeader}
       >
-        <Text style={styles.backArrow} onPress={() => router.back()}>
-          ‹
-        </Text>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Set Duress PIN</Text>
       </LinearGradient>
 
       <View style={styles.whiteCard}>
+        <Text style={styles.mainTitle}>Your Silent Safety Signal</Text>
         <Text style={styles.sub}>
-          This is the PIN you should use ONLY when in duress
+          This is the PIN you should ONLY use if you&apos;re being forced to
+          transact under threat.
         </Text>
-        <TouchableOpacity onPress={() => setDuressInfoModalVisible(true)}>
-          <Text style={styles.link}>What is a Duress PIN?</Text>
+        <TouchableOpacity onPress={openInfoModal}>
+          <Text style={styles.link}>What is a Duress PIN? </Text>
         </TouchableOpacity>
 
-        <Text style={styles.label}>Current Password</Text>
-        <TextInput
-          style={styles.input}
-          secureTextEntry
-          value={currentPassword}
-          onChangeText={(value) => {
-            setCurrentPassword(value);
-            clearError();
-          }}
-          placeholder="Enter your password"
-          placeholderTextColor="#ccc"
-        />
-
-        <Text style={styles.label}>Enter your Duress PIN</Text>
+        <Text style={styles.label}>Enter your Normal PIN</Text>
         <TextInput
           style={styles.input}
           secureTextEntry
           maxLength={6}
           keyboardType="numeric"
-          value={pin1}
+          value={normalPin}
           onChangeText={(value) => {
-            setPin1(value);
+            setNormalPin(value);
             clearError();
           }}
-          placeholder="••••••"
+          placeholder="••••"
           placeholderTextColor="#ccc"
         />
 
-        <Text style={styles.label}>Re-enter your Duress PIN</Text>
+        <Text style={styles.label}>Create your Duress PIN</Text>
         <TextInput
           style={styles.input}
           secureTextEntry
           maxLength={6}
           keyboardType="numeric"
-          value={pin2}
+          value={duressPin}
           onChangeText={(value) => {
-            setPin2(value);
+            setDuressPinValue(value);
             clearError();
           }}
-          placeholder="••••••"
+          placeholder="••••"
           placeholderTextColor="#ccc"
         />
 
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={animateCheck}
-          style={styles.checkRow}
-        >
-          <Animated.View
-            style={[
-              styles.checkbox,
-              agreed && styles.checked,
-              { transform: [{ scale: scaleAnim }] },
-            ]}
-          />
-          <Text style={styles.checkText}>
-            By creating Duress PIN you agree to our{" "}
-            <Text
-              style={styles.linkText}
-              onPress={() => setTermsModalVisible(true)}
-            >
-              Terms and Conditions
-            </Text>
-          </Text>
-        </TouchableOpacity>
+        <Text style={styles.label}>Confirm your Duress PIN</Text>
+        <TextInput
+          style={styles.input}
+          secureTextEntry
+          maxLength={6}
+          keyboardType="numeric"
+          value={confirmPin}
+          onChangeText={(value) => {
+            setConfirmPin(value);
+            clearError();
+          }}
+          placeholder="••••"
+          placeholderTextColor="#ccc"
+        />
 
         <ErrorBanner message={error} onPress={() => setShowErrorModal(true)} />
 
         <TouchableOpacity
-          style={[styles.enableButton, !isEnabled && styles.disabledButton]}
+          style={[styles.enableButton, !isFormValid && styles.disabledButton]}
           onPress={handleEnable}
-          disabled={isSaving}
+          disabled={!isFormValid}
         >
           <LinearGradient
-            colors={isEnabled ? ["#7C6EF7", "#4A6CF7"] : ["#ccc", "#ccc"]}
+            colors={isFormValid ? ["#7C6EF7", "#4A6CF7"] : ["#ccc", "#ccc"]}
             style={styles.gradientButton}
           >
-            <Text style={styles.buttonText}>
-              {isSaving ? "Saving..." : "Enable Duress PIN"}
-            </Text>
+            <Text style={styles.buttonText}>Activate Silent Protection</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>
+
       <ErrorModal
         title="Duress PIN"
         message={error}
         visible={showErrorModal}
         onClose={() => setShowErrorModal(false)}
       />
+
+      {/* Modal: "What is a Duress PIN?" */}
       <Modal
         transparent
-        visible={duressInfoModalVisible}
-        animationType="fade"
-        onRequestClose={() => setDuressInfoModalVisible(false)}
+        visible={infoModalVisible}
+        animationType="none"
+        onRequestClose={closeInfoModal}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setDuressInfoModalVisible(false)}
-            >
-              <Text style={styles.modalCloseIcon}>✕</Text>
-            </TouchableOpacity>
+        <TouchableWithoutFeedback onPress={closeInfoModal}>
+          <Animated.View
+            style={[styles.modalOverlay, { opacity: infoFadeAnim }]}
+          >
+            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+              <Animated.View
+                style={[
+                  styles.modalCard,
+                  { transform: [{ scale: infoScaleAnim }] },
+                ]}
+              >
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={closeInfoModal}
+                >
+                  <Ionicons name="close" size={24} color={colors.navy} />
+                </TouchableOpacity>
 
-            <Text style={styles.modalTitle}>What is a Duress PIN?</Text>
+                <Text style={styles.modalTitle}>What is a Duress PIN?</Text>
+                <Text style={styles.modalSubtitle}>
+                  A duress PIN is a special PIN that looks like a simple typing
+                  mistake — but it silently activates your protection.
+                </Text>
 
-            <ScrollView
-              style={styles.modalScroll}
-              showsVerticalScrollIndicator={false}
-            >
-              <Text style={styles.modalParagraph}>
-                A Duress PIN is a second PIN, separate from your normal one. It
-                exists for situations where you&apos;re forced to open the app
-                or send money against your will.
-              </Text>
-              <Text style={styles.modalParagraph}>
-                Entering it works exactly like your normal PIN on the surface —
-                nothing on screen looks different, nothing warns whoever&apos;s
-                watching. But in the background it lets your bank know something
-                is wrong.
-              </Text>
-              <Text style={styles.modalParagraph}>
-                Choose a PIN that&apos;s easy for you to remember under
-                pressure, but different enough from your normal PIN that you
-                won&apos;t mix them up by accident in everyday use.
-              </Text>
-            </ScrollView>
-
-            <TouchableOpacity
-              style={styles.modalDoneButton}
-              onPress={() => setDuressInfoModalVisible(false)}
-            >
-              <Text style={styles.modalDoneText}>Got it</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+                <View style={styles.bulletList}>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      <Text style={styles.boldText}>
+                        It looks normal to attackers.
+                      </Text>{" "}
+                      If they see you type it, they&apos;ll think you just
+                      corrected a typo.
+                    </Text>
+                  </View>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      <Text style={styles.boldText}>
+                        It triggers your safety protocol.
+                      </Text>{" "}
+                      The moment you enter it, the bank and police are alerted
+                      with your location.
+                    </Text>
+                  </View>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      <Text style={styles.boldText}>It locks your funds.</Text>{" "}
+                      Only your protection amount is available to transfer —
+                      everything else is frozen.
+                    </Text>
+                  </View>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      <Text style={styles.boldText}>It&apos;s guaranteed.</Text>{" "}
+                      Any amount transferred under duress is refunded by the
+                      bank when you report it.
+                    </Text>
+                  </View>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      Your normal banking remains completely unchanged. This is
+                      your <Text style={styles.boldText}>silent lifeline</Text>{" "}
+                      — only for emergencies.
+                    </Text>
+                  </View>
+                </View>
+              </Animated.View>
+            </TouchableWithoutFeedback>
+          </Animated.View>
+        </TouchableWithoutFeedback>
       </Modal>
 
+      {/* T&C Modal with internal checkbox and confirm-and-save */}
       <Modal
         transparent
         visible={termsModalVisible}
-        animationType="fade"
-        onRequestClose={() => setTermsModalVisible(false)}
+        animationType="none"
+        onRequestClose={closeTermsModal}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setTermsModalVisible(false)}
-            >
-              <Text style={styles.modalCloseIcon}>✕</Text>
-            </TouchableOpacity>
+        <TouchableWithoutFeedback onPress={closeTermsModal}>
+          <Animated.View
+            style={[styles.modalOverlay, { opacity: termsFadeAnim }]}
+          >
+            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+              <Animated.View
+                style={[
+                  styles.modalCard,
+                  { transform: [{ scale: termsScaleAnim }] },
+                ]}
+              >
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={closeTermsModal}
+                >
+                  <Ionicons name="close" size={24} color={colors.navy} />
+                </TouchableOpacity>
 
-            <Text style={styles.modalTitle}>Terms and Conditions</Text>
+                <Text style={styles.modalTitle}>Terms & Conditions</Text>
+                <Text style={styles.modalSubtitle}>(Key Points)</Text>
 
-            <ScrollView
-              style={styles.modalScroll}
-              showsVerticalScrollIndicator={false}
-            >
-              <Text style={styles.modalParagraph}>
-                By creating a Duress PIN, you agree that using it will trigger
-                account safety measures, including notifying your bank and,
-                where configured, your emergency contacts.
-              </Text>
-              <Text style={styles.modalParagraph}>
-                Your Duress PIN should be kept just as confidential as your
-                normal PIN. Do not share it with anyone, including people you
-                trust, as doing so may compromise its effectiveness in a genuine
-                emergency.
-              </Text>
-              <Text style={styles.modalParagraph}>
-                You can update or disable your Duress PIN at any time from the
-                Secure Escape section of your app.
-              </Text>
-            </ScrollView>
+                <View style={styles.bulletList}>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      <Text style={styles.boldText}>Misuse is fraud.</Text> Only
+                      use in genuine emergencies. False claims lead to{" "}
+                      <Text style={styles.boldText}>
+                        permanent deactivation and criminal charges
+                      </Text>
+                      .
+                    </Text>
+                  </View>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      <Text style={styles.boldText}>Keep it secret.</Text> Never
+                      share your duress PIN. If forced to reveal it,{" "}
+                      <Text style={styles.boldText}>
+                        contact your bank immediately
+                      </Text>{" "}
+                      to reset it.
+                    </Text>
+                  </View>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      <Text style={styles.boldText}>
+                        Refund guarantee — genuine only.
+                      </Text>{" "}
+                      You&apos;ll be fully refunded if used in a real emergency,
+                      provided you{" "}
+                      <Text style={styles.boldText}>
+                        report within 72 hours with a police case number
+                      </Text>
+                      .
+                    </Text>
+                  </View>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      <Text style={styles.boldText}>
+                        False use is a criminal offence.
+                      </Text>{" "}
+                      Fraud, perjury, and wasting police resources carry{" "}
+                      <Text style={styles.boldText}>
+                        severe penalties including imprisonment
+                      </Text>
+                      .
+                    </Text>
+                  </View>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      <Text style={styles.boldText}>
+                        Report immediately if compromised.
+                      </Text>{" "}
+                      Accidental use or forced disclosure{" "}
+                      <Text style={styles.boldText}>
+                        must be reported promptly
+                      </Text>{" "}
+                      — failure may void your guarantee.
+                    </Text>
+                  </View>
+                </View>
 
-            <TouchableOpacity
-              style={styles.modalDoneButton}
-              onPress={() => setTermsModalVisible(false)}
-            >
-              <Text style={styles.modalDoneText}>I Understand</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+                <Text style={styles.modalFooter}>
+                  For full details, visit{" "}
+                  <Text
+                    style={[styles.linkText, { fontSize: 14 }]}
+                    onPress={() =>
+                      Linking.openURL("https://www.secureescape.ai")
+                    }
+                  >
+                    www.secureescape.ai
+                  </Text>
+                </Text>
+
+                <TouchableOpacity
+                  style={styles.modalCheckRow}
+                  onPress={() => setModalAgreed(!modalAgreed)}
+                  activeOpacity={0.7}
+                >
+                  <View
+                    style={[
+                      styles.modalCheckbox,
+                      modalAgreed && styles.modalCheckboxChecked,
+                    ]}
+                  >
+                    {modalAgreed && (
+                      <Ionicons name="checkmark" size={18} color="#fff" />
+                    )}
+                  </View>
+                  <Text style={styles.modalCheckText}>
+                    I have read and agree to the Terms & Conditions
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.modalConfirmButton,
+                    (!modalAgreed || isSaving) && styles.modalConfirmDisabled,
+                  ]}
+                  onPress={handleConfirm}
+                  disabled={!modalAgreed || isSaving}
+                  activeOpacity={0.7}
+                >
+                  <LinearGradient
+                    colors={
+                      modalAgreed ? ["#7C6EF7", "#4A6CF7"] : ["#ccc", "#ccc"]
+                    }
+                    style={styles.modalGradientButton}
+                  >
+                    <Text style={styles.buttonText}>
+                      {isSaving ? "Saving..." : "Confirm & Agree"}
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </Animated.View>
+            </TouchableWithoutFeedback>
+          </Animated.View>
+        </TouchableWithoutFeedback>
       </Modal>
     </ScrollView>
   );
@@ -348,14 +575,13 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   gradientHeader: {
-    paddingTop: 80, // increased from 48 to push header down
+    paddingTop: 65,
     paddingHorizontal: 20,
-    paddingBottom: 30, // increased from 20 to add more space below header
+    paddingBottom: 30,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
   },
-  backArrow: { fontSize: 18, color: "#fff" },
   headerTitle: { fontSize: 20, fontWeight: "800", color: "#fff" },
   whiteCard: {
     flex: 1,
@@ -365,7 +591,18 @@ const styles = StyleSheet.create({
     padding: 24,
     marginTop: -20,
   },
-  sub: { fontSize: 14, color: colors.textSub, marginBottom: 4, lineHeight: 20 },
+  mainTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: colors.primary,
+    marginBottom: 6,
+  },
+  sub: {
+    fontSize: 14,
+    color: colors.textSub,
+    marginBottom: 4,
+    lineHeight: 20,
+  },
   link: {
     fontSize: 13,
     color: colors.primary,
@@ -384,28 +621,15 @@ const styles = StyleSheet.create({
     borderColor: colors.greyLine,
     borderRadius: 16,
     padding: 14,
-    fontSize: 15,
+    fontSize: 20,
     letterSpacing: 8,
     textAlign: "center",
     backgroundColor: "#FAFAFA",
   },
-  checkRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 24,
-    gap: 12,
+  linkText: {
+    color: colors.primary,
+    textDecorationLine: "underline",
   },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderWidth: 2,
-    borderColor: colors.greyLine,
-    borderRadius: 6,
-    backgroundColor: "#fff",
-  },
-  checked: { backgroundColor: colors.primary, borderColor: colors.primary },
-  checkText: { fontSize: 13, color: colors.textSub, flex: 1, lineHeight: 18 },
-  linkText: { color: colors.primary, textDecorationLine: "underline" },
   enableButton: {
     marginTop: 8,
     borderRadius: 50,
@@ -420,68 +644,107 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.5,
   },
-
+  boldText: { fontWeight: "700" },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.55)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
+    paddingHorizontal: 20,
   },
-  modalContent: {
-    width: "100%",
-    maxHeight: "80%",
+  modalCard: {
     backgroundColor: "#fff",
-    borderRadius: 24,
+    borderRadius: 20,
     padding: 24,
-    alignItems: "center",
+    width: "100%",
+    maxWidth: 360,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 15,
   },
-  modalCloseButton: {
+  closeButton: {
     position: "absolute",
-    top: 16,
-    right: 16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#F0F0F5",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 10,
-  },
-  modalCloseIcon: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: colors.navy,
+    top: 12,
+    right: 12,
+    padding: 4,
+    zIndex: 1,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "800",
+    fontSize: 22,
+    fontWeight: "700",
     color: colors.navy,
-    marginBottom: 16,
-    marginTop: 8,
-    textAlign: "center",
+    marginBottom: 6,
+    letterSpacing: 0.5,
   },
-  modalScroll: {
-    width: "100%",
-    marginBottom: 16,
+  modalSubtitle: {
+    fontSize: 15,
+    color: "#333",
+    lineHeight: 22,
+    marginBottom: 18,
   },
-  modalParagraph: {
-    fontSize: 14,
-    color: colors.textSub,
-    lineHeight: 21,
+  bulletList: {
+    marginBottom: 8,
+  },
+  bulletItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
     marginBottom: 14,
-    textAlign: "left",
   },
-  modalDoneButton: {
-    width: "100%",
+  bulletText: {
+    fontSize: 14,
+    color: "#444",
+    lineHeight: 20,
+    marginLeft: 10,
+    flex: 1,
+  },
+  modalFooter: {
+    fontSize: 14,
+    color: "#555",
+    lineHeight: 20,
+    fontStyle: "italic",
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+    paddingTop: 14,
+    marginTop: 4,
+  },
+  modalCheckRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 16,
+    gap: 12,
+  },
+  modalCheckbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: colors.greyLine,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalCheckboxChecked: {
     backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  modalCheckText: {
+    fontSize: 13,
+    color: colors.textSub,
+    flex: 1,
+    lineHeight: 18,
+  },
+  modalConfirmButton: {
     borderRadius: 50,
+    overflow: "hidden",
+    marginTop: 4,
+  },
+  modalConfirmDisabled: {
+    opacity: 0.6,
+  },
+  modalGradientButton: {
     paddingVertical: 14,
     alignItems: "center",
-  },
-  modalDoneText: {
-    color: "#fff",
-    fontWeight: "800",
-    fontSize: 15,
   },
 });

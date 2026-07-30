@@ -22,6 +22,6 @@ export type UpsertDecoyProfileRequest = {
 };
 
 export type SetDuressPinRequest = {
-  currentPassword: string;
+  currentPin: string;
   duressPin: string;
 };
