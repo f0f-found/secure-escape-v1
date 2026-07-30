@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   Animated,
   Dimensions,
   Modal,
-  ScrollView,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
@@ -19,12 +19,19 @@ const { width, height } = Dimensions.get("window");
 
 export default function SecureEscapeSplashPage() {
   const router = useRouter();
+
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const [infoModalVisible, setInfoModalVisible] = React.useState(false);
+
+  // Modal visibility
+  const [modalVisible, setModalVisible] = useState(false);
+
+  // Modal animation
+  const modalFadeAnim = useRef(new Animated.Value(0)).current;
+  const modalScaleAnim = useRef(new Animated.Value(0.9)).current;
 
   useEffect(() => {
     // Entrance animations
@@ -69,7 +76,41 @@ export default function SecureEscapeSplashPage() {
     router.push("/secure-escape/mode-selection");
   };
 
-  // Floating circles (decorative)
+  const openModal = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setModalVisible(true);
+    Animated.parallel([
+      Animated.timing(modalFadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.spring(modalScaleAnim, {
+        toValue: 1,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeModal = () => {
+    Animated.parallel([
+      Animated.timing(modalFadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.spring(modalScaleAnim, {
+        toValue: 0.9,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setModalVisible(false));
+  };
+
+  // Floating decorative circles
   const circles = [
     { size: 120, top: 80, left: -40, opacity: 0.1, color: "#fff" },
     { size: 180, top: 200, right: -60, opacity: 0.08, color: "#fff" },
@@ -90,6 +131,7 @@ export default function SecureEscapeSplashPage() {
       >
         <Ionicons name="arrow-back" size={24} color="#fff" />
       </TouchableOpacity>
+
       {/* Floating decorative circles */}
       {circles.map((circle, idx) => (
         <Animated.View
@@ -123,87 +165,132 @@ export default function SecureEscapeSplashPage() {
         </LinearGradient>
       </Animated.View>
 
-      {/* Text content (moved down) */}
+      {/* Text content */}
       <Animated.View
         style={[
           styles.content,
           { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
         ]}
       >
-        <Text style={styles.title}>Secure Escape</Text>
+        <Text style={styles.title}>SECURE ESCAPE</Text>
         <Text style={styles.tagline}>
-          Silent Protection{"\n"}When You Need It Most
+          Silent protection when you need it most
         </Text>
         <Text style={styles.description}>
           Set a duress PIN to silently alert the bank and police if you&apos;re
           ever forced to transact under threat.
         </Text>
-        <TouchableOpacity onPress={() => setInfoModalVisible(true)}>
-          <Text style={styles.learnMore}>Learn more →</Text>
+
+        <TouchableOpacity onPress={openModal}>
+          <Text style={styles.learnMore}>Learn More </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.continueButton}
+          onPress={handlePress}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={["#f7f7f8", "rgb(1, 23, 150)"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.continueButtonGradient}
+          >
+            <Text style={styles.continueButtonText}>Continue</Text>
+            <Ionicons
+              name="arrow-forward"
+              size={20}
+              color="#fff"
+              style={{ marginLeft: 8 }}
+            />
+          </LinearGradient>
         </TouchableOpacity>
       </Animated.View>
 
-      {/* Arrow button */}
-      <TouchableOpacity style={styles.arrowButton} onPress={handlePress}>
-        <Text style={styles.arrow}>→</Text>
-      </TouchableOpacity>
+      {/* Premium Modal for "Learn More" */}
       <Modal
         transparent
-        visible={infoModalVisible}
-        animationType="fade"
-        onRequestClose={() => setInfoModalVisible(false)}
+        visible={modalVisible}
+        animationType="none"
+        onRequestClose={closeModal}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setInfoModalVisible(false)}
-            >
-              <Ionicons name="close" size={22} color={colors.navy} />
-            </TouchableOpacity>
+        <TouchableWithoutFeedback onPress={closeModal}>
+          <Animated.View
+            style={[styles.modalOverlay, { opacity: modalFadeAnim }]}
+          >
+            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+              <Animated.View
+                style={[
+                  styles.modalCard,
+                  { transform: [{ scale: modalScaleAnim }] },
+                ]}
+              >
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={closeModal}
+                >
+                  <Ionicons name="close" size={24} color={colors.navy} />
+                </TouchableOpacity>
 
-            <View style={styles.modalIconWrapper}>
-              <Ionicons
-                name="shield-checkmark"
-                size={40}
-                color={colors.primary}
-              />
-            </View>
+                <Text style={styles.modalTitle}>SecureEscape</Text>
+                <Text style={styles.modalSubtitle}>
+                  gives you a silent lifeline. If you&apos;re ever forced to
+                  open your banking app under duress, entering your duress PIN
+                  will:
+                </Text>
 
-            <Text style={styles.modalTitle}>About Secure Escape</Text>
+                <View style={styles.bulletList}>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      Show attackers a realistic balance (not your real money)
+                    </Text>
+                  </View>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      Only make a small, bank-guaranteed amount available
+                    </Text>
+                  </View>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      Silently alert police with your GPS location
+                    </Text>
+                  </View>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      Freeze the rest of your money for 72 hours
+                    </Text>
+                  </View>
+                </View>
 
-            <ScrollView
-              style={styles.modalScroll}
-              showsVerticalScrollIndicator={false}
-            >
-              <Text style={styles.modalParagraph}>
-                Secure Escape lets you set a second, secret PIN alongside your
-                normal PIN. If you&apos;re ever forced to make a transaction
-                under threat, entering your duress PIN instead of your normal
-                one silently alerts the bank and your emergency contacts —
-                without changing anything visible on your screen.
-              </Text>
-
-              <Text style={styles.modalParagraph}>
-                The app continues to work exactly as normal for anyone watching.
-                No alarms, no visible warnings, no sudden changes — just a quiet
-                signal sent in the background so help can be sent your way.
-              </Text>
-
-              <Text style={styles.modalParagraph}>
-                You can set up your duress PIN and manage your Secure Escape
-                settings from this screen at any time.
-              </Text>
-            </ScrollView>
-
-            <TouchableOpacity
-              style={styles.modalDoneButton}
-              onPress={() => setInfoModalVisible(false)}
-            >
-              <Text style={styles.modalDoneText}>Got it</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+                <Text style={styles.modalFooter}>
+                  The bank guarantees your safety buffer. You won&apos;t lose a
+                  cent if you report the incident within 72 hours with a police
+                  case number.
+                </Text>
+              </Animated.View>
+            </TouchableWithoutFeedback>
+          </Animated.View>
+        </TouchableWithoutFeedback>
       </Modal>
     </LinearGradient>
   );
@@ -212,8 +299,8 @@ export default function SecureEscapeSplashPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "flex-end", // pushes content to bottom
     alignItems: "center",
+    justifyContent: "center",
   },
   floatingCircle: {
     position: "absolute",
@@ -222,7 +309,7 @@ const styles = StyleSheet.create({
   },
   iconWrapper: {
     position: "absolute",
-    top: height * 0.2, // 20% from top – central but high enough
+    top: height * 0.12,
     alignSelf: "center",
   },
   shieldCircle: {
@@ -240,7 +327,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 28,
-    marginBottom: 80, // enough space from bottom
+    marginTop: height * 0.34,
     alignItems: "center",
     width: "100%",
   },
@@ -282,93 +369,92 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
     marginTop: 8,
   },
-
-  arrowButton: {
-    position: "absolute",
-    bottom: 36,
-    right: 28,
-    width: 56,
-    height: 56,
-    backgroundColor: "#fff",
-    borderRadius: 28,
+  continueButton: {
+    marginTop: 32,
+    width: "100%",
+    maxWidth: 280,
+    borderRadius: 30,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  continueButtonGradient: {
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 30,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
   },
-  arrow: {
-    fontSize: 24,
-    color: colors.navy,
-    fontWeight: "600",
+  continueButtonText: {
+    color: "#fff",
+    fontSize: 17,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.55)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
+    paddingHorizontal: 20,
   },
-  modalContent: {
-    width: "100%",
-    maxHeight: height * 0.7,
+  modalCard: {
     backgroundColor: "#fff",
-    borderRadius: 24,
+    borderRadius: 20,
     padding: 24,
-    alignItems: "center",
+    width: "100%",
+    maxWidth: 360,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 15,
   },
-  modalCloseButton: {
+  closeButton: {
     position: "absolute",
-    top: 16,
-    right: 16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#F0F0F5",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 10,
-  },
-  modalIconWrapper: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#F0EFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-    marginBottom: 12,
+    top: 12,
+    right: 12,
+    padding: 4,
+    zIndex: 1,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "800",
+    fontSize: 22,
+    fontWeight: "700",
     color: colors.navy,
-    marginBottom: 16,
-    textAlign: "center",
+    marginBottom: 10,
+    letterSpacing: 0.5,
   },
-  modalScroll: {
-    width: "100%",
-    marginBottom: 20,
-  },
-  modalParagraph: {
-    fontSize: 14,
-    color: colors.textSub,
-    lineHeight: 21,
-    marginBottom: 14,
-    textAlign: "left",
-  },
-  modalDoneButton: {
-    width: "100%",
-    backgroundColor: colors.primary,
-    borderRadius: 50,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  modalDoneText: {
-    color: "#fff",
-    fontWeight: "800",
+  modalSubtitle: {
     fontSize: 15,
+    color: "#333",
+    lineHeight: 22,
+    marginBottom: 18,
+  },
+  bulletList: {
+    marginBottom: 18,
+  },
+  bulletItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 10,
+  },
+  bulletText: {
+    fontSize: 14,
+    color: "#444",
+    lineHeight: 20,
+    marginLeft: 10,
+    flex: 1,
+  },
+  modalFooter: {
+    fontSize: 14,
+    color: "#555",
+    lineHeight: 20,
+    fontStyle: "italic",
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+    paddingTop: 14,
   },
 });

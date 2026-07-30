@@ -1,4 +1,3 @@
-// screens/Screen7_EmergencyContact.js - Fixed (no undefined 'shadow')
 import React, { useState, useRef } from "react";
 import {
   View,
@@ -8,6 +7,8 @@ import {
   TouchableOpacity,
   Animated,
   ScrollView,
+  Modal,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
@@ -44,6 +45,12 @@ export default function EmergencyContact() {
   const [error, setError] = useState<string | null>(null);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const buttonScale = useRef(new Animated.Value(1)).current;
+  const skipScale = useRef(new Animated.Value(1)).current;
+
+  // "Why add a safety contact?" modal
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
+  const infoFadeAnim = useRef(new Animated.Value(0)).current;
+  const infoScaleAnim = useRef(new Animated.Value(0.9)).current;
 
   const showError = (message: string) => {
     setError(message);
@@ -53,6 +60,40 @@ export default function EmergencyContact() {
   const clearError = () => {
     setError(null);
     setShowErrorModal(false);
+  };
+
+  const openInfoModal = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setInfoModalVisible(true);
+    Animated.parallel([
+      Animated.timing(infoFadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.spring(infoScaleAnim, {
+        toValue: 1,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeInfoModal = () => {
+    Animated.parallel([
+      Animated.timing(infoFadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.spring(infoScaleAnim, {
+        toValue: 0.9,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setInfoModalVisible(false));
   };
 
   const checkValidContacts = (contactsList: LocalContact[]) => {
@@ -68,7 +109,7 @@ export default function EmergencyContact() {
 
   const removeContact = (id: string) => {
     if (contacts.length === 1) {
-      showError("You need at least one emergency contact.");
+      showError("You need at least one emergency contact slot.");
       return;
     }
     const newContacts = contacts.filter((c) => c.id !== id);
@@ -96,27 +137,7 @@ export default function EmergencyContact() {
     );
 
     if (completeContacts.length === 0) {
-      const firstContact = contacts[0];
-      const missingFields = [];
-
-      if (!firstContact.name.trim()) {
-        missingFields.push("name");
-      }
-
-      if (!firstContact.surname.trim()) {
-        missingFields.push("surname");
-      }
-
-      if (!firstContact.phone.trim()) {
-        missingFields.push("phone number");
-      }
-
-      if (missingFields.length === 1) {
-        return `Please enter the emergency contact ${missingFields[0]}.`;
-      }
-
-      const lastField = missingFields.pop();
-      return `Please enter the emergency contact ${missingFields.join(", ")} and ${lastField}.`;
+      return "Please fill in at least one complete emergency contact (name, surname, phone number).";
     }
 
     for (const contact of completeContacts) {
@@ -138,7 +159,15 @@ export default function EmergencyContact() {
     return null;
   };
 
-  const handleContinue = async () => {
+  const goToNextScreen = () => {
+    if (from === "onboarding") {
+      router.push("/secure-escape/congrats");
+    } else {
+      router.push("/secure-escape/manage-secure-escape");
+    }
+  };
+
+  const handleAddContact = async () => {
     const validationMessage = getValidationMessage();
 
     if (validationMessage) {
@@ -163,27 +192,28 @@ export default function EmergencyContact() {
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (from === "onboarding") {
-        router.push("/secure-escape/congrats");
-      } else {
-        router.push("/secure-escape/manage-secure-escape");
-      }
-    } catch (error) {
+      goToNextScreen();
+    } catch (err) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showError(
-        error instanceof Error ? error.message : "Failed to save contacts.",
+        err instanceof Error ? err.message : "Failed to save contacts.",
       );
     }
   };
 
-  const animateButton = () => {
+  const handleSkip = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    goToNextScreen();
+  };
+
+  const animateButton = (anim: Animated.Value) => {
     Animated.sequence([
-      Animated.timing(buttonScale, {
+      Animated.timing(anim, {
         toValue: 0.96,
         duration: 100,
         useNativeDriver: true,
       }),
-      Animated.spring(buttonScale, {
+      Animated.spring(anim, {
         toValue: 1,
         friction: 3,
         tension: 200,
@@ -278,22 +308,34 @@ export default function EmergencyContact() {
         colors={["#5B8DEF", "#6C63FF"]}
         style={styles.gradientHeader}
       >
-        <Text style={styles.backArrow} onPress={() => router.back()}>
-          ‹
-        </Text>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Emergency Contact</Text>
       </LinearGradient>
 
       <View style={styles.whiteCard}>
-        <View style={styles.infoBox}>
+        <Text style={styles.mainTitle}>Add a Safety Contact (Optional)</Text>
+        <Text style={styles.sub}>
+          If you ever use your duress PIN, we can silently notify someone you
+          trust — without alerting the attacker.
+        </Text>
+        <TouchableOpacity onPress={openInfoModal}>
+          <Text style={styles.link}>Why add a safety contact? </Text>
+        </TouchableOpacity>
+
+        <View style={styles.noteBox}>
           <Ionicons
-            name="information-circle-outline"
-            size={24}
+            name="alert-circle-outline"
+            size={20}
             color={colors.primary}
+            style={styles.noteIcon}
           />
-          <Text style={styles.infoText}>
-            This contact will be notified when duress PIN is used. We will also
-            contact authorities and our fraud team.
+          <Text style={styles.noteText}>
+            <Text style={styles.boldText}>
+              Only add someone you trust completely
+            </Text>{" "}
+            — they will be notified in an emergency.
           </Text>
         </View>
 
@@ -392,6 +434,7 @@ export default function EmergencyContact() {
           />
           <Text style={styles.importButtonText}>Import from Contacts</Text>
         </TouchableOpacity>
+
         <TouchableOpacity style={styles.addButton} onPress={addContact}>
           <Ionicons
             name="add-circle-outline"
@@ -401,42 +444,141 @@ export default function EmergencyContact() {
           <Text style={styles.addButtonText}>Add Another Contact</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => {
-            if (validContactAdded) {
-              animateButton();
-              handleContinue();
-            } else {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              const validationMessage = getValidationMessage();
-              if (validationMessage) {
-                showError(validationMessage);
-              }
-            }
-          }}
-          disabled={false}
-        >
-          <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
-            <LinearGradient
-              colors={
-                validContactAdded ? ["#7C6EF7", "#4A6CF7"] : ["#ccc", "#ccc"]
-              }
-              style={styles.gradientButton}
-            >
-              <Text style={styles.buttonText}>Continue</Text>
-            </LinearGradient>
-          </Animated.View>
-        </TouchableOpacity>
-
         <ErrorBanner message={error} onPress={() => setShowErrorModal(true)} />
+
+        {/* Premium button row */}
+        <View style={styles.buttonsRow}>
+          <TouchableOpacity
+            style={[
+              styles.actionButtonWrapper,
+              !validContactAdded && styles.disabledWrapper,
+            ]}
+            onPress={() => {
+              if (validContactAdded) {
+                animateButton(buttonScale);
+                handleAddContact();
+              } else {
+                Haptics.notificationAsync(
+                  Haptics.NotificationFeedbackType.Error,
+                );
+              }
+            }}
+            disabled={!validContactAdded}
+            activeOpacity={0.8}
+          >
+            <Animated.View
+              style={{ transform: [{ scale: buttonScale }], width: "100%" }}
+            >
+              <LinearGradient
+                colors={
+                  validContactAdded ? ["#7C6EF7", "#4A6CF7"] : ["#ccc", "#ccc"]
+                }
+                style={styles.gradientButton}
+              >
+                <Text style={styles.buttonText}>Add Contact</Text>
+              </LinearGradient>
+            </Animated.View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={() => {
+              animateButton(skipScale);
+              handleSkip();
+            }}
+            activeOpacity={0.7}
+          >
+            <Animated.View
+              style={{
+                transform: [{ scale: skipScale }],
+                width: "100%",
+                alignItems: "center",
+              }}
+            >
+              <Text style={styles.skipButtonText}>Skip</Text>
+            </Animated.View>
+          </TouchableOpacity>
+        </View>
       </View>
+
       <ErrorModal
         title="Emergency contact"
         message={error}
         visible={showErrorModal}
         onClose={() => setShowErrorModal(false)}
       />
+
+      {/* Modal: "Why add a safety contact?" */}
+      <Modal
+        transparent
+        visible={infoModalVisible}
+        animationType="none"
+        onRequestClose={closeInfoModal}
+      >
+        <TouchableWithoutFeedback onPress={closeInfoModal}>
+          <Animated.View
+            style={[styles.modalOverlay, { opacity: infoFadeAnim }]}
+          >
+            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+              <Animated.View
+                style={[
+                  styles.modalCard,
+                  { transform: [{ scale: infoScaleAnim }] },
+                ]}
+              >
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={closeInfoModal}
+                >
+                  <Ionicons name="close" size={24} color={colors.navy} />
+                </TouchableOpacity>
+
+                <Text style={styles.modalTitle}>Why add a safety contact?</Text>
+
+                <View style={styles.bulletList}>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      Your safety contact will receive a silent SMS if your
+                      duress PIN is ever used. It will include your last known
+                      location so they can alert authorities if needed.
+                    </Text>
+                  </View>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      Attackers will see{" "}
+                      <Text style={styles.boldText}>
+                        NO indication on your phone
+                      </Text>
+                      . The SMS is sent silently in the background.
+                    </Text>
+                  </View>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      You are in control. You can add, change, or remove this
+                      contact at any time through the app.
+                    </Text>
+                  </View>
+                </View>
+              </Animated.View>
+            </TouchableWithoutFeedback>
+          </Animated.View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </ScrollView>
   );
 }
@@ -446,14 +588,13 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   gradientHeader: {
-    paddingTop: 80, // increased from 48 to push header down
+    paddingTop: 65,
     paddingHorizontal: 20,
-    paddingBottom: 30, // increased from 20 to add more space below header
+    paddingBottom: 30,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
   },
-  backArrow: { fontSize: 18, color: "#fff" },
   headerTitle: { fontSize: 20, fontWeight: "800", color: "#fff" },
   whiteCard: {
     flex: 1,
@@ -461,8 +602,43 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     padding: 24,
-    marginTop: -20,
+    marginTop: -16,
   },
+  mainTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: colors.primary,
+    marginBottom: 6,
+  },
+  sub: {
+    fontSize: 14,
+    color: colors.textSub,
+    marginBottom: 4,
+    lineHeight: 20,
+  },
+  link: {
+    fontSize: 13,
+    color: colors.primary,
+    textDecorationLine: "underline",
+    marginVertical: 8,
+  },
+  noteBox: {
+    flexDirection: "row",
+    backgroundColor: "#F5F3FF",
+    padding: 14,
+    borderRadius: 12,
+    marginVertical: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+  },
+  noteIcon: { marginRight: 10, marginTop: 1 },
+  noteText: {
+    fontSize: 13,
+    color: "#444",
+    lineHeight: 20,
+    flex: 1,
+  },
+  boldText: { fontWeight: "700" },
   primaryRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -484,21 +660,6 @@ const styles = StyleSheet.create({
   checkLabel: {
     fontSize: 13,
     color: colors.textSub,
-  },
-  infoBox: {
-    flexDirection: "row",
-    backgroundColor: "#F8F9FC",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
-    alignItems: "center",
-    gap: 12,
-  },
-  infoText: {
-    fontSize: 13,
-    color: colors.textSub,
-    flex: 1,
-    lineHeight: 18,
   },
   contactCard: {
     backgroundColor: colors.white,
@@ -542,36 +703,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     backgroundColor: "#FAFAFA",
   },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: 40,
-    borderStyle: "dashed",
-  },
-  addButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.primary,
-  },
-  gradientButton: {
-    paddingVertical: 16,
-    alignItems: "center",
-    borderRadius: 50,
-    marginTop: 8,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-
   importButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -586,5 +717,115 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: colors.primary,
+  },
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 40,
+    borderStyle: "dashed",
+  },
+  addButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.primary,
+  },
+  buttonsRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+  },
+  skipButton: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderRadius: 50,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  skipButtonText: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: "600",
+    letterSpacing: 0.3,
+  },
+  actionButtonWrapper: {
+    flex: 2,
+    borderRadius: 50,
+    overflow: "hidden",
+  },
+  disabledWrapper: {
+    opacity: 0.6,
+  },
+  gradientButton: {
+    paddingVertical: 16,
+    alignItems: "center",
+    width: "100%",
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  modalCard: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 24,
+    width: "100%",
+    maxWidth: 360,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 15,
+  },
+  closeButton: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    padding: 4,
+    zIndex: 1,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: colors.navy,
+    marginBottom: 6,
+    letterSpacing: 0.5,
+  },
+  bulletList: {
+    marginBottom: 8,
+  },
+  bulletItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 14,
+  },
+  bulletText: {
+    fontSize: 14,
+    color: "#444",
+    lineHeight: 20,
+    marginLeft: 10,
+    flex: 1,
   },
 });

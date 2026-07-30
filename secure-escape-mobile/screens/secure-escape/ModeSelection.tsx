@@ -1,4 +1,3 @@
-// screens/Screen4_ModeSelection.js - Better spacing + onboarding animation + "Recommended" badge
 import React, { useState, useRef, useEffect } from "react";
 import {
   View,
@@ -8,6 +7,7 @@ import {
   Animated,
   ScrollView,
   Modal,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
@@ -18,9 +18,13 @@ import { useRouter } from "expo-router";
 export default function ModeSelection() {
   const router = useRouter();
   const [selectedMode, setSelectedMode] = useState<string>();
-  const [riskModalVisible, setRiskModalVisible] = useState(false);
   const [scaleLow] = useState(new Animated.Value(1));
   const [scaleReal] = useState(new Animated.Value(1));
+
+  // Modal visibility & animations
+  const [modalVisible, setModalVisible] = useState(false);
+  const modalFadeAnim = useRef(new Animated.Value(0)).current;
+  const modalScaleAnim = useRef(new Animated.Value(0.9)).current;
 
   // Animation for the lock icon (continuous pulse + rotation)
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -79,7 +83,6 @@ export default function ModeSelection() {
 
   const handleSelect = (mode: string) => {
     setSelectedMode(mode);
-    console.log(mode);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
@@ -91,6 +94,41 @@ export default function ModeSelection() {
         params: { profileType: selectedMode },
       });
     }
+  };
+
+  // Modal handlers
+  const openRiskModal = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setModalVisible(true);
+    Animated.parallel([
+      Animated.timing(modalFadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.spring(modalScaleAnim, {
+        toValue: 1,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeRiskModal = () => {
+    Animated.parallel([
+      Animated.timing(modalFadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.spring(modalScaleAnim, {
+        toValue: 0.9,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setModalVisible(false));
   };
 
   // Rotation interpolation
@@ -120,11 +158,12 @@ export default function ModeSelection() {
         <Text style={styles.sub}>
           Hello there, Select the mode that matches your risk level
         </Text>
-        <TouchableOpacity onPress={() => setRiskModalVisible(true)}>
-          <Text style={styles.link}>I dont know my risk level?</Text>
+
+        <TouchableOpacity onPress={openRiskModal}>
+          <Text style={styles.link}>I don&apos;t know my risk level </Text>
         </TouchableOpacity>
 
-        {/* Animated lock/shield icon in‑between */}
+        {/* Animated lock/shield icon in-between */}
         <Animated.View
           style={[
             styles.iconContainer,
@@ -139,7 +178,7 @@ export default function ModeSelection() {
           >
             <Ionicons
               name="shield-checkmark"
-              size={48}
+              size={60}
               color={colors.primary}
             />
           </LinearGradient>
@@ -212,62 +251,88 @@ export default function ModeSelection() {
           </LinearGradient>
         </TouchableOpacity>
       </View>
+
+      {/* Premium Modal for "I don't know my risk level" */}
       <Modal
         transparent
-        visible={riskModalVisible}
-        animationType="fade"
-        onRequestClose={() => setRiskModalVisible(false)}
+        visible={modalVisible}
+        animationType="none"
+        onRequestClose={closeRiskModal}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setRiskModalVisible(false)}
-            >
-              <Ionicons name="close" size={22} color={colors.navy} />
-            </TouchableOpacity>
+        <TouchableWithoutFeedback onPress={closeRiskModal}>
+          <Animated.View
+            style={[styles.modalOverlay, { opacity: modalFadeAnim }]}
+          >
+            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+              <Animated.View
+                style={[
+                  styles.modalCard,
+                  { transform: [{ scale: modalScaleAnim }] },
+                ]}
+              >
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={closeRiskModal}
+                >
+                  <Ionicons name="close" size={24} color={colors.navy} />
+                </TouchableOpacity>
 
-            <View style={styles.modalIconWrapper}>
-              <Ionicons
-                name="shield-checkmark"
-                size={40}
-                color={colors.primary}
-              />
-            </View>
-
-            <Text style={styles.modalTitle}>Which mode is right for me?</Text>
-
-            <ScrollView
-              style={styles.modalScroll}
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={styles.modalModeBlock}>
-                <Text style={styles.modalModeTitle}>Low Profile Mode</Text>
-                <Text style={styles.modalParagraph}>
-                  Good for most people. If someone forces you to open the app,
-                  they&apos;ll see a near-empty balance — nothing to take,
-                  nothing to question. Simple and effective for everyday
-                  situations.
+                <Text style={styles.modalTitle}>SecureEscape</Text>
+                <Text style={styles.modalSubtitle}>
+                  If you&apos;re unsure, start with{" "}
+                  <Text style={styles.boldText}>Low Profile Mode</Text>.
                 </Text>
-              </View>
 
-              <View style={styles.modalModeBlock}>
-                <Text style={styles.modalModeTitle}>Realistic Decoy Mode</Text>
-                <Text style={styles.modalParagraph}>
-                  Better if you&apos;re at higher risk of being watched closely
-                  — for example, if someone forcing you already knows roughly
-                  how much money you have. Shows a believable balance based on
-                  your actual spending patterns instead of an empty account, so
-                  nothing looks obviously staged.
+                <View style={styles.bulletList}>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      <Text style={styles.boldText}>Low Profile Mode</Text>:
+                      Best for most people. Shows a{" "}
+                      <Text style={styles.boldText}>very low balance</Text> if
+                      forced to transact. Good for{" "}
+                      <Text style={styles.boldText}>
+                        opportunistic crimes like hijackings or express
+                        kidnappings
+                      </Text>
+                      .
+                    </Text>
+                  </View>
+                  <View style={styles.bulletItem}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.bulletText}>
+                      <Text style={styles.boldText}>Realistic Decoy Mode</Text>:
+                      Best if you&apos;re a{" "}
+                      <Text style={styles.boldText}>business owner</Text>, have
+                      a <Text style={styles.boldText}>high income</Text>, or
+                      believe{" "}
+                      <Text style={styles.boldText}>
+                        someone might be watching you
+                      </Text>
+                      . Shows a{" "}
+                      <Text style={styles.boldText}>believable balance</Text> to
+                      satisfy attackers who expect you to have money.
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={styles.modalFooter}>
+                  You can always{" "}
+                  <Text style={styles.boldText}>change this later</Text> by
+                  contacting your bank.
                 </Text>
-              </View>
-
-              <Text style={styles.modalHint}>
-                Not sure? Low Profile Mode is the safer default for most people.
-              </Text>
-            </ScrollView>
-          </View>
-        </View>
+              </Animated.View>
+            </TouchableWithoutFeedback>
+          </Animated.View>
+        </TouchableWithoutFeedback>
       </Modal>
     </ScrollView>
   );
@@ -280,7 +345,7 @@ const styles = StyleSheet.create({
   gradientHeader: {
     paddingTop: 65,
     paddingHorizontal: 20,
-    paddingBottom: 30, // increased from 20 to 24 (more spacing)
+    paddingBottom: 30,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
@@ -301,23 +366,22 @@ const styles = StyleSheet.create({
     color: colors.primary,
     marginBottom: 6,
   },
-  sub: { fontSize: 14, color: colors.textSub, marginBottom: 4, lineHeight: 20 },
+  sub: { fontSize: 14, color: colors.textSub, marginBottom: 2, lineHeight: 20 },
   link: {
     fontSize: 13,
     color: colors.primary,
     textDecorationLine: "underline",
     marginBottom: 24,
+    marginTop: 4,
   },
-
-  // Animated icon in middle
   iconContainer: {
     alignItems: "center",
-    marginVertical: 32, // added vertical spacing
+    marginVertical: 32,
   },
   iconCircle: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: colors.primary,
@@ -326,8 +390,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 5,
   },
-
-  // Mode cards
   modeOption: {
     backgroundColor: colors.greyBg,
     borderWidth: 1.5,
@@ -383,7 +445,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginTop: 4,
   },
-
   continueButton: {
     marginTop: 12,
     borderRadius: 50,
@@ -400,96 +461,69 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.55)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
+    paddingHorizontal: 20,
   },
-  modalContent: {
-    width: "100%",
-    maxHeight: "80%",
+  modalCard: {
     backgroundColor: "#fff",
-    borderRadius: 24,
+    borderRadius: 20,
     padding: 24,
-    alignItems: "center",
+    width: "100%",
+    maxWidth: 360,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 15,
   },
-  modalCloseButton: {
+  closeButton: {
     position: "absolute",
-    top: 16,
-    right: 16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#F0F0F5",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 10,
-  },
-  modalIconWrapper: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#F0EFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-    marginBottom: 12,
+    top: 12,
+    right: 12,
+    padding: 4,
+    zIndex: 1,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "800",
+    fontSize: 22,
+    fontWeight: "700",
     color: colors.navy,
-    marginBottom: 16,
-    textAlign: "center",
+    marginBottom: 10,
+    letterSpacing: 0.5,
   },
-  modalScroll: {
-    width: "100%",
-    marginBottom: 16,
-  },
-  modalModeBlock: {
+  modalSubtitle: {
+    fontSize: 15,
+    color: "#333",
+    lineHeight: 22,
     marginBottom: 18,
   },
-  modalModeTitle: {
-    fontSize: 15,
+  boldText: {
     fontWeight: "700",
-    color: colors.primary,
-    marginBottom: 6,
+    color: colors.navy,
   },
-  modalParagraph: {
+  bulletList: {
+    marginBottom: 18,
+  },
+  bulletItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 14,
+  },
+  bulletText: {
     fontSize: 14,
-    color: colors.textSub,
-    lineHeight: 21,
-    textAlign: "left",
+    color: "#444",
+    lineHeight: 20,
+    marginLeft: 10,
+    flex: 1,
   },
-  modalHint: {
-    fontSize: 12,
-    color: colors.textSub,
+  modalFooter: {
+    fontSize: 14,
+    color: "#555",
+    lineHeight: 20,
     fontStyle: "italic",
-    textAlign: "center",
-    marginTop: 4,
-    marginBottom: 4,
-  },
-  modalDoneButton: {
-    width: "100%",
-    backgroundColor: colors.primary,
-    borderRadius: 50,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  modalDoneText: {
-    color: "#fff",
-    fontWeight: "800",
-    fontSize: 15,
-  },
-  modalSecondaryButton: {
-    width: "100%",
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  modalSecondaryText: {
-    color: colors.primary,
-    fontWeight: "700",
-    fontSize: 15,
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+    paddingTop: 14,
   },
 });

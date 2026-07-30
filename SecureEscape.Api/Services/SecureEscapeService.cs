@@ -104,8 +104,8 @@ public class SecureEscapeService : ISecureEscapeService
         }
 
         var passwordValid = _hashingService.Verify(
-            request.CurrentPassword,
-            user.AuthCredential.PasswordHash);
+            request.CurrentPin,
+            user.AuthCredential.NormalPinHash);
 
         if (!passwordValid)
         {
