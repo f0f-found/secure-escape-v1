@@ -1,39 +1,107 @@
+// app/beneficiaries/add-bank-account.tsx
 import React, { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
+  View,
   Text,
   TextInput,
+  StyleSheet,
   TouchableOpacity,
-  View,
+  ScrollView,
+  Switch,
+  Modal,
+  FlatList,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { colors } from "@/utils/theme";
 import { useRouter } from "expo-router";
 import { addBeneficiary } from "@/services/beneficiaryService";
 import { BeneficiaryResponse } from "@/types/beneficiary";
-import { colors } from "@/utils/theme";
 import VerifyPinModal from "@/components/VerifyPinModal";
 
-export default function CreateBeneficiary() {
+// Bank list with realistic branch codes (South Africa)
+const banks = [
+  { name: "ABSA", branchCode: "632005" },
+  { name: "FNB", branchCode: "255005" },
+  { name: "Nedbank", branchCode: "198765" },
+  { name: "Standard Bank", branchCode: "051001" },
+  { name: "Capitec Bank", branchCode: "470010" },
+  { name: "TymeBank", branchCode: "678900" },
+  { name: "Discovery Bank", branchCode: "123456" },
+  { name: "Bank Zero", branchCode: "789012" },
+  { name: "African Bank", branchCode: "430000" },
+  { name: "Investec", branchCode: "580105" },
+  { name: "Sasfin", branchCode: "612100" },
+  { name: "Bidvest Bank", branchCode: "462005" },
+  { name: "Grindrod Bank", branchCode: "660000" },
+];
+
+// Validation helpers – updated limits
+const validateName = (name: string): string => {
+  const trimmed = name.trim();
+  if (!trimmed) return "Beneficiary name is required";
+  if (trimmed.length < 2) return "Minimum 2 characters";
+  if (trimmed.length > 25) return "Maximum 25 characters";
+  if (!/^[A-Za-z\s\-']+$/.test(trimmed))
+    return "Only letters, spaces, hyphens, and apostrophes";
+  return "";
+};
+
+const validateAccountNumber = (num: string): string => {
+  const trimmed = num.trim();
+  if (!trimmed) return "Account number is required";
+  if (!/^\d+$/.test(trimmed)) return "Digits only";
+  if (trimmed.length !== 16) return "Must be exactly 16 digits"; // Updated to 16
+  return "";
+};
+
+const validateBranchCode = (code: string): string => {
+  const trimmed = code.trim();
+  if (trimmed.length === 0) return ""; // optional
+  if (!/^\d+$/.test(trimmed)) return "Digits only";
+  if (trimmed.length > 6) return "Maximum 6 digits";
+  return "";
+};
+
+const validateReference = (ref: string): string => {
+  const trimmed = ref.trim();
+  if (trimmed.length === 0) return ""; // optional
+  if (trimmed.length > 25) return "Maximum 25 characters"; // Updated to 25
+  if (!/^[A-Za-z0-9\s\-_]+$/.test(trimmed))
+    return "No special characters allowed";
+  return "";
+};
+
+export default function AddBankAccount() {
   const router = useRouter();
 
-  const [verifyVisible, setVerifyVisible] = useState(false);
-
-  const [name, setName] = useState("");
-  const [bankName, setBankName] = useState("");
+  // Form fields
+  const [beneficiaryName, setBeneficiaryName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
+  const [selectedBank, setSelectedBank] = useState("");
+  const [branchCode, setBranchCode] = useState("");
+  const [oneTime, setOneTime] = useState(false);
   const [reference, setReference] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [notification, setNotification] = useState("None"); // UI only
 
+  // Errors
+  const [nameError, setNameError] = useState("");
+  const [accountError, setAccountError] = useState("");
+  const [bankError, setBankError] = useState("");
+  const [branchError, setBranchError] = useState("");
+  const [referenceError, setReferenceError] = useState("");
+
+  // Modal
+  const [modalVisible, setModalVisible] = useState(false);
+
+  // Submission state
+  const [verifyVisible, setVerifyVisible] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showErrorModal, setShowErrorModal] = useState(false);
-
   const [createdBeneficiary, setCreatedBeneficiary] =
     useState<BeneficiaryResponse | null>(null);
 
@@ -42,60 +110,94 @@ export default function CreateBeneficiary() {
     setShowErrorModal(true);
   };
 
-  const getValidationMessage = () => {
-    const missingFields = [];
+  // Real‑time validation (side‑effect free)
+  const isFormValid = (): boolean => {
+    return (
+      beneficiaryName.trim().length > 0 &&
+      accountNumber.trim().length > 0 &&
+      selectedBank.length > 0 &&
+      !nameError &&
+      !accountError &&
+      !bankError &&
+      !branchError &&
+      !referenceError
+    );
+  };
 
-    if (!name.trim()) {
-      missingFields.push("beneficiary name");
-    }
+  // Validate all fields and update errors
+  const validateAll = (): boolean => {
+    const nameErr = validateName(beneficiaryName);
+    const accErr = validateAccountNumber(accountNumber);
+    const bankErr = selectedBank ? "" : "Please select a bank";
+    const branchErr = validateBranchCode(branchCode);
+    const refErr = validateReference(reference);
 
-    if (!bankName.trim()) {
-      missingFields.push("bank name");
-    }
+    setNameError(nameErr);
+    setAccountError(accErr);
+    setBankError(bankErr);
+    setBranchError(branchErr);
+    setReferenceError(refErr);
 
-    if (!accountNumber.trim()) {
-      missingFields.push("account number");
-    }
+    return !nameErr && !accErr && !bankErr && !branchErr && !refErr;
+  };
 
-    if (missingFields.length === 1) {
-      return `Please enter the ${missingFields[0]}.`;
-    }
+  // Handlers with live validation
+  const handleNameChange = (text: string) => {
+    setBeneficiaryName(text);
+    setNameError(validateName(text));
+    if (error) { setError(null); setShowErrorModal(false); }
+  };
 
-    if (missingFields.length > 1) {
-      const lastField = missingFields.pop();
-      return `Please enter the ${missingFields.join(", ")} and ${lastField}.`;
-    }
+  const handleAccountChange = (text: string) => {
+    const digits = text.replace(/\D/g, "").slice(0, 16); // enforce max 16
+    setAccountNumber(digits);
+    setAccountError(validateAccountNumber(digits));
+    if (error) { setError(null); setShowErrorModal(false); }
+  };
 
-    if (accountNumber.trim().length > 30) {
-      return "Account number cannot be more than 30 characters.";
-    }
+  const handleBranchChange = (text: string) => {
+    const digits = text.replace(/\D/g, "").slice(0, 6);
+    setBranchCode(digits);
+    setBranchError(validateBranchCode(digits));
+    if (error) { setError(null); setShowErrorModal(false); }
+  };
 
-    return null;
+  const handleReferenceChange = (text: string) => {
+    setReference(text);
+    setReferenceError(validateReference(text));
+    if (error) { setError(null); setShowErrorModal(false); }
+  };
+
+  const handleBankSelect = (bank: { name: string; branchCode: string }) => {
+    setSelectedBank(bank.name);
+    setBranchCode(bank.branchCode); // auto‑populate branch code
+    setBankError("");
+    setModalVisible(false);
+    if (error) { setError(null); setShowErrorModal(false); }
   };
 
   const handleSubmit = () => {
-    const validationMessage = getValidationMessage();
-
-    if (validationMessage) {
-      showError(validationMessage);
+    if (!validateAll()) {
+      const err =
+        nameError || accountError || bankError || branchError || referenceError ||
+        "Please correct the highlighted fields.";
+      showError(err);
       return;
     }
-
     setVerifyVisible(true);
   };
 
   const handleVerifiedSubmit = async () => {
     setVerifyVisible(false);
-
     try {
       setSaving(true);
       setError(null);
 
       const created = await addBeneficiary({
-        name: name.trim(),
-        bankName: bankName.trim(),
+        name: beneficiaryName.trim(),
+        bankName: selectedBank,
         accountNumber: accountNumber.trim(),
-        reference: reference.trim(),
+        reference: reference.trim() || beneficiaryName.trim(),
       });
 
       setCreatedBeneficiary(created);
@@ -107,13 +209,25 @@ export default function CreateBeneficiary() {
     }
   };
 
+  const renderBankItem = ({ item }: { item: { name: string; branchCode: string } }) => (
+    <TouchableOpacity
+      style={styles.bankItem}
+      onPress={() => handleBankSelect(item)}
+    >
+      <Text style={styles.bankItemText}>{item.name}</Text>
+      {selectedBank === item.name && (
+        <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
+      )}
+    </TouchableOpacity>
+  );
+
   return (
     <View style={styles.container}>
       <LinearGradient colors={["#5B8DEF", "#6C63FF"]} style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Bank Account</Text>
+        <Text style={styles.headerTitle}>Add Beneficiary</Text>
         <View style={{ width: 40 }} />
       </LinearGradient>
 
@@ -121,56 +235,125 @@ export default function CreateBeneficiary() {
         style={styles.whiteCard}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <Text style={styles.label}>Beneficiary name</Text>
-          <TextInput
-            style={styles.input}
-            value={name}
-            onChangeText={(value) => {
-              setName(value);
-              setError(null);
-              setShowErrorModal(false);
-            }}
-            placeholder="e.g. Thabo Nkosi"
-            placeholderTextColor="#A0A4B8"
-          />
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <Text style={styles.infoText}>
+            Ensure you enter the correct details. Only Capitec account numbers
+            are verified against the actual account holder.
+          </Text>
 
-          <Text style={styles.label}>Bank name</Text>
-          <TextInput
-            style={styles.input}
-            value={bankName}
-            onChangeText={(value) => {
-              setBankName(value);
-              setError(null);
-              setShowErrorModal(false);
-            }}
-            placeholder="e.g. Capitec"
-            placeholderTextColor="#A0A4B8"
-          />
+          {/* Beneficiary name */}
+          <View style={styles.field}>
+            <Text style={styles.label}>
+              Beneficiary name <Text style={styles.requiredAsterisk}>*</Text>
+            </Text>
+            <TextInput
+              style={[styles.input, nameError && styles.inputError]}
+              value={beneficiaryName}
+              onChangeText={handleNameChange}
+              placeholder="e.g., John Doe"
+              placeholderTextColor="#A0A4B8"
+              maxLength={25}
+            />
+            {!!nameError && <Text style={styles.errorText}>{nameError}</Text>}
+          </View>
 
-          <Text style={styles.label}>Account number</Text>
-          <TextInput
-            style={styles.input}
-            value={accountNumber}
-            onChangeText={(value) => {
-              setAccountNumber(value);
-              setError(null);
-              setShowErrorModal(false);
-            }}
-            placeholder="Enter account number"
-            placeholderTextColor="#A0A4B8"
-            keyboardType="number-pad"
-            maxLength={30}
-          />
+          {/* Account number */}
+          <View style={styles.field}>
+            <Text style={styles.label}>
+              Account number <Text style={styles.requiredAsterisk}>*</Text>
+            </Text>
+            <TextInput
+              style={[styles.input, accountError && styles.inputError]}
+              value={accountNumber}
+              onChangeText={handleAccountChange}
+              keyboardType="number-pad"
+              placeholder="1234567890123456"
+              placeholderTextColor="#A0A4B8"
+              maxLength={16}
+            />
+            {!!accountError && (
+              <Text style={styles.errorText}>{accountError}</Text>
+            )}
+          </View>
 
-          <Text style={styles.label}>Reference</Text>
-          <TextInput
-            style={styles.input}
-            value={reference}
-            onChangeText={setReference}
-            placeholder="Optional payment reference"
-            placeholderTextColor="#A0A4B8"
-          />
+          {/* Bank selection */}
+          <View style={styles.field}>
+            <Text style={styles.label}>
+              Choose bank <Text style={styles.requiredAsterisk}>*</Text>
+            </Text>
+            <TouchableOpacity
+              style={[styles.selectInput, bankError && styles.inputError]}
+              onPress={() => setModalVisible(true)}
+            >
+              <Text
+                style={
+                  selectedBank ? styles.selectText : styles.placeholderText
+                }
+              >
+                {selectedBank || "Select bank"}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color="#aaa" />
+            </TouchableOpacity>
+            {!!bankError && <Text style={styles.errorText}>{bankError}</Text>}
+          </View>
+
+          {/* Branch code */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Branch code</Text>
+            <TextInput
+              style={[styles.input, branchError && styles.inputError]}
+              value={branchCode}
+              onChangeText={handleBranchChange}
+              keyboardType="number-pad"
+              placeholder="e.g., 123456"
+              placeholderTextColor="#A0A4B8"
+              maxLength={6}
+            />
+            {!!branchError && (
+              <Text style={styles.errorText}>{branchError}</Text>
+            )}
+          </View>
+
+          {/* One‑time switch */}
+          <View style={styles.switchRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.switchLabel}>One-time beneficiary</Text>
+              <Text style={styles.switchSub}>Used for once-off payment</Text>
+            </View>
+            <Switch
+              value={oneTime}
+              onValueChange={setOneTime}
+              trackColor={{ false: "#ccc", true: colors.primary }}
+            />
+          </View>
+
+          {/* Reference */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Beneficiary reference</Text>
+            <TextInput
+              style={[styles.input, referenceError && styles.inputError]}
+              value={reference}
+              onChangeText={handleReferenceChange}
+              placeholder="M LEHOKO"
+              placeholderTextColor="#A0A4B8"
+              maxLength={25}
+            />
+            {!!referenceError && (
+              <Text style={styles.errorText}>{referenceError}</Text>
+            )}
+          </View>
+
+          {/* Notification (UI only) */}
+          <View style={styles.notificationRow}>
+            <Text style={styles.label}>Payment notification</Text>
+            <TouchableOpacity style={styles.notificationSelector}>
+              <Text style={styles.notificationText}>{notification}</Text>
+              <Ionicons name="chevron-down" size={18} color="#888" />
+            </TouchableOpacity>
+          </View>
 
           {error && (
             <TouchableOpacity
@@ -183,13 +366,12 @@ export default function CreateBeneficiary() {
             </TouchableOpacity>
           )}
 
-          {createdBeneficiary && (
+          {createdBeneficiary ? (
             <View style={styles.successBox}>
               <Text style={styles.successTitle}>Beneficiary saved</Text>
               <Text style={styles.successText}>
                 {createdBeneficiary.name} is ready for payments.
               </Text>
-
               <View style={styles.successActions}>
                 <TouchableOpacity
                   style={styles.secondaryButton}
@@ -199,12 +381,11 @@ export default function CreateBeneficiary() {
                 >
                   <Text style={styles.secondaryButtonText}>View list</Text>
                 </TouchableOpacity>
-
                 <TouchableOpacity
                   style={styles.payButton}
                   onPress={() =>
                     router.push({
-                      pathname: "/transactions/create-transaction",
+                      pathname: "/transactions/create-transfer",
                       params: {
                         beneficiaryId: createdBeneficiary.id,
                         beneficiaryName: createdBeneficiary.name,
@@ -217,29 +398,33 @@ export default function CreateBeneficiary() {
                 </TouchableOpacity>
               </View>
             </View>
-          )}
-
-          {!createdBeneficiary && (
+          ) : (
             <TouchableOpacity
-              style={[styles.submitButton, saving && styles.disabledButton]}
+              style={[
+                styles.submitButton,
+                (!isFormValid() || saving) && styles.disabledButton,
+              ]}
               onPress={handleSubmit}
-              disabled={saving}
+              disabled={!isFormValid() || saving}
             >
               {saving ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.submitText}>Save beneficiary</Text>
+                <Text style={styles.submitText}>Add Beneficiary</Text>
               )}
             </TouchableOpacity>
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
       <VerifyPinModal
         visible={verifyVisible}
         onCancel={() => setVerifyVisible(false)}
         onVerified={handleVerifiedSubmit}
         subtitle="Enter your PIN to add this beneficiary"
       />
+
+      {/* Error Modal */}
       <Modal
         transparent
         visible={showErrorModal && !!error}
@@ -251,10 +436,8 @@ export default function CreateBeneficiary() {
             <View style={styles.modalIconCircle}>
               <Ionicons name="alert-circle" size={30} color="#DC2626" />
             </View>
-
             <Text style={styles.modalTitle}>Could not continue</Text>
             <Text style={styles.modalMessage}>{error}</Text>
-
             <TouchableOpacity
               style={styles.modalButton}
               activeOpacity={0.85}
@@ -262,6 +445,31 @@ export default function CreateBeneficiary() {
             >
               <Text style={styles.modalButtonText}>Got it</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Bank selection modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Bank</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Ionicons name="close" size={24} color={colors.navy} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={banks}
+              keyExtractor={(item) => item.name}
+              renderItem={renderBankItem}
+              showsVerticalScrollIndicator={false}
+            />
           </View>
         </View>
       </Modal>
@@ -275,7 +483,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingTop: 60,
+    paddingTop: 80,
     paddingHorizontal: 20,
     paddingBottom: 24,
   },
@@ -289,25 +497,93 @@ const styles = StyleSheet.create({
     padding: 24,
     marginTop: -20,
   },
-  label: {
+  scrollContent: { paddingBottom: 20 },
+  infoText: {
     fontSize: 13,
-    fontWeight: "700",
+    color: colors.textSub,
+    backgroundColor: "#F8F9FC",
+    padding: 14,
+    borderRadius: 16,
+    marginBottom: 20,
+    lineHeight: 18,
+  },
+  field: { marginBottom: 20 },
+  label: {
+    fontSize: 14,
+    fontWeight: "600",
     color: colors.navy,
-    marginBottom: 8,
-    marginTop: 14,
+    marginBottom: 6,
+  },
+  requiredAsterisk: {
+    color: "#FF3B30",
+    fontSize: 14,
+    fontWeight: "700",
   },
   input: {
-    borderWidth: 1,
-    borderColor: "#E2E6F0",
+    borderWidth: 1.5,
+    borderColor: colors.greyLine || "#E2E8F0",
     borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: colors.navy,
-    backgroundColor: "#F8F9FC",
+    padding: 14,
+    fontSize: 15,
+    backgroundColor: "#FAFAFA",
+    marginBottom: 4,
   },
+  inputError: {
+    borderColor: "#FF3B30",
+  },
+  errorText: {
+    color: "#FF3B30",
+    fontSize: 12,
+    marginLeft: 4,
+    marginTop: 2,
+  },
+  selectInput: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: colors.greyLine || "#E2E8F0",
+    borderRadius: 14,
+    padding: 14,
+    backgroundColor: "#FAFAFA",
+    marginBottom: 4,
+  },
+  selectText: { fontSize: 15, color: colors.navy },
+  placeholderText: { fontSize: 15, color: "#aaa" },
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
+    backgroundColor: "#F8F9FC",
+    padding: 14,
+    borderRadius: 16,
+  },
+  switchLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.navy,
+    marginBottom: 2,
+  },
+  switchSub: { fontSize: 12, color: colors.textSub },
+  notificationRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  notificationSelector: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#F0F0F0",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  notificationText: { fontSize: 14, color: colors.navy },
   submitButton: {
-    marginTop: 28,
+    marginTop: 16,
     backgroundColor: colors.primary,
     borderRadius: 50,
     paddingVertical: 16,
@@ -333,56 +609,53 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     lineHeight: 18,
   },
+  errorModal: {
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 28,
+    padding: 24,
+    alignItems: "center",
+  },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
   },
-  errorModal: {
-    width: "100%",
+  modalContent: {
     backgroundColor: "#fff",
-    borderRadius: 24,
-    padding: 22,
+    borderRadius: 28,
+    padding: 20,
+    width: "85%",
+    maxHeight: "70%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 20,
   },
   modalIconCircle: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: "#FEF2F2",
-    alignItems: "center",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#FEE2E2",
     justifyContent: "center",
-    marginBottom: 12,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: colors.navy,
-    textAlign: "center",
-  },
-  modalMessage: {
-    marginTop: 8,
-    color: colors.textSub,
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: "center",
-  },
-  modalButton: {
-    marginTop: 20,
-    width: "100%",
-    backgroundColor: colors.primary,
-    borderRadius: 50,
-    paddingVertical: 14,
     alignItems: "center",
+    marginBottom: 16,
   },
-  modalButtonText: {
-    color: "#fff",
-    fontWeight: "800",
-    fontSize: 15,
+  modalTitle: { fontSize: 18, fontWeight: "700", color: colors.navy },
+  modalMessage: { fontSize: 14, color: colors.textSub, textAlign: "center", marginTop: 8 },
+  bankItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
   },
-
+  bankItemText: { fontSize: 16, color: colors.navy },
   successBox: {
     marginTop: 22,
     backgroundColor: "#F0FDF4",
@@ -428,5 +701,17 @@ const styles = StyleSheet.create({
   payButtonText: {
     color: "#fff",
     fontWeight: "800",
+  },
+  modalButton: {
+    marginTop: 20,
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  modalButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 15,
   },
 });
