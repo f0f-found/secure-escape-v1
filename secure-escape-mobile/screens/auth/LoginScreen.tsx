@@ -8,6 +8,7 @@ import {
   Switch,
   Modal,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors } from "@/utils/theme";
@@ -30,6 +31,11 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const [error, setError] = useState<string | null>(null);
   const [showErrorModal, setShowErrorModal] = useState(false);
 
+  // Field-level error states
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [pinError, setPinError] = useState<string | null>(null);
+
+  
   const showError = (message: string) => {
     setError(message);
     setShowErrorModal(true);
@@ -49,8 +55,8 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
     if (!pin.trim()) {
       missingFields.push("PIN");
-    } else if (pin.length < 4) {
-      return "Please enter at least 4 digits for your app PIN.";
+    } else if (pin.length !== 4) {
+      return "Please enter exactly 4 digits for your app PIN.";
     }
 
     if (missingFields.length === 0) {
@@ -99,6 +105,11 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       return;
     }
 
+    if (emailError || pinError) {
+      showError("Please fix the highlighted fields before submitting.");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       clearError();
@@ -123,176 +134,233 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       setIsSubmitting(false);
     }
   };
+  
+  const validateEmail = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setEmailError("Email is required.");
+      return false;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmed)) {
+      setEmailError("Please enter a valid email address.");
+      return false;
+    }
+    setEmailError(null);
+    return true;
+  };
 
-  return React.createElement(
-    ScrollView,
-    {
-      style: styles.container,
-      contentContainerStyle: styles.scrollContent,
-      showsVerticalScrollIndicator: false,
-      keyboardShouldPersistTaps: "handled",
-    },
-    React.createElement(
-      View,
-      { style: styles.topBar },
-      React.createElement(View, { style: { width: 24 } }),
-     
-      React.createElement(View, { style: { width: 24 } })
-    ),
-    React.createElement(
-      View,
-      { style: styles.logoContainer },
-      React.createElement(
-        Text,
-        { style: styles.logoText },
-        "Global",
-        React.createElement(Text, { style: styles.logoO }, "O"),
-        "ne"
-      )
-    ),
-    React.createElement(
-      View,
-      { style: styles.pinArea },
-      React.createElement(
-        View,
-        { style: styles.pinLabelRow },
-        React.createElement(Text, { style: styles.pinLabel }, "Email")
-      ),
-      React.createElement(TextInput, {
-        style: styles.textInput,
-        autoCapitalize: "none",
-        keyboardType: "email-address",
-        value: email,
-        onChangeText: (value: string) => {
-          setEmail(value);
-          clearError();
-        },
-      }),
-      React.createElement(
-        View,
-        { style: styles.pinLabelRow },
-        React.createElement(Text, { style: styles.pinLabel }, "Enter app PIN"),
-        React.createElement(
-          TouchableOpacity,
-          null,
-          React.createElement(Text, { style: styles.forgotPin }, "Forgot PIN")
-        )
-      ),
-      React.createElement(TextInput, {
-        style: styles.pinInput,
-        secureTextEntry: true,
-        maxLength: 6,
-        keyboardType: "numeric",
-        value: pin,
-        onChangeText: (value: string) => {
-          setPin(value);
-          clearError();
-        },
-        placeholder: "••••",
-        placeholderTextColor: "#ccc",
-      }),
-      error
-        ? React.createElement(
-            TouchableOpacity,
-            {
-              style: styles.errorBanner,
-              activeOpacity: 0.8,
-              onPress: () => setShowErrorModal(true),
-            },
-            React.createElement(Text, { style: styles.errorIcon }, "!"),
-            React.createElement(Text, { style: styles.errorBannerText }, error)
-          )
-        : null,
-      React.createElement(
-        TouchableOpacity,
-        {
-          style: [styles.submitButton, isSubmitting && styles.disabledButton],
-          onPress: handleSubmit,
-          disabled: isSubmitting,
-        },
-        React.createElement(
-          LinearGradient,
-          { colors: ["#7C6EF7", "#4A6CF7"], style: styles.gradientButton },
-          React.createElement(
-            Text,
-            { style: styles.submitText },
-            isSubmitting ? "Signing in..." : "Submit"
-          )
-        )
-      )
-    ),
-    React.createElement(
-      View,
-      { style: styles.biometricsSection },
-      React.createElement(
-        View,
-        { style: styles.biometricsRow },
-        React.createElement(
-          View,
-          { style: styles.biometricsText },
-          React.createElement(Text, { style: styles.biometricsTitle }, "Biometrics"),
-          React.createElement(
-            Text,
-            { style: styles.biometricsSubtitle },
-            "Sign in and authenticate with fingerprint or facial recognition"
-          )
-        ),
-        React.createElement(Switch, {
-          value: biometricsEnabled,
-          onValueChange: setBiometricsEnabled,
-          trackColor: { false: colors.greyLine, true: colors.primary },
-          thumbColor: "#fff",
-        })
-      ),
-      React.createElement(
-        TouchableOpacity,
-        {
-          style: styles.dontShowRow,
-          onPress: () => setDontShowAgain(!dontShowAgain),
-          activeOpacity: 0.7,
-        },
-        React.createElement(
-          View,
-          { style: [styles.checkbox, dontShowAgain && styles.checkboxChecked] },
-          dontShowAgain ? React.createElement(Text, { style: styles.checkmark }, "✓") : null
-        ),
-        React.createElement(Text, { style: styles.dontShowText }, "Don't show me this again")
-      )
-    ),
-    React.createElement(
-      Modal,
-      {
-        transparent: true,
-        visible: showErrorModal && !!error,
-        animationType: "fade",
-        onRequestClose: () => setShowErrorModal(false),
-      },
-      React.createElement(
-        View,
-        { style: styles.modalOverlay },
-        React.createElement(
-          View,
-          { style: styles.errorModal },
-          React.createElement(
-            View,
-            { style: styles.modalIconCircle },
-            React.createElement(Text, { style: styles.modalIcon }, "!")
-          ),
-          React.createElement(Text, { style: styles.modalTitle }, "Could not sign in"),
-          React.createElement(Text, { style: styles.modalMessage }, error),
-          React.createElement(
-            TouchableOpacity,
-            {
-              style: styles.modalButton,
-              activeOpacity: 0.85,
-              onPress: () => setShowErrorModal(false),
-            },
-            React.createElement(Text, { style: styles.modalButtonText }, "Got it")
-          )
-        )
-      )
-    ),
-    React.createElement(View, { style: styles.bottomSpacer })
+  const validatePin = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setPinError("PIN is required.");
+      return false;
+    }
+    if (!/^\d+$/.test(trimmed)) {
+      setPinError("PIN must contain only digits.");
+      return false;
+    }
+    if (trimmed.length !== 4) {
+      setPinError("PIN must be exactly 4 digits.");
+      return false;
+    }
+    setPinError(null);
+    return true;
+  };
+
+  const handleEmailBlur = () => {
+    validateEmail(email);
+  };
+
+  const handlePinBlur = () => {
+    validatePin(pin);
+  };
+
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    if (emailError) {
+      const trimmed = value.trim();
+      if (trimmed && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+        setEmailError(null);
+      } else if (!trimmed) {
+        setEmailError("Email is required.");
+      }
+    }
+  };
+
+  const handlePinChange = (value: string) => {
+    const numericValue = value.replace(/[^0-9]/g, "");
+    setPin(numericValue);
+    if (pinError) {
+      if (numericValue.length === 4) {
+        setPinError(null);
+      } else if (numericValue.length === 0) {
+        setPinError("PIN is required.");
+      } else {
+        setPinError("PIN must be exactly 4 digits.");
+      }
+    }
+  };
+
+  const isFormValid = () => {
+    const trimmedEmail = email.trim();
+    const trimmedPin = pin.trim();
+    const emailValid = trimmedEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
+    const pinValid = trimmedPin && /^\d{4}$/.test(trimmedPin); // Strictly 4 digits
+    return emailValid && pinValid;
+  };
+
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={styles.topBar}>
+        <View style={{ width: 24 }} />
+        <View style={{ width: 24 }} />
+      </View>
+
+      <View style={styles.logoContainer}>
+        <Text style={styles.logoText}>
+          Global
+          <Text style={styles.logoO}>O</Text>
+          ne
+        </Text>
+      </View>
+
+      <View style={styles.pinArea}>
+        {/* Email field - NOW maxLength 25 */}
+        <View style={styles.pinLabelRow}>
+          <Text style={styles.pinLabel}>Email <Text style={styles.required}></Text></Text>
+        </View>
+        <TextInput
+          style={[styles.textInput, emailError && styles.inputError]}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={handleEmailChange}
+          onBlur={handleEmailBlur}
+          placeholder="Enter your email"
+          placeholderTextColor="#ccc"
+          maxLength={25} // now limits to 25 characters not sure if this is realistic though
+        />
+        {emailError && <Text style={styles.fieldError}>{emailError}</Text>}
+
+        {/* PIN field - NOW strictly 4 digits */}
+        <View style={[styles.pinLabelRow, { marginTop: 16 }]}>
+          <Text style={styles.pinLabel}>Enter app PIN  <Text style={styles.required}></Text></Text>
+          <TouchableOpacity>
+            <Text style={styles.forgotPin}>Forgot PIN</Text>
+          </TouchableOpacity>
+        </View>
+        <TextInput
+          style={[styles.pinInput, pinError && styles.inputError]}
+          secureTextEntry
+          maxLength={4} // <-- STRICTLY 4
+          keyboardType="numeric"
+          value={pin}
+          onChangeText={handlePinChange}
+          onBlur={handlePinBlur}
+          placeholder="• • • •"
+          placeholderTextColor="#ccc"
+        />
+        {pinError && <Text style={styles.fieldError}>{pinError}</Text>}
+
+        {/* Error banner */}
+        {error && !emailError && !pinError && (
+          <TouchableOpacity
+            style={styles.errorBanner}
+            activeOpacity={0.8}
+            onPress={() => setShowErrorModal(true)}
+          >
+            <Text style={styles.errorIcon}>!</Text>
+            <Text style={styles.errorBannerText}>{error}</Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity
+          style={[
+            styles.submitButton,
+            (!isFormValid() || isSubmitting) && styles.disabledButton,
+          ]}
+          onPress={handleSubmit}
+          disabled={!isFormValid() || isSubmitting}
+        >
+          <LinearGradient
+            colors={["#7C6EF7", "#4A6CF7"]}
+            style={styles.gradientButton}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.submitText}>Submit</Text>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.biometricsSection}>
+        <View style={styles.biometricsRow}>
+          <View style={styles.biometricsText}>
+            <Text style={styles.biometricsTitle}>Biometrics</Text>
+            <Text style={styles.biometricsSubtitle}>
+              Sign in and authenticate with fingerprint or facial recognition
+            </Text>
+          </View>
+          <Switch
+            value={biometricsEnabled}
+            onValueChange={setBiometricsEnabled}
+            trackColor={{ false: colors.greyLine, true: colors.primary }}
+            thumbColor="#fff"
+          />
+        </View>
+        <TouchableOpacity
+          style={styles.dontShowRow}
+          onPress={() => setDontShowAgain(!dontShowAgain)}
+          activeOpacity={0.7}
+        >
+          <View
+            style={[styles.checkbox, dontShowAgain && styles.checkboxChecked]}
+          >
+            {dontShowAgain && (
+              <Text style={styles.checkmark}>✓</Text>
+            )}
+          </View>
+          <Text style={styles.dontShowText}>
+            Don&apos;t show me this again
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Error Modal */}
+      <Modal
+        transparent
+        visible={showErrorModal && !!error}
+        animationType="fade"
+        onRequestClose={() => setShowErrorModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.errorModal}>
+            <View style={styles.modalIconCircle}>
+              <Text style={styles.modalIcon}>!</Text>
+            </View>
+            <Text style={styles.modalTitle}>Could not sign in</Text>
+            <Text style={styles.modalMessage}>{error}</Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              activeOpacity={0.85}
+              onPress={() => setShowErrorModal(false)}
+            >
+              <Text style={styles.modalButtonText}>Got it</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <View style={styles.bottomSpacer} />
+    </ScrollView>
   );
 }
 
@@ -306,9 +374,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 75,
     marginBottom: 20,
-  },
-  topPill: {
-    
   },
   logoContainer: { alignItems: "center", marginTop: 20, marginBottom: 40 },
   logoText: {
@@ -337,6 +402,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   pinLabel: { fontSize: 14, color: colors.textSub },
+  required: { color: "#DC2626", fontWeight: "700" },
   forgotPin: {
     fontSize: 13,
     color: colors.gradientEnd,
@@ -349,7 +415,7 @@ const styles = StyleSheet.create({
     padding: 14,
     fontSize: 16,
     backgroundColor: "#FAFAFA",
-    marginBottom: 20,
+    marginBottom: 4,
   },
   pinInput: {
     borderWidth: 1.5,
@@ -360,6 +426,18 @@ const styles = StyleSheet.create({
     letterSpacing: 8,
     textAlign: "center",
     backgroundColor: "#FAFAFA",
+    marginBottom: 4,
+  },
+  inputError: {
+    borderColor: "#DC2626",
+    borderWidth: 2,
+  },
+  fieldError: {
+    color: "#DC2626",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 4,
+    marginBottom: 8,
   },
   submitButton: { marginTop: 28, borderRadius: 50, overflow: "hidden" },
   gradientButton: { paddingVertical: 16, alignItems: "center" },
