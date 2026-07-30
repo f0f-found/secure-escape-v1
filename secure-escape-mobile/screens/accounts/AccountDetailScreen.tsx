@@ -17,7 +17,7 @@ import { getAccountById } from "@/services/accountService";
 import { getTransactions } from "@/services/transactionServices";
 import { AccountResponse } from "@/types/account";
 import { TransactionResponse } from "@/types/transaction";
-
+//testing commit
 const STATUS_META: Record<
   string,
   { label: string; bg: string; color: string }
@@ -29,7 +29,7 @@ const STATUS_META: Record<
   Blocked: { label: "Blocked", bg: "#FDECEC", color: "#E5484D" },
   Delayed: { label: "Delayed", bg: "#FFF6E5", color: "#B98900" },
 };
-
+//testing commit
 export default function AccountDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
