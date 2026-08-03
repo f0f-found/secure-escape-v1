@@ -5,7 +5,7 @@ namespace SecureEscape.Api.DTOs.Request;
 public class SetDuressPinRequestDto
 {
     [Required]
-    public string CurrentPassword { get; set; } = string.Empty;
+    public string CurrentPin { get; set; } = string.Empty;
 
     [Required]
     [MinLength(4)]

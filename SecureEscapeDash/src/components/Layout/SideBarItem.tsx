@@ -10,7 +10,7 @@ export default function SidebarItem({ label, path }: SidebarItemProps) {
     <NavLink
       to={path}
       className={({ isActive }) =>
-        `flex items-center rounded-xl px-4 py-3 transition ${
+        `flex items-center   px-4 py-3 transition ${
           isActive
             ? "bg-[#12355B] text-white"
             : "text-slate-600 hover:bg-slate-100"

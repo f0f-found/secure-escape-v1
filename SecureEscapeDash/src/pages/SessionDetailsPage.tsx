@@ -4,19 +4,12 @@ import Layout from "../components/Layout";
 import type { DuressSessionDetail } from "../types/session";
 import {
   getDuressSessionById,
-  updateCaseStatus,
-  addCaseAction,
   freezeSessionAccounts,
   dispatchSessionNotifications,
+  claimSession,
+  assignSession,
 } from "../services/sessionService";
-import {
-  ACTION_TYPES,
-  CASE_STATUSES,
-  cleanText,
-  validateActionType,
-  validateCaseStatus,
-  validateOptionalNotes,
-} from "../utils/validation";
+
 import { getAdminUser } from "../utils/tokenStore";
 import type { AdminLoginResponse } from "../types/auth";
 import CaseOverview from "../components/Session/CaseOverview";
@@ -48,38 +41,26 @@ export default function SessionDetail() {
   const canViewFullCase = canViewAnyCaseDetails || canViewAssignedCaseDetails;
 
   const canAssignCases = hasPermission(admin?.adminRole, "assignCases");
-  const canUpdateCaseStatus = hasPermission(
-    admin?.adminRole,
-    "updateCaseStatus",
-  );
-  const canRecordCaseAction = hasPermission(
-    admin?.adminRole,
-    "recordCaseAction",
-  );
+
   const canFreezeAccounts = hasPermission(admin?.adminRole, "freezeAccounts");
   const canDispatchNotifications = hasPermission(
     admin?.adminRole,
     "dispatchNotifications",
   );
+  const canClaimCases = hasPermission(admin?.adminRole, "claimCases");
 
   const isSecureEscapeAdmin =
     admin?.adminRole === ADMIN_ROLES.SecureEscapeAdmin;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [statusNotes, setStatusNotes] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("");
-  const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [statusFormError, setStatusFormError] = useState("");
-
-  const [actionType, setActionType] = useState("");
-  const [actionNotes, setActionNotes] = useState("");
-  const [addingAction, setAddingAction] = useState(false);
-  const [actionFormError, setActionFormError] = useState("");
-
   const [freezingAccounts, setFreezingAccounts] = useState(false);
   const [dispatchingNotifications, setDispatchingNotifications] =
     useState(false);
+  const [claimingCase, setClaimingCase] = useState(false);
+  const [assigningCase, setAssigningCase] = useState(false);
+  const [assignAdminUserId, setAssignAdminUserId] = useState("");
+  const [assignNotes, setAssignNotes] = useState("");
 
   useEffect(() => {
     if (!id) return;
@@ -89,7 +70,6 @@ export default function SessionDetail() {
         setLoading(true);
         const data = await getDuressSessionById(id);
         setSession(data);
-        setSelectedStatus(data.caseStatus);
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Failed to load session.",
@@ -102,59 +82,37 @@ export default function SessionDetail() {
     fetchSession();
   }, [id]);
 
-  const handleStatusUpdate = async (status?: string) => {
-    const newStatus = status ?? selectedStatus;
-
-    if (!newStatus || !id) return;
-
-    const cleanedNotes = cleanText(statusNotes);
-    const validationError =
-      validateCaseStatus(newStatus) || validateOptionalNotes(cleanedNotes);
-
-    setStatusFormError(validationError);
-
-    if (validationError) return;
+  const handleClaimSession = async () => {
+    if (!id) return;
 
     try {
-      setUpdatingStatus(true);
-      const updatedSession = await updateCaseStatus(
-        id,
-        newStatus,
-        cleanedNotes,
-      );
-
+      setClaimingCase(true);
+      const updatedSession = await claimSession(id);
       setSession(updatedSession);
-      setSelectedStatus(updatedSession.caseStatus);
-      setStatusNotes("");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update status.");
+      alert(err instanceof Error ? err.message : "Failed to claim case.");
     } finally {
-      setUpdatingStatus(false);
+      setClaimingCase(false);
     }
   };
 
-  const handleAddAction = async () => {
-    if (!actionType || !id) return;
-
-    const cleanedNotes = cleanText(actionNotes);
-    const validationError =
-      validateActionType(actionType) || validateOptionalNotes(cleanedNotes);
-
-    setActionFormError(validationError);
-
-    if (validationError) return;
+  const handleAssignSession = async () => {
+    if (!id || !assignAdminUserId.trim()) return;
 
     try {
-      setAddingAction(true);
-      const updatedSession = await addCaseAction(id, actionType, cleanedNotes);
-
+      setAssigningCase(true);
+      const updatedSession = await assignSession(
+        id,
+        assignAdminUserId.trim(),
+        assignNotes.trim(),
+      );
       setSession(updatedSession);
-      setActionType("");
-      setActionNotes("");
+      setAssignAdminUserId("");
+      setAssignNotes("");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to add action.");
+      alert(err instanceof Error ? err.message : "Failed to assign case.");
     } finally {
-      setAddingAction(false);
+      setAssigningCase(false);
     }
   };
 
@@ -229,12 +187,18 @@ export default function SessionDetail() {
   const canSubmitCaseReport =
     admin?.adminRole === ADMIN_ROLES.FraudAnalyst &&
     isAssignedToMe &&
-    session.caseStatus === "Investigating";
+    session.caseStatus === "Investigating" &&
+    session.managerReviewStatus !== "PendingReview" &&
+    session.managerReviewStatus !== "Approved";
 
   const canManagerReview =
     (admin?.adminRole === ADMIN_ROLES.FraudManager ||
       admin?.adminRole === ADMIN_ROLES.SystemAdmin) &&
     session.managerReviewStatus === "PendingReview";
+
+  const isLiveSession = session.status === "Active";
+  const isPostIncidentSession =
+    session.status === "Expired" || session.status === "Terminated";
 
   return (
     <Layout>
@@ -255,48 +219,69 @@ export default function SessionDetail() {
         </div>
 
         <div className="mt-6">
-          {isUnassigned && canAssignCases && (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-8">
+          {isUnassigned && (
+            <div className="  border border-amber-200 bg-amber-50 p-8">
               <h2 className="text-xl font-semibold text-amber-900">
-                Claim Investigation
+                Unclaimed Investigation
               </h2>
-              <p className="mt-2 text-amber-700">
-                This case has not yet been assigned to an analyst.
-              </p>
-              <p className="mt-1 text-amber-700">
-                Begin the investigation to assign this case to yourself and
-                unlock customer evidence.
-              </p>
-              <button
-                onClick={() => handleStatusUpdate("Investigating")}
-                disabled={updatingStatus}
-                className="mt-6 rounded-xl bg-indigo-600 px-6 py-3 text-white font-semibold hover:bg-indigo-500 disabled:opacity-50"
-              >
-                {updatingStatus ? "Assigning..." : "Begin Investigation"}
-              </button>
-            </div>
-          )}
 
-          {isUnassigned && !canAssignCases && (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8">
-              <h2 className="text-xl font-semibold text-slate-900">
-                Awaiting Assignment
-              </h2>
-              <p className="mt-2 text-slate-600">
-                This case has not yet been assigned to an analyst.
+              <p className="mt-2 text-amber-700">
+                This case has not yet been claimed by a fraud analyst.
               </p>
+
+              {canClaimCases && (
+                <button
+                  onClick={handleClaimSession}
+                  disabled={claimingCase}
+                  className="mt-6   bg-indigo-600 px-6 py-3 text-white font-semibold hover:bg-indigo-500 disabled:opacity-50"
+                >
+                  {claimingCase ? "Claiming..." : "Claim Case"}
+                </button>
+              )}
+
+              {canAssignCases && (
+                <div className="mt-6   border border-amber-200 bg-white p-5">
+                  <h3 className="font-semibold text-slate-900">
+                    Assign Analyst
+                  </h3>
+
+                  <input
+                    type="text"
+                    value={assignAdminUserId}
+                    onChange={(e) => setAssignAdminUserId(e.target.value)}
+                    placeholder="Analyst admin user ID"
+                    className="mt-4 w-full   border border-slate-300 px-4 py-3"
+                  />
+
+                  <textarea
+                    value={assignNotes}
+                    onChange={(e) => setAssignNotes(e.target.value)}
+                    placeholder="Assignment notes"
+                    rows={3}
+                    className="mt-3 w-full   border border-slate-300 px-4 py-3 resize-none"
+                  />
+
+                  <button
+                    onClick={handleAssignSession}
+                    disabled={assigningCase || !assignAdminUserId.trim()}
+                    className="mt-4   bg-indigo-600 px-6 py-3 text-white font-semibold hover:bg-indigo-500 disabled:opacity-50"
+                  >
+                    {assigningCase ? "Assigning..." : "Assign Case"}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
           {!isUnassigned && !canViewFullCase && (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8">
+            <div className="  border border-slate-200 bg-slate-50 p-8">
               <h2 className="text-xl font-semibold text-slate-900">
                 Investigation In Progress
               </h2>
               <p className="mt-2 text-slate-600">
                 This case is currently assigned to another fraud analyst.
               </p>
-              <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
+              <div className="mt-6   border border-slate-200 bg-white p-5">
                 <p className="text-sm text-slate-500">Assigned To</p>
                 <p className="mt-1 font-semibold text-slate-900">
                   {session.assignedAdminName}
@@ -314,71 +299,100 @@ export default function SessionDetail() {
           )}
 
           {!isUnassigned && canViewFullCase && !isSecureEscapeAdmin && (
-            <div className="grid grid-cols-12 gap-6">
-              <div className="col-span-8 space-y-6">
-                <InvestigationPanel session={session} />
-                <EvidencePanel session={session} />
-                <Timeline session={session} />
-              </div>
+            <>
+              {isLiveSession && (
+                <div className="grid grid-cols-12 gap-6">
+                  <div className="col-span-8 space-y-6">
+                    <EvidencePanel session={session} />
+                    <InvestigationPanel session={session} />
+                    <Timeline session={session} />
+                  </div>
 
-              <div className="col-span-4 space-y-6">
-                {canSubmitCaseReport && (
-                  <CaseReportForm session={session} onSubmitted={setSession} />
-                )}
+                  <div className="col-span-4 space-y-6">
+                    <div className="  border border-red-200 bg-red-50 p-6">
+                      <div className="flex items-center gap-3">
+                        <span className="relative flex h-3 w-3">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                          <span className="relative inline-flex h-3 w-3 rounded-full bg-red-600" />
+                        </span>
 
-                {canManagerReview && (
-                  <ManagerReviewForm
-                    session={session}
-                    onReviewed={setSession}
-                  />
-                )}
+                        <h2 className="text-lg font-semibold text-red-900">
+                          Live Duress Response
+                        </h2>
+                      </div>
 
-                {session.managerReviewStatus === "Approved" && (
-                  <div className="bg-white rounded-2xl border border-green-200 shadow-sm p-6">
-                    <h2 className="text-lg font-semibold text-green-800">
-                      Case Resolved
-                    </h2>
-                    <p className="mt-2 text-sm text-slate-600">
-                      {session.resolutionSummary}
-                    </p>
-                    {session.managerReviewedAt && (
-                      <p className="mt-4 text-xs text-slate-500">
-                        Approved{" "}
-                        {new Date(session.managerReviewedAt).toLocaleString()}
+                      <p className="mt-3 text-sm text-red-700">
+                        Prioritise location monitoring, alerts, emergency
+                        notifications and account protection.
                       </p>
+                    </div>
+
+                    <CaseManagement
+                      session={session}
+                      freezingAccounts={freezingAccounts}
+                      handleFreezeAccounts={handleFreezeAccounts}
+                      dispatchingNotifications={dispatchingNotifications}
+                      handleDispatchNotifications={handleDispatchNotifications}
+                      canFreezeAccounts={canFreezeAccounts}
+                      canDispatchNotifications={canDispatchNotifications}
+                    />
+                    {canSubmitCaseReport && (
+                      <CaseReportForm
+                        session={session}
+                        onSubmitted={setSession}
+                      />
                     )}
                   </div>
-                )}
+                </div>
+              )}
 
-                <CaseManagement
-                  session={session}
-                  selectedStatus={selectedStatus}
-                  setSelectedStatus={setSelectedStatus}
-                  statusNotes={statusNotes}
-                  setStatusNotes={setStatusNotes}
-                  statusFormError={statusFormError}
-                  updatingStatus={updatingStatus}
-                  handleStatusUpdate={handleStatusUpdate}
-                  freezingAccounts={freezingAccounts}
-                  handleFreezeAccounts={handleFreezeAccounts}
-                  dispatchingNotifications={dispatchingNotifications}
-                  handleDispatchNotifications={handleDispatchNotifications}
-                  actionType={actionType}
-                  setActionType={setActionType}
-                  actionNotes={actionNotes}
-                  setActionNotes={setActionNotes}
-                  actionFormError={actionFormError}
-                  addingAction={addingAction}
-                  handleAddAction={handleAddAction}
-                  canUpdateCaseStatus={canUpdateCaseStatus}
-                  canRecordCaseAction={canRecordCaseAction}
-                  canFreezeAccounts={canFreezeAccounts}
-                  canDispatchNotifications={canDispatchNotifications}
-                  CASE_STATUSES={CASE_STATUSES}
-                  ACTION_TYPES={ACTION_TYPES}
-                />
-              </div>
-            </div>
+              {isPostIncidentSession && (
+                <div className="grid grid-cols-12 gap-6">
+                  <div className="col-span-8 space-y-6">
+                    <InvestigationPanel session={session} />
+                    <EvidencePanel session={session} />
+                    <Timeline session={session} />
+                  </div>
+
+                  <div className="col-span-4 space-y-6">
+                    {canSubmitCaseReport && (
+                      <CaseReportForm
+                        session={session}
+                        onSubmitted={setSession}
+                      />
+                    )}
+
+                    {canManagerReview && (
+                      <ManagerReviewForm
+                        session={session}
+                        onReviewed={setSession}
+                      />
+                    )}
+
+                    {session.managerReviewStatus === "Approved" && (
+                      <div className="bg-white   border border-green-200 shadow-sm p-6">
+                        <h2 className="text-lg font-semibold text-green-800">
+                          Case Resolved
+                        </h2>
+
+                        <p className="mt-2 text-sm text-slate-600">
+                          {session.resolutionSummary}
+                        </p>
+
+                        {session.managerReviewedAt && (
+                          <p className="mt-4 text-xs text-slate-500">
+                            Approved{" "}
+                            {new Date(
+                              session.managerReviewedAt,
+                            ).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

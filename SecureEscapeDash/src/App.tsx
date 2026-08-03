@@ -18,6 +18,7 @@ import AdminDashboard from "./pages/Admin/AdminDashboard";
 import AdminBanksPage from "./pages/Admin/AdminBanksPage";
 import AdminAuditLogsPage from "./pages/Admin/AdminAuditLogsPage";
 import AdminUsersPage from "./pages/Admin/AdminUsersPage";
+import AnalystOpenCasesPage from "./pages/Analyst/AnalystOpenCasesPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = getToken();
@@ -57,6 +58,14 @@ export default function App() {
           element={
             <RoleProtectedRoute permission="viewAnalystDashboard">
               <AnalystDashboard />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="/analyst/open-cases"
+          element={
+            <RoleProtectedRoute permission="viewAnalystDashboard">
+              <AnalystOpenCasesPage />
             </RoleProtectedRoute>
           }
         />

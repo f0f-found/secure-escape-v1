@@ -17,6 +17,7 @@ public class AuthService : IAuthService
     private readonly IRiskService _riskService;
     private readonly ICurrentUserService _currentUserService;
     private readonly IEmergencyContactRepository _emergencyContactRepository;
+    private readonly INotificationDispatchService _notificationDispatchService;
 
     public AuthService(
     AppDbContext context,
@@ -25,7 +26,7 @@ public class AuthService : IAuthService
     IAuditService auditService,
     IRiskService riskService,
     IEmergencyContactRepository emergencyContactRepository,
-    ICurrentUserService currentUserService)
+    ICurrentUserService currentUserService, INotificationDispatchService notificationDispatchService)
     {
         _context = context;
         _hashingService = hashingService;
@@ -34,6 +35,7 @@ public class AuthService : IAuthService
         _currentUserService = currentUserService;
         _emergencyContactRepository = emergencyContactRepository;
         _riskService = riskService;
+        _notificationDispatchService = notificationDispatchService;
     }
 
     public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto request)
@@ -130,6 +132,10 @@ public class AuthService : IAuthService
         Alert? alert = null;
         string? lastKnownLocation = null;
 
+        if (request.Latitude.HasValue && request.Longitude.HasValue)
+        {
+            lastKnownLocation = $"{request.Latitude.Value}, {request.Longitude.Value}";
+        }
         if (duressPinValid)
         {
             var riskAssessment = _riskService.AssessDuressLogin();
@@ -146,6 +152,11 @@ public class AuthService : IAuthService
             };
 
             await _context.Alerts.AddAsync(alert);
+
+            if (duressPinValid)
+            {
+                await _notificationDispatchService.DispatchPendingForSessionAsync(session.Id);
+            }
 
             var riskEvaluation = new RiskEvaluation
             {

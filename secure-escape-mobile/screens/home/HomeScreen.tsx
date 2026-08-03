@@ -136,6 +136,19 @@ export default function HomeScreen() {
       bg: "#EEEEFF",
       link: "/transactions/report",
     },
+    // { label: "Buy Prepaid", icon: "phone-portrait", bg: "#FFFBEB" },
+    {
+      label: "Financial Advice",
+      icon: "document-text",
+      bg: "#F0FDF4",
+      link: "/advice/financial-advice",
+    },
+    {
+      label: "Security Tips",
+      icon: "card",
+      bg: "#FFF5F5",
+      link: "/advice/security-tips",
+    },
   ];
 
   const handleFavPress = (item: (typeof favourites)[0]) => {

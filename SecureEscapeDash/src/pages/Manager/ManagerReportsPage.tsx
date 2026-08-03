@@ -32,7 +32,17 @@ export default function ManagerReportsPage() {
   const report = useMemo(() => {
     const total = sessions.length;
     const active = sessions.filter((s) => s.status === "Active").length;
-    const resolved = sessions.filter((s) => s.caseStatus === "Resolved").length;
+    const pendingReview = sessions.filter(
+      (s) => s.managerReviewStatus === "PendingReview",
+    ).length;
+
+    const approved = sessions.filter(
+      (s) => s.managerReviewStatus === "Approved",
+    ).length;
+
+    const rejected = sessions.filter(
+      (s) => s.managerReviewStatus === "Rejected",
+    ).length;
     const falseAlarms = sessions.filter(
       (s) => s.caseStatus === "FalseAlarm",
     ).length;
@@ -41,20 +51,22 @@ export default function ManagerReportsPage() {
     ).length;
 
     const resolutionRate =
-      total === 0 ? 0 : Math.round((resolved / total) * 100);
+      total === 0 ? 0 : Math.round((approved / total) * 100);
 
     return {
       total,
       active,
-      resolved,
+      rejected,
+      approved,
       falseAlarms,
       highRisk,
+      pendingReview,
       resolutionRate,
     };
   }, [sessions]);
 
   const recentlyResolved = sessions
-    .filter((s) => s.caseStatus === "Resolved")
+    .filter((s) => s.managerReviewStatus === "Approved")
     .slice(0, 8);
 
   return (
@@ -85,8 +97,18 @@ export default function ManagerReportsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="dashboard-card dashboard-card-body">
-          <p className="kpi-title">Resolved Cases</p>
-          <h2 className="kpi-value text-green-600">{report.resolved}</h2>
+          <p className="kpi-title">Approved Resolutions</p>
+          <h2 className="kpi-value text-green-600">{report.approved}</h2>
+        </div>
+
+        <div className="dashboard-card dashboard-card-body">
+          <p className="kpi-title">Rejected Reports</p>
+          <h2 className="kpi-value text-red-600">{report.rejected}</h2>
+        </div>
+
+        <div className="dashboard-card dashboard-card-body">
+          <p className="kpi-title">Pending Manager Review</p>
+          <h2 className="kpi-value text-indigo-600">{report.pendingReview}</h2>
         </div>
 
         <div className="dashboard-card dashboard-card-body">
@@ -96,7 +118,7 @@ export default function ManagerReportsPage() {
 
         <div className="dashboard-card dashboard-card-body">
           <p className="kpi-title">Pending Manager Review</p>
-          <h2 className="kpi-value text-indigo-600">{report.resolved}</h2>
+          <h2 className="kpi-value text-indigo-600">{report.pendingReview}</h2>
         </div>
       </div>
 

@@ -64,7 +64,7 @@ export default function ManagerAssignmentsPage() {
           placeholder="Search by customer, email, case ID, status or severity..."
         />
 
-        <label className="inline-flex items-center gap-3 rounded-xl bg-white border border-slate-200 px-4 py-3 text-sm text-slate-700">
+        <label className="inline-flex items-center gap-3   bg-white border border-slate-200 px-4 py-3 text-sm text-slate-700">
           <input
             type="checkbox"
             checked={showOnlyUnassigned}
