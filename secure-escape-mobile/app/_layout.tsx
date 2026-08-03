@@ -27,39 +27,40 @@ export default function RootLayout() {
 
   const router = useRouter();
   const segments = useSegments();
+  const currentSegment = segments[0] ?? "";
 
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const token = await getAuthToken();
+        const expired = await isSessionExpired();
+
+        const inAuthGroup = currentSegment === "(auth)";
+
+        // User is authenticated
+        if (token && !expired) {
+          if (inAuthGroup) {
+            router.replace("/(tabs)");
+          }
+        }
+
+        // User is NOT authenticated
+        else {
+          if (!inAuthGroup) {
+            router.replace("/(auth)");
+          }
+        }
+      } catch (error) {
+        console.log("Authentication error:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     checkAuth();
-  }, [segments]);
-
-  const checkAuth = async () => {
-    try {
-      const token = await getAuthToken();
-      const expired = await isSessionExpired();
-
-      const inAuthGroup = segments[0] === "(auth)";
-
-      // User is authenticated
-      if (token && !expired) {
-        if (inAuthGroup) {
-          router.replace("/(tabs)");
-        }
-      }
-
-      // User is NOT authenticated
-      else {
-        if (!inAuthGroup) {
-          router.replace("/(auth)");
-        }
-      }
-    } catch (error) {
-      console.log("Authentication error:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [currentSegment]);
 
   // Loading screen while checking auth
   if (isLoading) {

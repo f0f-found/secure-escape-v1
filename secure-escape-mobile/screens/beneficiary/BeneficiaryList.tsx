@@ -1,3 +1,4 @@
+// app/beneficiaries/beneficiary-list.tsx
 import React, { useCallback, useState } from "react";
 import {
   View,
@@ -20,7 +21,6 @@ export default function BeneficiaryList() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("Frequent");
   const [searchQuery, setSearchQuery] = useState("");
-
   const [showAll, setShowAll] = useState(true);
   const [beneficiaries, setBeneficiaries] = useState<BeneficiaryResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,12 +33,11 @@ export default function BeneficiaryList() {
     try {
       setLoading(true);
       setError("");
-
       const data = await getBeneficiaries();
       setBeneficiaries(data);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to load beneficiaries.",
+        err instanceof Error ? err.message : "Failed to load beneficiaries."
       );
     } finally {
       setLoading(false);
@@ -48,7 +47,7 @@ export default function BeneficiaryList() {
   useFocusEffect(
     useCallback(() => {
       loadBeneficiaries();
-    }, []),
+    }, [])
   );
 
   const visibleList = showAll ? beneficiaries : beneficiaries.slice(0, 5);
@@ -57,7 +56,6 @@ export default function BeneficiaryList() {
     if (sortBy === "Recently added") {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }
-
     return (
       new Date(b.lastPaidAt ?? 0).getTime() -
       new Date(a.lastPaidAt ?? 0).getTime()
@@ -66,11 +64,7 @@ export default function BeneficiaryList() {
 
   const filteredData = sortedData.filter((item) => {
     const query = searchQuery.trim().toLowerCase();
-
-    if (!query) {
-      return true;
-    }
-
+    if (!query) return true;
     return [
       item.name,
       item.bankName,
@@ -83,28 +77,14 @@ export default function BeneficiaryList() {
   });
 
   const formatLastPaid = (lastPaidAt?: string | null) => {
-    if (!lastPaidAt) {
-      return "Never paid";
-    }
-
+    if (!lastPaidAt) return "Never paid";
     const paidDate = new Date(lastPaidAt);
     const now = new Date();
-
     const diffMs = now.getTime() - paidDate.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) {
-      return "Paid today";
-    }
-
-    if (diffDays === 1) {
-      return "Paid yesterday";
-    }
-
-    if (diffDays < 7) {
-      return `Paid ${diffDays} days ago`;
-    }
-
+    if (diffDays === 0) return "Paid today";
+    if (diffDays === 1) return "Paid yesterday";
+    if (diffDays < 7) return `Paid ${diffDays} days ago`;
     return `Last paid ${paidDate.toLocaleDateString()}`;
   };
 
@@ -164,10 +144,11 @@ export default function BeneficiaryList() {
             />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search name, bank, account or reference"
+              placeholder="Search beneficiaries"
               placeholderTextColor="#aaa"
               value={searchQuery}
               onChangeText={setSearchQuery}
+              maxLength={15}
             />
             {!!searchQuery && (
               <TouchableOpacity onPress={() => setSearchQuery("")}>
@@ -192,7 +173,7 @@ export default function BeneficiaryList() {
                 setSortBy((current) =>
                   current === "Recently paid"
                     ? "Recently added"
-                    : "Recently paid",
+                    : "Recently paid"
                 )
               }
             >
@@ -204,25 +185,19 @@ export default function BeneficiaryList() {
 
         <View style={styles.tabRow}>
           <TouchableOpacity
-            style={[styles.tab, activeTab === "Frequent" && styles.activeTab]}
+            style={[styles.tab, styles.activeTab]}
             onPress={() => {
               setActiveTab("Frequent");
               setShowAll(true);
             }}
           >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === "Frequent" && styles.activeTabText,
-              ]}
-            >
-              All
-            </Text>
+            <Text style={[styles.tabText, styles.activeTabText]}>All</Text>
           </TouchableOpacity>
         </View>
-        {loading && <ActivityIndicator color={colors.primary} />}
 
+        {loading && <ActivityIndicator color={colors.primary} />}
         {!!error && !loading && <Text style={styles.emptyText}>{error}</Text>}
+
         <FlatList
           data={loading || error ? [] : filteredData}
           keyExtractor={(item) => item.id}
@@ -242,14 +217,13 @@ export default function BeneficiaryList() {
   );
 }
 
-// styles unchanged – same as you already have (just remove SafeAreaView wrapper)
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingTop: 60,
+    paddingTop: 80, 
     paddingHorizontal: 20,
     paddingBottom: 44,
   },
@@ -322,8 +296,15 @@ const styles = StyleSheet.create({
     borderBottomColor: "#E5E5E5",
     marginBottom: 16,
   },
-  tab: { flex: 1, paddingVertical: 12, alignItems: "flex-start" },
-  activeTab: { borderBottomWidth: 2, borderBottomColor: colors.primary },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "flex-start", 
+  },
+  activeTab: {
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary,
+  },
   tabText: { fontSize: 14, fontWeight: "600", color: "#888" },
   activeTabText: { color: colors.primary },
   listContent: { paddingBottom: 40 },

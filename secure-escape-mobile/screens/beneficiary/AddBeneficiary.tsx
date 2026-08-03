@@ -1,4 +1,4 @@
-// screens/Screen12_AddBeneficiaryOptions.js – with alerts and bank account navigation
+// app/beneficiaries/add-beneficiary-options.tsx
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -8,6 +8,7 @@ import { useRouter, Href } from "expo-router";
 
 export default function AddBeneficiaryOptions() {
   const router = useRouter();
+
   type BeneficiaryOption = {
     title: string;
     desc: string;
@@ -23,16 +24,7 @@ export default function AddBeneficiaryOptions() {
       desc: "Pay to Capitec client’s cellphone number",
       icon: "call-outline",
       action: "navigate",
-      route: "/beneficiaries/beneficiary-list",
-    },
-
-    {
-      title: "Capitec Registered",
-      desc: "Dstv, Telkom, Mr Price, credit card, etc.",
-      icon: "card-outline",
-      action: "alert",
-      message:
-        "Capitec Registered payments will be available in the next sprint.",
+      route: "/beneficiaries/add-beneficiary-form",
     },
 
     {
@@ -42,6 +34,16 @@ export default function AddBeneficiaryOptions() {
       action: "navigate",
       route: "/beneficiaries/create-beneficiary",
     },
+    
+    {
+      title: "Capitec Registered",
+      desc: "Dstv, Telkom, Mr Price, credit card, etc.",
+      icon: "card-outline",
+      action: "alert",
+      message: "Capitec Registered payments will be available in the next sprint.",
+    },
+
+    
   ];
 
   const handlePress = (opt: BeneficiaryOption) => {
@@ -90,7 +92,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingTop: 60,
+    paddingTop: 80, // Matches your design
     paddingHorizontal: 20,
     paddingBottom: 24,
   },
