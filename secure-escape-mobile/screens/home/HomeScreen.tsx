@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
@@ -6,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { getAccounts } from "@/services/accountService";
@@ -35,20 +37,18 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       loadAccounts();
-    }, []),
+    }, [])
   );
 
   const loadProfile = async () => {
     try {
       setIsLoading(true);
       setError(null);
-
       const user = await getProfileMe();
-
       setProfile(user);
     } catch (error) {
       setError(
-        error instanceof Error ? error.message : "Failed to load profile.",
+        error instanceof Error ? error.message : "Failed to load profile."
       );
     } finally {
       setIsLoading(false);
@@ -59,9 +59,7 @@ export default function HomeScreen() {
     try {
       setIsLoading(true);
       setError(null);
-
       const data = await getAccounts();
-
       setAccounts(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load accounts.");
@@ -73,13 +71,13 @@ export default function HomeScreen() {
   const logoutButton = async () => {
     try {
       await logout();
-
       router.replace("/(auth)");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to Logout");
     }
   };
 
+  // Build account cards from API data
   const accountCards = accounts.map((account, index) => ({
     id: account.id,
     name: account.accountName,
@@ -93,6 +91,7 @@ export default function HomeScreen() {
     iconBg: index === 0 ? "#9F8FEF20" : "#60A5FA20",
   }));
 
+  // Favourites list
   const favourites = [
     {
       label: "Pay Beneficiary",
@@ -111,6 +110,25 @@ export default function HomeScreen() {
       icon: "cash",
       bg: "#E6FAF8",
       link: "/transactions/create-cash-send",
+    },
+    {
+      label: "PayShap",
+      icon: "document-text",
+      bg: "#F0FDF4",
+      link: null, // Coming soon
+    },
+    {
+      label: "Cards",
+      icon: "card",
+      bg: "#FFF5F5",
+      link: null,
+    },
+    
+    {
+      label: "Buy Prepaid",
+      icon: "phone-portrait",
+      bg: "#FFFBEB",
+      link: null,
     },
     {
       label: "Transaction report",
@@ -133,17 +151,30 @@ export default function HomeScreen() {
     },
   ];
 
+  const handleFavPress = (item: (typeof favourites)[0]) => {
+    if (item.link) {
+      router.push(item.link as never);
+    } else {
+      Alert.alert(
+        "Coming Soon",
+        `The "${item.label}" feature will be available in the next sprint.`,
+        [{ text: "OK", style: "default" }]
+      );
+    }
+  };
+
   return (
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.scrollContent}
     >
+      {/* Header – with logout button */}
       <View style={styles.headerComponent}>
         <View style={styles.header}>
           <Text style={styles.title}>My Dashboard</Text>
           <Text style={styles.greeting}>
-            Good afternoon, {profile?.fullName}
+            Good afternoon, {profile?.fullName || "User"}
           </Text>
         </View>
         <TouchableOpacity
@@ -152,25 +183,26 @@ export default function HomeScreen() {
           onPress={logoutButton}
         >
           <Ionicons name="log-out-outline" size={18} color={colors.white} />
-
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
 
+      {/* Loading / Error states */}
       {isLoading && <Text style={styles.stateText}>Loading accounts...</Text>}
-
       {error && (
         <TouchableOpacity onPress={loadAccounts}>
           <Text style={styles.errorText}>{error}</Text>
         </TouchableOpacity>
       )}
-      {/* Account Cards with gradient background */}
+
+      {/* Account Cards */}
       <View style={styles.cardsRow}>
-        {accountCards.map((card, idx) => (
+        {accountCards.map((card) => (
           <TouchableOpacity
             key={card.id}
             activeOpacity={0.9}
             style={styles.cardWrapper}
+            // Optionally add navigation to account details if needed
           >
             <LinearGradient
               colors={card.gradient}
@@ -213,11 +245,7 @@ export default function HomeScreen() {
               key={idx}
               style={styles.favTile}
               activeOpacity={0.7}
-              onPress={() => {
-                if (item.link) {
-                  router.push(item.link as never);
-                }
-              }}
+              onPress={() => handleFavPress(item)}
             >
               <View style={[styles.favIcon, { backgroundColor: item.bg }]}>
                 <Ionicons
@@ -238,54 +266,68 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.greyBg },
   scrollContent: {
-    paddingTop: 48,
-    paddingBottom: 40, // extra space at bottom
+    paddingBottom: 40,
   },
   headerComponent: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  header: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: colors.navy,
+  },
+  greeting: {
+    fontSize: 14,
+    color: colors.textSub,
+    marginTop: 6,
   },
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-
     backgroundColor: colors.danger,
-
     paddingVertical: 10,
     paddingHorizontal: 16,
-
     borderRadius: 14,
-
-    marginTop: 20,
-    marginRight: 20,
-
+    marginTop: 10,
     gap: 6,
-
     ...shadows.medium,
   },
-
   logoutText: {
     color: colors.white,
     fontSize: 14,
     fontWeight: "700",
   },
-  header: {
+  stateText: {
     paddingHorizontal: 20,
-    paddingTop: 20, // was 20 → now 48 (moves title down)
-    paddingBottom: 16,
+    marginBottom: 12,
+    color: colors.textSub,
+    fontSize: 13,
   },
-  title: { fontSize: 28, fontWeight: "800", color: colors.navy },
-  greeting: { fontSize: 14, color: colors.textSub, marginTop: 6 },
+  errorText: {
+    paddingHorizontal: 20,
+    marginBottom: 12,
+    color: "#DC2626",
+    fontSize: 13,
+    fontWeight: "600",
+  },
   cardsRow: {
     flexDirection: "row",
     paddingHorizontal: 16,
     gap: 16,
-    marginTop: 8, // slight separation from header
-    marginBottom: 28, // increased from 24 to 28
+    marginTop: 8,
+    marginBottom: 28,
   },
-  cardWrapper: { flex: 1 },
+  cardWrapper: {
+    flex: 1,
+  },
   accountCard: {
     borderRadius: 28,
     padding: 18,
@@ -299,12 +341,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 12,
   },
-  decoyBadge: {
-    fontSize: 10,
-    color: "rgba(255,255,255,0.7)",
-    marginTop: 4,
-    fontWeight: "600",
-  },
   accName: {
     fontSize: 14,
     fontWeight: "600",
@@ -317,9 +353,15 @@ const styles = StyleSheet.create({
     color: colors.white,
     marginTop: 6,
   },
+  decoyBadge: {
+    fontSize: 10,
+    color: "rgba(255,255,255,0.7)",
+    marginTop: 4,
+    fontWeight: "600",
+  },
   favouritesSection: {
     paddingHorizontal: 16,
-    marginTop: 4, // reduced from 8 to avoid double spacing
+    marginTop: 4,
   },
   favouritesHeader: {
     flexDirection: "row",
@@ -327,7 +369,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-  favTitle: { fontSize: 18, fontWeight: "800", color: colors.navy },
+  favTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: colors.navy,
+  },
   editLink: {
     fontSize: 14,
     fontWeight: "600",
@@ -345,7 +391,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingVertical: 14,
     alignItems: "center",
-    marginBottom: 14, // increased from 12 for better grid spacing
+    marginBottom: 14,
     ...shadows.medium,
   },
   favIcon: {
@@ -362,19 +408,5 @@ const styles = StyleSheet.create({
     color: colors.textMain,
     textAlign: "center",
     paddingHorizontal: 4,
-  },
-  stateText: {
-    paddingHorizontal: 20,
-    marginBottom: 12,
-    color: colors.textSub,
-    fontSize: 13,
-  },
-
-  errorText: {
-    paddingHorizontal: 20,
-    marginBottom: 12,
-    color: "#DC2626",
-    fontSize: 13,
-    fontWeight: "600",
   },
 });

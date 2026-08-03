@@ -7,7 +7,10 @@ import {
   StyleSheet,
   Switch,
   Modal,
+  ScrollView,
+  ActivityIndicator,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { colors } from "@/utils/theme";
 import { login } from "@/services/authService";
 import { saveAuthSession } from "@/services/tokenStore";
@@ -28,6 +31,11 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const [error, setError] = useState<string | null>(null);
   const [showErrorModal, setShowErrorModal] = useState(false);
 
+  // Field-level error states
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [pinError, setPinError] = useState<string | null>(null);
+
+  
   const showError = (message: string) => {
     setError(message);
     setShowErrorModal(true);
@@ -47,8 +55,8 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
     if (!pin.trim()) {
       missingFields.push("PIN");
-    } else if (pin.length < 4) {
-      return "Please enter at least 4 digits for your app PIN.";
+    } else if (pin.length !== 4) {
+      return "Please enter exactly 4 digits for your app PIN.";
     }
 
     if (missingFields.length === 0) {
@@ -97,6 +105,11 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       return;
     }
 
+    if (emailError || pinError) {
+      showError("Please fix the highlighted fields before submitting.");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       clearError();
@@ -121,55 +134,142 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       setIsSubmitting(false);
     }
   };
+  
+  const validateEmail = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setEmailError("Email is required.");
+      return false;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmed)) {
+      setEmailError("Please enter a valid email address.");
+      return false;
+    }
+    setEmailError(null);
+    return true;
+  };
+
+  const validatePin = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setPinError("PIN is required.");
+      return false;
+    }
+    if (!/^\d+$/.test(trimmed)) {
+      setPinError("PIN must contain only digits.");
+      return false;
+    }
+    if (trimmed.length !== 4) {
+      setPinError("PIN must be exactly 4 digits.");
+      return false;
+    }
+    setPinError(null);
+    return true;
+  };
+
+  const handleEmailBlur = () => {
+    validateEmail(email);
+  };
+
+  const handlePinBlur = () => {
+    validatePin(pin);
+  };
+
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    if (emailError) {
+      const trimmed = value.trim();
+      if (trimmed && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+        setEmailError(null);
+      } else if (!trimmed) {
+        setEmailError("Email is required.");
+      }
+    }
+  };
+
+  const handlePinChange = (value: string) => {
+    const numericValue = value.replace(/[^0-9]/g, "");
+    setPin(numericValue);
+    if (pinError) {
+      if (numericValue.length === 4) {
+        setPinError(null);
+      } else if (numericValue.length === 0) {
+        setPinError("PIN is required.");
+      } else {
+        setPinError("PIN must be exactly 4 digits.");
+      }
+    }
+  };
+
+  const isFormValid = () => {
+    const trimmedEmail = email.trim();
+    const trimmedPin = pin.trim();
+    const emailValid = trimmedEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
+    const pinValid = trimmedPin && /^\d{4}$/.test(trimmedPin); // Strictly 4 digits
+    return emailValid && pinValid;
+  };
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.topBar}>
+        <View style={{ width: 24 }} />
         <View style={{ width: 24 }} />
       </View>
 
       <View style={styles.logoContainer}>
         <Text style={styles.logoText}>
-          Global<Text style={styles.logoO}>O</Text>ne
+          Global
+          <Text style={styles.logoO}>O</Text>
+          ne
         </Text>
       </View>
 
       <View style={styles.pinArea}>
+        {/* Email field - NOW maxLength 25 */}
         <View style={styles.pinLabelRow}>
-          <Text>Email</Text>
+          <Text style={styles.pinLabel}>Email <Text style={styles.required}></Text></Text>
         </View>
-
         <TextInput
-          style={styles.textInput}
+          style={[styles.textInput, emailError && styles.inputError]}
           autoCapitalize="none"
           keyboardType="email-address"
           value={email}
-          onChangeText={(value) => {
-            setEmail(value);
-            clearError();
-          }}
+          onChangeText={handleEmailChange}
+          onBlur={handleEmailBlur}
+          placeholder="Enter your email"
+          placeholderTextColor="#ccc"
+          maxLength={25} // now limits to 25 characters not sure if this is realistic though
         />
+        {emailError && <Text style={styles.fieldError}>{emailError}</Text>}
 
-
-
-        <View style={styles.pinLabelRow}>
-          <Text>Enter app PIN</Text>
-          {/* <Text style={styles.forgotPin}>Forgot PIN</Text> */}
+        {/* PIN field - NOW strictly 4 digits */}
+        <View style={[styles.pinLabelRow, { marginTop: 16 }]}>
+          <Text style={styles.pinLabel}>Enter app PIN  <Text style={styles.required}></Text></Text>
+          <TouchableOpacity>
+            <Text style={styles.forgotPin}>Forgot PIN</Text>
+          </TouchableOpacity>
         </View>
-
         <TextInput
-          style={styles.pinInput}
+          style={[styles.pinInput, pinError && styles.inputError]}
           secureTextEntry
-          maxLength={6}
+          maxLength={4} // <-- STRICTLY 4
           keyboardType="numeric"
           value={pin}
-          onChangeText={(value) => {
-            setPin(value);
-            clearError();
-          }}
+          onChangeText={handlePinChange}
+          onBlur={handlePinBlur}
+          placeholder="• • • •"
+          placeholderTextColor="#ccc"
         />
+        {pinError && <Text style={styles.fieldError}>{pinError}</Text>}
 
-        {error && (
+        {/* Error banner */}
+        {error && !emailError && !pinError && (
           <TouchableOpacity
             style={styles.errorBanner}
             activeOpacity={0.8}
@@ -181,33 +281,60 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
         )}
 
         <TouchableOpacity
-          style={[styles.submitButton, isSubmitting && styles.disabledButton]}
+          style={[
+            styles.submitButton,
+            (!isFormValid() || isSubmitting) && styles.disabledButton,
+          ]}
           onPress={handleSubmit}
-          disabled={isSubmitting}
+          disabled={!isFormValid() || isSubmitting}
         >
-          <Text style={styles.submitText}>
-            {isSubmitting ? "Signing in..." : "Submit"}
-          </Text>
+          <LinearGradient
+            colors={["#7C6EF7", "#4A6CF7"]}
+            style={styles.gradientButton}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.submitText}>Submit</Text>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
       </View>
 
       <View style={styles.biometricsSection}>
         <View style={styles.biometricsRow}>
-          <View>
-            <Text style={{ fontWeight: "bold" }}>Biometrics</Text>
-            <Text style={{ fontSize: 12, color: colors.textSub }}>
-              Sign in with fingerprint or facial recognition
+          <View style={styles.biometricsText}>
+            <Text style={styles.biometricsTitle}>Biometrics</Text>
+            <Text style={styles.biometricsSubtitle}>
+              Sign in and authenticate with fingerprint or facial recognition
             </Text>
           </View>
-
           <Switch
             value={biometricsEnabled}
             onValueChange={setBiometricsEnabled}
-            trackColor={{ false: "#ccc", true: colors.primary }}
+            trackColor={{ false: colors.greyLine, true: colors.primary }}
+            thumbColor="#fff"
           />
         </View>
+        <TouchableOpacity
+          style={styles.dontShowRow}
+          onPress={() => setDontShowAgain(!dontShowAgain)}
+          activeOpacity={0.7}
+        >
+          <View
+            style={[styles.checkbox, dontShowAgain && styles.checkboxChecked]}
+          >
+            {dontShowAgain && (
+              <Text style={styles.checkmark}>✓</Text>
+            )}
+          </View>
+          <Text style={styles.dontShowText}>
+            Don&apos;t show me this again
+          </Text>
+        </TouchableOpacity>
       </View>
 
+      {/* Error Modal */}
       <Modal
         transparent
         visible={showErrorModal && !!error}
@@ -219,10 +346,8 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
             <View style={styles.modalIconCircle}>
               <Text style={styles.modalIcon}>!</Text>
             </View>
-
             <Text style={styles.modalTitle}>Could not sign in</Text>
             <Text style={styles.modalMessage}>{error}</Text>
-
             <TouchableOpacity
               style={styles.modalButton}
               activeOpacity={0.85}
@@ -233,85 +358,96 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           </View>
         </View>
       </Modal>
-    </View>
+
+      <View style={styles.bottomSpacer} />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
+  scrollContent: { paddingBottom: 40 },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: 36,
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 75,
+    marginBottom: 20,
   },
-  backArrow: { fontSize: 20, color: "#555" },
-  pill: { width: 130, height: 5, backgroundColor: "#ccc", borderRadius: 10 },
-  logoContainer: { alignItems: "center", marginTop: 36 },
-  logoText: { fontSize: 42, fontWeight: "800", color: colors.navy },
+  logoContainer: { alignItems: "center", marginTop: 20, marginBottom: 40 },
+  logoText: {
+    fontSize: 42,
+    fontWeight: "800",
+    color: colors.navy,
+    letterSpacing: -1,
+  },
   logoO: {
     borderWidth: 4,
     borderColor: colors.gradientEnd,
     borderRadius: 38,
-    width: 38,
-    height: 38,
+    width: 42,
+    height: 42,
     textAlign: "center",
-    lineHeight: 34,
+    lineHeight: 36,
     marginHorizontal: 2,
+    fontSize: 36,
+    fontWeight: "800",
+    color: colors.navy,
   },
-  pinArea: { padding: 24 },
+  pinArea: { paddingHorizontal: 24, marginBottom: 30 },
   pinLabelRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 8,
   },
-  forgotPin: { color: colors.gradientEnd, textDecorationLine: "underline" },
-  pinInput: {
-    borderWidth: 1.5,
-    borderColor: colors.greyLine,
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 20,
-    letterSpacing: 8,
-    textAlign: "center",
-    marginBottom: 20,
+  pinLabel: { fontSize: 14, color: colors.textSub },
+  required: { color: "#DC2626", fontWeight: "700" },
+  forgotPin: {
+    fontSize: 13,
+    color: colors.gradientEnd,
+    textDecorationLine: "underline",
   },
-  submitButton: {
-    marginTop: 24,
-    backgroundColor: colors.primary,
-    borderRadius: 50,
-    padding: 16,
-    alignItems: "center",
-  },
-  submitText: { color: colors.white, fontWeight: "700" },
-  biometricsSection: {
-    margin: 16,
-    backgroundColor: "#F8F9FC",
-    borderRadius: 16,
-    padding: 16,
-  },
-  biometricsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  dontShowRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   textInput: {
     borderWidth: 1.5,
     borderColor: colors.greyLine,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 16,
+    padding: 14,
     fontSize: 16,
-    marginBottom: 20,
+    backgroundColor: "#FAFAFA",
+    marginBottom: 4,
   },
-  disabledButton: {
-    opacity: 0.6,
+  pinInput: {
+    borderWidth: 1.5,
+    borderColor: colors.greyLine,
+    borderRadius: 16,
+    padding: 14,
+    fontSize: 20,
+    letterSpacing: 8,
+    textAlign: "center",
+    backgroundColor: "#FAFAFA",
+    marginBottom: 4,
   },
+  inputError: {
+    borderColor: "#DC2626",
+    borderWidth: 2,
+  },
+  fieldError: {
+    color: "#DC2626",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  submitButton: { marginTop: 28, borderRadius: 50, overflow: "hidden" },
+  gradientButton: { paddingVertical: 16, alignItems: "center" },
+  submitText: { color: "#fff", fontSize: 17, fontWeight: "700", letterSpacing: 0.5 },
+  disabledButton: { opacity: 0.6 },
   errorBanner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 4,
+    marginTop: 16,
     backgroundColor: "#FEF2F2",
     borderWidth: 1,
     borderColor: "#FECACA",
@@ -335,6 +471,49 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     lineHeight: 18,
   },
+  biometricsSection: {
+    marginHorizontal: 20,
+    backgroundColor: "#F8F9FC",
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: colors.greyLine,
+    marginTop: 10,
+  },
+  biometricsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  biometricsText: { flex: 1, marginRight: 12 },
+  biometricsTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.navy,
+    marginBottom: 4,
+  },
+  biometricsSubtitle: { fontSize: 13, color: colors.textSub, lineHeight: 18 },
+  dontShowRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 8,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderWidth: 2,
+    borderColor: colors.greyLine,
+    borderRadius: 6,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
+  checkmark: { color: "#fff", fontSize: 14, fontWeight: "bold" },
+  dontShowText: { fontSize: 13, color: colors.textSub },
+  bottomSpacer: { height: 30 },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(15, 23, 42, 0.45)",

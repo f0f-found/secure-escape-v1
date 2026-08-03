@@ -1,4 +1,4 @@
-// app/beneficiaries/add-bank-account.tsx
+// app/beneficiaries/add-beneficiary-form.tsx
 import React, { useState } from "react";
 import {
   View,
@@ -8,9 +8,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Switch,
-  Modal,
-  FlatList,
   ActivityIndicator,
+  Modal,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -22,24 +21,7 @@ import { addBeneficiary } from "@/services/beneficiaryService";
 import { BeneficiaryResponse } from "@/types/beneficiary";
 import VerifyPinModal from "@/components/VerifyPinModal";
 
-// Bank list with realistic branch codes (South Africa)
-const banks = [
-  { name: "ABSA", branchCode: "632005" },
-  { name: "FNB", branchCode: "255005" },
-  { name: "Nedbank", branchCode: "198765" },
-  { name: "Standard Bank", branchCode: "051001" },
-  { name: "Capitec Bank", branchCode: "470010" },
-  { name: "TymeBank", branchCode: "678900" },
-  { name: "Discovery Bank", branchCode: "123456" },
-  { name: "Bank Zero", branchCode: "789012" },
-  { name: "African Bank", branchCode: "430000" },
-  { name: "Investec", branchCode: "580105" },
-  { name: "Sasfin", branchCode: "612100" },
-  { name: "Bidvest Bank", branchCode: "462005" },
-  { name: "Grindrod Bank", branchCode: "660000" },
-];
-
-// Validation helpers – updated limits
+// Validation helpers (pure functions, no state)
 const validateName = (name: string): string => {
   const trimmed = name.trim();
   if (!trimmed) return "Beneficiary name is required";
@@ -50,54 +32,38 @@ const validateName = (name: string): string => {
   return "";
 };
 
-const validateAccountNumber = (num: string): string => {
-  const trimmed = num.trim();
-  if (!trimmed) return "Account number is required";
-  if (!/^\d+$/.test(trimmed)) return "Digits only";
-  if (trimmed.length !== 16) return "Must be exactly 16 digits"; // Updated to 16
-  return "";
-};
-
-const validateBranchCode = (code: string): string => {
-  const trimmed = code.trim();
-  if (trimmed.length === 0) return ""; // optional
-  if (!/^\d+$/.test(trimmed)) return "Digits only";
-  if (trimmed.length > 6) return "Maximum 6 digits";
+const validatePhone = (phone: string): string => {
+  const trimmed = phone.trim();
+  if (!trimmed) return "Cellphone number is required";
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length !== 10) return "Must be exactly 10 digits";
+  if (!digits.startsWith("0")) return "Must start with 0 (e.g., 0821234567)";
   return "";
 };
 
 const validateReference = (ref: string): string => {
   const trimmed = ref.trim();
   if (trimmed.length === 0) return ""; // optional
-  if (trimmed.length > 25) return "Maximum 25 characters"; // Updated to 25
+  if (trimmed.length > 25) return "Maximum 25 characters";
   if (!/^[A-Za-z0-9\s\-_]+$/.test(trimmed))
     return "No special characters allowed";
   return "";
 };
 
-export default function AddBankAccount() {
+export default function AddBeneficiaryForm() {
   const router = useRouter();
 
-  // Form fields
-  const [beneficiaryName, setBeneficiaryName] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
-  const [selectedBank, setSelectedBank] = useState("");
-  const [branchCode, setBranchCode] = useState("");
-  const [oneTime, setOneTime] = useState(false);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [reference, setReference] = useState("");
+  const [oneTime, setOneTime] = useState(false);
   const [notification, setNotification] = useState("None"); // UI only
 
-  // Errors
+  // Field errors for real‑time feedback
   const [nameError, setNameError] = useState("");
-  const [accountError, setAccountError] = useState("");
-  const [bankError, setBankError] = useState("");
-  const [branchError, setBranchError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [referenceError, setReferenceError] = useState("");
 
-  // Modal
-  const [modalVisible, setModalVisible] = useState(false);
-
-  // Submission state
   const [verifyVisible, setVerifyVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,77 +76,61 @@ export default function AddBankAccount() {
     setShowErrorModal(true);
   };
 
-  // Real‑time validation (side‑effect free)
-  const isFormValid = (): boolean => {
+  // Simple validation check without side effects
+  const isFormValid = () => {
     return (
-      beneficiaryName.trim().length > 0 &&
-      accountNumber.trim().length > 0 &&
-      selectedBank.length > 0 &&
+      name.trim().length > 0 &&
+      phone.trim().length > 0 &&
       !nameError &&
-      !accountError &&
-      !bankError &&
-      !branchError &&
+      !phoneError &&
       !referenceError
     );
   };
 
-  // Validate all fields and update errors
+  // Validate all fields and update errors, return true if all valid
   const validateAll = (): boolean => {
-    const nameErr = validateName(beneficiaryName);
-    const accErr = validateAccountNumber(accountNumber);
-    const bankErr = selectedBank ? "" : "Please select a bank";
-    const branchErr = validateBranchCode(branchCode);
+    const nameErr = validateName(name);
+    const phoneErr = validatePhone(phone);
     const refErr = validateReference(reference);
 
     setNameError(nameErr);
-    setAccountError(accErr);
-    setBankError(bankErr);
-    setBranchError(branchErr);
+    setPhoneError(phoneErr);
     setReferenceError(refErr);
 
-    return !nameErr && !accErr && !bankErr && !branchErr && !refErr;
+    return !nameErr && !phoneErr && !refErr;
   };
 
-  // Handlers with live validation
   const handleNameChange = (text: string) => {
-    setBeneficiaryName(text);
+    setName(text);
     setNameError(validateName(text));
-    if (error) { setError(null); setShowErrorModal(false); }
+    if (error) {
+      setError(null);
+      setShowErrorModal(false);
+    }
   };
 
-  const handleAccountChange = (text: string) => {
-    const digits = text.replace(/\D/g, "").slice(0, 16); // enforce max 16
-    setAccountNumber(digits);
-    setAccountError(validateAccountNumber(digits));
-    if (error) { setError(null); setShowErrorModal(false); }
-  };
-
-  const handleBranchChange = (text: string) => {
-    const digits = text.replace(/\D/g, "").slice(0, 6);
-    setBranchCode(digits);
-    setBranchError(validateBranchCode(digits));
-    if (error) { setError(null); setShowErrorModal(false); }
+  const handlePhoneChange = (text: string) => {
+    setPhone(text);
+    setPhoneError(validatePhone(text));
+    if (error) {
+      setError(null);
+      setShowErrorModal(false);
+    }
   };
 
   const handleReferenceChange = (text: string) => {
     setReference(text);
     setReferenceError(validateReference(text));
-    if (error) { setError(null); setShowErrorModal(false); }
-  };
-
-  const handleBankSelect = (bank: { name: string; branchCode: string }) => {
-    setSelectedBank(bank.name);
-    setBranchCode(bank.branchCode); // auto‑populate branch code
-    setBankError("");
-    setModalVisible(false);
-    if (error) { setError(null); setShowErrorModal(false); }
+    if (error) {
+      setError(null);
+      setShowErrorModal(false);
+    }
   };
 
   const handleSubmit = () => {
     if (!validateAll()) {
       const err =
-        nameError || accountError || bankError || branchError || referenceError ||
-        "Please correct the highlighted fields.";
+        nameError || phoneError || referenceError || "Please correct the highlighted fields.";
       showError(err);
       return;
     }
@@ -193,11 +143,12 @@ export default function AddBankAccount() {
       setSaving(true);
       setError(null);
 
+      const digits = phone.replace(/\D/g, "");
       const created = await addBeneficiary({
-        name: beneficiaryName.trim(),
-        bankName: selectedBank,
-        accountNumber: accountNumber.trim(),
-        reference: reference.trim() || beneficiaryName.trim(),
+        name: name.trim(),
+        bankName: "Capitec",
+        accountNumber: digits,
+        reference: reference.trim() || name.trim(),
       });
 
       setCreatedBeneficiary(created);
@@ -208,18 +159,6 @@ export default function AddBankAccount() {
       setSaving(false);
     }
   };
-
-  const renderBankItem = ({ item }: { item: { name: string; branchCode: string } }) => (
-    <TouchableOpacity
-      style={styles.bankItem}
-      onPress={() => handleBankSelect(item)}
-    >
-      <Text style={styles.bankItemText}>{item.name}</Text>
-      {selectedBank === item.name && (
-        <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
-      )}
-    </TouchableOpacity>
-  );
 
   return (
     <View style={styles.container}>
@@ -239,85 +178,52 @@ export default function AddBankAccount() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          <Text style={styles.infoText}>
-            Ensure you enter the correct details. Only Capitec account numbers
-            are verified against the actual account holder.
+          {/* Beneficiary Name */}
+          <Text style={styles.label}>
+            Beneficiary Name <Text style={styles.requiredAsterisk}>*</Text>
           </Text>
+          <TextInput
+            style={[styles.input, nameError && styles.inputError]}
+            value={name}
+            onChangeText={handleNameChange}
+            placeholder="Mr M Djonga"
+            placeholderTextColor="#A0A4B8"
+            maxLength={25}
+          />
+          {!!nameError && <Text style={styles.errorText}>{nameError}</Text>}
 
-          {/* Beneficiary name */}
-          <View style={styles.field}>
-            <Text style={styles.label}>
-              Beneficiary name <Text style={styles.requiredAsterisk}>*</Text>
-            </Text>
-            <TextInput
-              style={[styles.input, nameError && styles.inputError]}
-              value={beneficiaryName}
-              onChangeText={handleNameChange}
-              placeholder="e.g., John Doe"
-              placeholderTextColor="#A0A4B8"
-              maxLength={25}
-            />
-            {!!nameError && <Text style={styles.errorText}>{nameError}</Text>}
-          </View>
+          {/* Cellphone number */}
+          <Text style={[styles.label, { marginTop: 16 }]}>
+            Cellphone number <Text style={styles.requiredAsterisk}>*</Text>
+          </Text>
+          <TextInput
+            style={[styles.input, phoneError && styles.inputError]}
+            value={phone}
+            onChangeText={handlePhoneChange}
+            keyboardType="phone-pad"
+            placeholder="082 123 4567"
+            placeholderTextColor="#A0A4B8"
+            maxLength={10}
+          />
+          {!!phoneError && <Text style={styles.errorText}>{phoneError}</Text>}
 
-          {/* Account number */}
-          <View style={styles.field}>
-            <Text style={styles.label}>
-              Account number <Text style={styles.requiredAsterisk}>*</Text>
-            </Text>
-            <TextInput
-              style={[styles.input, accountError && styles.inputError]}
-              value={accountNumber}
-              onChangeText={handleAccountChange}
-              keyboardType="number-pad"
-              placeholder="1234567890123456"
-              placeholderTextColor="#A0A4B8"
-              maxLength={16}
-            />
-            {!!accountError && (
-              <Text style={styles.errorText}>{accountError}</Text>
-            )}
-          </View>
+          {/* Beneficiary Reference */}
+          <Text style={[styles.label, { marginTop: 16 }]}>
+            Beneficiary Reference
+          </Text>
+          <TextInput
+            style={[styles.input, referenceError && styles.inputError]}
+            value={reference}
+            onChangeText={handleReferenceChange}
+            placeholder="M LEHOKO"
+            placeholderTextColor="#A0A4B8"
+            maxLength={25}
+          />
+          {!!referenceError && (
+            <Text style={styles.errorText}>{referenceError}</Text>
+          )}
 
-          {/* Bank selection */}
-          <View style={styles.field}>
-            <Text style={styles.label}>
-              Choose bank <Text style={styles.requiredAsterisk}>*</Text>
-            </Text>
-            <TouchableOpacity
-              style={[styles.selectInput, bankError && styles.inputError]}
-              onPress={() => setModalVisible(true)}
-            >
-              <Text
-                style={
-                  selectedBank ? styles.selectText : styles.placeholderText
-                }
-              >
-                {selectedBank || "Select bank"}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color="#aaa" />
-            </TouchableOpacity>
-            {!!bankError && <Text style={styles.errorText}>{bankError}</Text>}
-          </View>
-
-          {/* Branch code */}
-          <View style={styles.field}>
-            <Text style={styles.label}>Branch code</Text>
-            <TextInput
-              style={[styles.input, branchError && styles.inputError]}
-              value={branchCode}
-              onChangeText={handleBranchChange}
-              keyboardType="number-pad"
-              placeholder="e.g., 123456"
-              placeholderTextColor="#A0A4B8"
-              maxLength={6}
-            />
-            {!!branchError && (
-              <Text style={styles.errorText}>{branchError}</Text>
-            )}
-          </View>
-
-          {/* One‑time switch */}
+          {/* One-time beneficiary switch */}
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.switchLabel}>One-time beneficiary</Text>
@@ -330,23 +236,7 @@ export default function AddBankAccount() {
             />
           </View>
 
-          {/* Reference */}
-          <View style={styles.field}>
-            <Text style={styles.label}>Beneficiary reference</Text>
-            <TextInput
-              style={[styles.input, referenceError && styles.inputError]}
-              value={reference}
-              onChangeText={handleReferenceChange}
-              placeholder="M LEHOKO"
-              placeholderTextColor="#A0A4B8"
-              maxLength={25}
-            />
-            {!!referenceError && (
-              <Text style={styles.errorText}>{referenceError}</Text>
-            )}
-          </View>
-
-          {/* Notification (UI only) */}
+          {/* Payment notification (UI only) */}
           <View style={styles.notificationRow}>
             <Text style={styles.label}>Payment notification</Text>
             <TouchableOpacity style={styles.notificationSelector}>
@@ -410,7 +300,7 @@ export default function AddBankAccount() {
               {saving ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.submitText}>Add Beneficiary</Text>
+                <Text style={styles.submitText}>Add</Text>
               )}
             </TouchableOpacity>
           )}
@@ -448,31 +338,6 @@ export default function AddBankAccount() {
           </View>
         </View>
       </Modal>
-
-      {/* Bank selection modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Bank</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={24} color={colors.navy} />
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={banks}
-              keyExtractor={(item) => item.name}
-              renderItem={renderBankItem}
-              showsVerticalScrollIndicator={false}
-            />
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -498,16 +363,6 @@ const styles = StyleSheet.create({
     marginTop: -20,
   },
   scrollContent: { paddingBottom: 20 },
-  infoText: {
-    fontSize: 13,
-    color: colors.textSub,
-    backgroundColor: "#F8F9FC",
-    padding: 14,
-    borderRadius: 16,
-    marginBottom: 20,
-    lineHeight: 18,
-  },
-  field: { marginBottom: 20 },
   label: {
     fontSize: 14,
     fontWeight: "600",
@@ -537,24 +392,12 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     marginTop: 2,
   },
-  selectInput: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: colors.greyLine || "#E2E8F0",
-    borderRadius: 14,
-    padding: 14,
-    backgroundColor: "#FAFAFA",
-    marginBottom: 4,
-  },
-  selectText: { fontSize: 15, color: colors.navy },
-  placeholderText: { fontSize: 15, color: "#aaa" },
   switchRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 20,
+    marginTop: 16,
+    marginBottom: 12,
     backgroundColor: "#F8F9FC",
     padding: 14,
     borderRadius: 16,
@@ -570,20 +413,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginTop: 12,
   },
   notificationSelector: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#F0F0F0",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    backgroundColor: "#F5F5F5",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 20,
   },
   notificationText: { fontSize: 14, color: colors.navy },
   submitButton: {
-    marginTop: 16,
+    marginTop: 28,
     backgroundColor: colors.primary,
     borderRadius: 50,
     paddingVertical: 16,
@@ -609,53 +452,55 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     lineHeight: 18,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
   errorModal: {
     width: "100%",
     backgroundColor: "#fff",
-    borderRadius: 28,
-    padding: 24,
+    borderRadius: 24,
+    padding: 22,
     alignItems: "center",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderRadius: 28,
-    padding: 20,
-    width: "85%",
-    maxHeight: "70%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
   },
   modalIconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#FEE2E2",
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "#FEF2F2",
+    alignItems: "center",
     justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  modalTitle: { fontSize: 18, fontWeight: "700", color: colors.navy },
-  modalMessage: { fontSize: 14, color: colors.textSub, textAlign: "center", marginTop: 8 },
-  bankItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: colors.navy,
+    textAlign: "center",
+  },
+  modalMessage: {
+    marginTop: 8,
+    color: colors.textSub,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+  },
+  modalButton: {
+    marginTop: 20,
+    width: "100%",
+    backgroundColor: colors.primary,
+    borderRadius: 50,
     paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+    alignItems: "center",
   },
-  bankItemText: { fontSize: 16, color: colors.navy },
+  modalButtonText: {
+    color: "#fff",
+    fontWeight: "800",
+    fontSize: 15,
+  },
   successBox: {
     marginTop: 22,
     backgroundColor: "#F0FDF4",
@@ -701,17 +546,5 @@ const styles = StyleSheet.create({
   payButtonText: {
     color: "#fff",
     fontWeight: "800",
-  },
-  modalButton: {
-    marginTop: 20,
-    backgroundColor: colors.primary,
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  modalButtonText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 15,
   },
 });
