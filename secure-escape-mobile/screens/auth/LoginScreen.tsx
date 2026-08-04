@@ -9,6 +9,7 @@ import {
   Modal,
   ScrollView,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors } from "@/utils/theme";
@@ -16,7 +17,7 @@ import { login } from "@/services/authService";
 import { saveAuthSession } from "@/services/tokenStore";
 import * as Location from "expo-location";
 import Constants from "expo-constants";
-import { Platform } from "react-native";
+
 
 interface LoginScreenProps {
   onLoginSuccess?: () => void;
@@ -231,7 +232,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       </View>
 
       <View style={styles.pinArea}>
-        {/* Email field - NOW maxLength 25 */}
+        {/* Email field - NOW maxLength 40 */}
         <View style={styles.pinLabelRow}>
           <Text style={styles.pinLabel}>Email <Text style={styles.required}></Text></Text>
         </View>
@@ -244,7 +245,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           onBlur={handleEmailBlur}
           placeholder="Enter your email"
           placeholderTextColor="#ccc"
-          maxLength={25} // now limits to 25 characters not sure if this is realistic though
+          maxLength={40} // now limits to 40 characters
         />
         {emailError && <Text style={styles.fieldError}>{emailError}</Text>}
 
