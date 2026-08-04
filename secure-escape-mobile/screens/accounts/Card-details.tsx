@@ -387,7 +387,7 @@ export default function CardDetail() {
             <Ionicons name="warning-outline" size={48} color="#FF6B6B" />
             <Text style={styles.confirmTitle}>Freeze your card?</Text>
             <Text style={styles.confirmDescription}>
-              You are about to freeze your card. No payments, subscriptions or withdrawals can be made while it's frozen.
+              You are about to freeze your card. No payments, subscriptions or withdrawals can be made while it&apos;s frozen.
             </Text>
             <View style={styles.confirmButtonRow}>
               <TouchableOpacity
