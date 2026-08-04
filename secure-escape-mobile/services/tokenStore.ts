@@ -100,13 +100,7 @@ export async function getLastActivity() {
 }
 
 export async function isSessionExpired() {
-  const lastActivity = await getLastActivity();
-
-  if (!lastActivity) {
-    return true;
-  }
-
-  const inActivityBoundary = 60 * 3000;
-
-  return Date.now() - lastActivity > inActivityBoundary;
+  // Disable automatic inactivity logout in the mobile app.
+  // The session is now treated as active until the user explicitly logs out.
+  return false;
 }
