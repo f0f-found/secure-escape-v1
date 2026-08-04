@@ -19,7 +19,7 @@ import { ProfileMeResponse } from "@/types/profile";
 import { useRouter } from "expo-router";
 import { logout } from "@/services/authService";
 import { useFocusEffect } from "@react-navigation/native";
-import BottomNav from "@/components/BottomNav";
+// BottomNav is provided by the (tabs) layout now.
 
 const { width } = Dimensions.get("window");
 
@@ -257,7 +257,7 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      <BottomNav />
+      
     </View>
   );
 }
