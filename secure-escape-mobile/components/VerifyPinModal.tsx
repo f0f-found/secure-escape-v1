@@ -91,10 +91,11 @@ export default function VerifyPinModal({
             placeholderTextColor="#ccc"
             keyboardType="number-pad"
             secureTextEntry
-            maxLength={6}
+            maxLength={4}
             value={pin}
             onChangeText={(v) => {
-              setPin(v);
+              const digitsOnly = v.replace(/[^0-9]/g, "");
+              setPin(digitsOnly);
               setError("");
             }}
             autoFocus
