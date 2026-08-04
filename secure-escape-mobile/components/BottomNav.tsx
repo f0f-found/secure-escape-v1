@@ -1,4 +1,3 @@
-// components/BottomNav.tsx
 import { useRouter, usePathname } from "expo-router";
 import {
   TouchableOpacity,
@@ -24,7 +23,30 @@ export default function BottomNav() {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Create animation values for each tab
+  const getTabBase = (path: string) => {
+    if (path === "/(tabs)") return "/";
+    return path.replace("/(tabs)", "").replace(/\/$/, "");
+  };
+
+  const isActive = (path: string) => {
+    const base = getTabBase(path);
+    const normalizedPath = pathname.replace(/\/$/, "");
+    
+    // Check both stripped base and full group path
+    if (normalizedPath === base || normalizedPath === path) return true;
+    
+    // Special case for Home
+    if (base === "/") {
+      return (
+        normalizedPath === "/" ||
+        normalizedPath === "" ||
+        normalizedPath === "/(tabs)" ||
+        normalizedPath === "/(tabs)/index"
+      );
+    }
+    return false;
+  };
+
   const scaleAnims = useRef<Record<string, Animated.Value>>(
     tabs.reduce((acc, tab) => {
       acc[tab.path] = new Animated.Value(1);
@@ -32,18 +54,6 @@ export default function BottomNav() {
     }, {} as Record<string, Animated.Value>)
   ).current;
 
-  const isActive = (path: string) => {
-    if (path === "/(tabs)") {
-      return (
-        pathname === "/" ||
-        pathname === "/(tabs)" ||
-        pathname === "/(tabs)/index"
-      );
-    }
-    return pathname === path;
-  };
-
-  // Update animations when active tab changes
   useEffect(() => {
     tabs.forEach((tab) => {
       const active = isActive(tab.path);
@@ -115,7 +125,6 @@ const styles = StyleSheet.create({
     borderTopColor: "#E2E8F0",
     paddingVertical: 8,
     paddingBottom: 8,
-    // Subtle shadow for depth
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.05,
@@ -135,8 +144,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   activeIconWrapper: {
-    // Soft pill background for active icon
-    backgroundColor: colors.primary + "15", // 15% opacity
+    backgroundColor: colors.primary + "15",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 20,
