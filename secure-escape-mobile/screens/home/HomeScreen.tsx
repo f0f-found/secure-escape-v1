@@ -1,4 +1,4 @@
-
+// app/(tabs)/index.tsx
 import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
@@ -113,23 +113,10 @@ export default function HomeScreen() {
       link: "/transactions/create-cash-send",
     },
     {
-      label: "PayShap",
-      icon: "document-text",
-      bg: "#F0FDF4",
-      link: null, // Coming soon
-    },
-    {
       label: "Cards",
       icon: "card",
       bg: "#FFF5F5",
       link: "/(tabs)/cards",
-    },
-    
-    {
-      label: "Buy Prepaid",
-      icon: "phone-portrait",
-      bg: "#FFFBEB",
-      link: null, // Coming soon",
     },
     {
       label: "Transaction report",
@@ -137,7 +124,6 @@ export default function HomeScreen() {
       bg: "#EEEEFF",
       link: "/transactions/report",
     },
-    // { label: "Buy Prepaid", icon: "phone-portrait", bg: "#FFFBEB" },
     {
       label: "Financial Advice",
       icon: "document-text",
@@ -179,8 +165,6 @@ export default function HomeScreen() {
               Good afternoon, {profile?.fullName || "User"}
             </Text>
           </View>
-
-          
         </View>
 
         {/* Loading / Error states */}
@@ -191,14 +175,23 @@ export default function HomeScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Account Cards */}
+        {/* Account Cards – now clickable */}
         <View style={styles.cardsRow}>
           {accountCards.map((card) => (
             <TouchableOpacity
               key={card.id}
               activeOpacity={0.9}
               style={styles.cardWrapper}
-              // Optionally add navigationr to account details if needed
+              onPress={() =>
+                router.push({
+                  pathname: "/(tabs)/accounts/account-history",
+                  params: {
+                    accountId: card.id,
+                    accountName: card.name,
+                    balance: card.balance.toString(),
+                  },
+                })
+              }
             >
               <LinearGradient
                 colors={card.gradient}
@@ -256,8 +249,6 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
-
-      
     </View>
   );
 }
