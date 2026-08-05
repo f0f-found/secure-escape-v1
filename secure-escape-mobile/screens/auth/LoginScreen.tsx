@@ -9,6 +9,7 @@ import {
   Modal,
   ScrollView,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors } from "@/utils/theme";
@@ -16,7 +17,6 @@ import { login } from "@/services/authService";
 import { saveAuthSession } from "@/services/tokenStore";
 import * as Location from "expo-location";
 import Constants from "expo-constants";
-import { Platform } from "react-native";
 
 interface LoginScreenProps {
   onLoginSuccess?: () => void;
@@ -35,7 +35,6 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [pinError, setPinError] = useState<string | null>(null);
 
-  
   const showError = (message: string) => {
     setError(message);
     setShowErrorModal(true);
@@ -97,6 +96,46 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     };
   };
 
+  // ----- Improved error handling -----
+  const getFriendlyErrorMessage = (error: unknown): string => {
+    if (!error) return "An unexpected error occurred. Please try again.";
+
+    // If it's a string, we can try to match common patterns
+    if (typeof error === "string") {
+      const lower = error.toLowerCase();
+      if (lower.includes("network") || lower.includes("connection") || lower.includes("timeout")) {
+        return "Network error. Please check your connection.";
+      }
+      if (lower.includes("invalid") || lower.includes("credentials") || lower.includes("incorrect")) {
+        return "Invalid email or PIN. Please try again.";
+      }
+      if (lower.includes("server") || lower.includes("internal") || lower.includes("500")) {
+        return "Something went wrong. Please try again later.";
+      }
+      // If it's a known backend message, we can still return a generic one
+      return "Unable to sign in. Please try again.";
+    }
+
+    // If it's an Error object
+    if (error instanceof Error) {
+      const message = error.message;
+      const lower = message.toLowerCase();
+      if (lower.includes("network") || lower.includes("connection") || lower.includes("timeout")) {
+        return "Network error. Please check your connection.";
+      }
+      if (lower.includes("invalid") || lower.includes("credentials") || lower.includes("incorrect")) {
+        return "Invalid email or PIN. Please try again.";
+      }
+      if (lower.includes("server") || lower.includes("internal") || lower.includes("500")) {
+        return "Something went wrong. Please try again later.";
+      }
+      // For any other Error, return a generic but polite message
+      return "Unable to sign in. Please try again.";
+    }
+
+    return "An unexpected error occurred. Please try again.";
+  };
+
   const handleSubmit = async () => {
     const validationMessage = getValidationMessage();
 
@@ -129,12 +168,14 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
       onLoginSuccess?.();
     } catch (error) {
-      showError(error instanceof Error ? error.message : "Please try again.");
+      // Use our friendly error mapper
+      const friendlyMessage = getFriendlyErrorMessage(error);
+      showError(friendlyMessage);
     } finally {
       setIsSubmitting(false);
     }
   };
-  
+
   const validateEmail = (value: string) => {
     const trimmed = value.trim();
     if (!trimmed) {
@@ -206,7 +247,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     const trimmedEmail = email.trim();
     const trimmedPin = pin.trim();
     const emailValid = trimmedEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
-    const pinValid = trimmedPin && /^\d{4}$/.test(trimmedPin); // Strictly 4 digits
+    const pinValid = trimmedPin && /^\d{4}$/.test(trimmedPin);
     return emailValid && pinValid;
   };
 
@@ -231,7 +272,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       </View>
 
       <View style={styles.pinArea}>
-        {/* Email field - NOW maxLength 25 */}
+        {/* Email field */}
         <View style={styles.pinLabelRow}>
           <Text style={styles.pinLabel}>Email <Text style={styles.required}></Text></Text>
         </View>
@@ -244,11 +285,11 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           onBlur={handleEmailBlur}
           placeholder="Enter your email"
           placeholderTextColor="#ccc"
-          maxLength={25} // now limits to 25 characters not sure if this is realistic though
+          maxLength={40}
         />
         {emailError && <Text style={styles.fieldError}>{emailError}</Text>}
 
-        {/* PIN field - NOW strictly 4 digits */}
+        {/* PIN field */}
         <View style={[styles.pinLabelRow, { marginTop: 16 }]}>
           <Text style={styles.pinLabel}>Enter app PIN  <Text style={styles.required}></Text></Text>
           <TouchableOpacity>
@@ -258,7 +299,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
         <TextInput
           style={[styles.pinInput, pinError && styles.inputError]}
           secureTextEntry
-          maxLength={4} // <-- STRICTLY 4
+          maxLength={4}
           keyboardType="numeric"
           value={pin}
           onChangeText={handlePinChange}
@@ -364,6 +405,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   );
 }
 
+// Styles remain unchanged (keep as they were)
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   scrollContent: { paddingBottom: 40 },

@@ -1,3 +1,4 @@
+// app/secure-escape/mode-selection.tsx
 import React, { useState, useRef, useEffect } from "react";
 import {
   View,
@@ -26,7 +27,7 @@ export default function ModeSelection() {
   const modalFadeAnim = useRef(new Animated.Value(0)).current;
   const modalScaleAnim = useRef(new Animated.Value(0.9)).current;
 
-  // Animation for the lock icon (continuous pulse + rotation)
+  // Animation for the shield icon (continuous pulse + rotation)
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
@@ -47,7 +48,7 @@ export default function ModeSelection() {
       ]),
     ).start();
 
-    // Gentle rotation for the lock (just a few degrees back and forth)
+    // Gentle rotation for the shield (just a few degrees back and forth)
     Animated.loop(
       Animated.sequence([
         Animated.timing(rotateAnim, {
@@ -147,10 +148,11 @@ export default function ModeSelection() {
         colors={["#5B8DEF", "#6C63FF"]}
         style={styles.gradientHeader}
       >
-        <Text style={styles.backArrow} onPress={() => router.back()}>
-          ‹
-        </Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Choose Protection Mode</Text>
+        <View style={{ width: 40 }} />
       </LinearGradient>
 
       <View style={styles.whiteCard}>
@@ -163,7 +165,7 @@ export default function ModeSelection() {
           <Text style={styles.link}>I don&apos;t know my risk level </Text>
         </TouchableOpacity>
 
-        {/* Animated lock/shield icon in-between */}
+        {/* Animated shield icon */}
         <Animated.View
           style={[
             styles.iconContainer,
@@ -343,15 +345,20 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   gradientHeader: {
-    paddingTop: 65,
+    paddingTop: 100, // Updated to match your design
     paddingHorizontal: 20,
     paddingBottom: 30,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
   },
-  backArrow: { fontSize: 18, color: "#fff" },
-  headerTitle: { fontSize: 20, fontWeight: "800", color: "#fff" },
+  backBtn: { padding: 4 },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#fff",
+    flex: 1,
+    textAlign: "center",
+  },
   whiteCard: {
     flex: 1,
     backgroundColor: "#fff",

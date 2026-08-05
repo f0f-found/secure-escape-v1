@@ -1,4 +1,4 @@
-
+// app/(tabs)/index.tsx
 import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
@@ -19,6 +19,7 @@ import { ProfileMeResponse } from "@/types/profile";
 import { useRouter } from "expo-router";
 import { logout } from "@/services/authService";
 import { useFocusEffect } from "@react-navigation/native";
+// BottomNav is provided by the (tabs) layout now.
 
 const { width } = Dimensions.get("window");
 
@@ -112,23 +113,10 @@ export default function HomeScreen() {
       link: "/transactions/create-cash-send",
     },
     {
-      label: "PayShap",
-      icon: "document-text",
-      bg: "#F0FDF4",
-      link: null, // Coming soon
-    },
-    {
       label: "Cards",
       icon: "card",
       bg: "#FFF5F5",
-      link: null,
-    },
-    
-    {
-      label: "Buy Prepaid",
-      icon: "phone-portrait",
-      bg: "#FFFBEB",
-      link: null,
+      link: "/(tabs)/cards",
     },
     {
       label: "Transaction report",
@@ -136,7 +124,6 @@ export default function HomeScreen() {
       bg: "#EEEEFF",
       link: "/transactions/report",
     },
-    // { label: "Buy Prepaid", icon: "phone-portrait", bg: "#FFFBEB" },
     {
       label: "Financial Advice",
       icon: "document-text",
@@ -164,106 +151,110 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.scrollContent}
-    >
-      {/* Header – with logout button */}
-      <View style={styles.headerComponent}>
-        <View style={styles.header}>
-          <Text style={styles.title}>My Dashboard</Text>
-          <Text style={styles.greeting}>
-            Good afternoon, {profile?.fullName || "User"}
-          </Text>
+    <View style={styles.pageContainer}>
+      <ScrollView
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Header – with logout button */}
+        <View style={styles.headerComponent}>
+          <View style={styles.header}>
+            <Text style={styles.title}>My Dashboard</Text>
+            <Text style={styles.greeting}>
+              Good afternoon, {profile?.fullName || "User"}
+            </Text>
+          </View>
         </View>
-        <TouchableOpacity
-          style={styles.logoutButton}
-          activeOpacity={0.8}
-          onPress={logoutButton}
-        >
-          <Ionicons name="log-out-outline" size={18} color={colors.white} />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
 
-      {/* Loading / Error states */}
-      {isLoading && <Text style={styles.stateText}>Loading accounts...</Text>}
-      {error && (
-        <TouchableOpacity onPress={loadAccounts}>
-          <Text style={styles.errorText}>{error}</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Account Cards */}
-      <View style={styles.cardsRow}>
-        {accountCards.map((card) => (
-          <TouchableOpacity
-            key={card.id}
-            activeOpacity={0.9}
-            style={styles.cardWrapper}
-            // Optionally add navigation to account details if needed
-          >
-            <LinearGradient
-              colors={card.gradient}
-              style={styles.accountCard}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View
-                style={[styles.iconCircle, { backgroundColor: card.iconBg }]}
-              >
-                <Ionicons
-                  name={card.icon as keyof typeof Ionicons.glyphMap}
-                  size={24}
-                  color={colors.primary}
-                />
-              </View>
-              <Text style={styles.accName}>{card.name}</Text>
-              <Text style={styles.accBalance}>
-                R {card.balance.toLocaleString()}
-              </Text>
-              {card.isDecoyView && (
-                <Text style={styles.decoyBadge}>⚠ Decoy View</Text>
-              )}
-            </LinearGradient>
+        {/* Loading / Error states */}
+        {isLoading && <Text style={styles.stateText}>Loading accounts...</Text>}
+        {error && (
+          <TouchableOpacity onPress={loadAccounts}>
+            <Text style={styles.errorText}>{error}</Text>
           </TouchableOpacity>
-        ))}
-      </View>
+        )}
 
-      {/* Favourites */}
-      <View style={styles.favouritesSection}>
-        <View style={styles.favouritesHeader}>
-          <Text style={styles.favTitle}>Favourites</Text>
-          <TouchableOpacity>
-            <Text style={styles.editLink}>edit ›</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.favGrid}>
-          {favourites.map((item, idx) => (
+        {/* Account Cards – now clickable */}
+        <View style={styles.cardsRow}>
+          {accountCards.map((card) => (
             <TouchableOpacity
-              key={idx}
-              style={styles.favTile}
-              activeOpacity={0.7}
-              onPress={() => handleFavPress(item)}
+              key={card.id}
+              activeOpacity={0.9}
+              style={styles.cardWrapper}
+              onPress={() =>
+                router.push({
+                  pathname: "/(tabs)/accounts/account-history",
+                  params: {
+                    accountId: card.id,
+                    accountName: card.name,
+                    balance: card.balance.toString(),
+                  },
+                })
+              }
             >
-              <View style={[styles.favIcon, { backgroundColor: item.bg }]}>
-                <Ionicons
-                  name={item.icon as keyof typeof Ionicons.glyphMap}
-                  size={24}
-                  color={colors.primary}
-                />
-              </View>
-              <Text style={styles.favLabel}>{item.label}</Text>
+              <LinearGradient
+                colors={card.gradient}
+                style={styles.accountCard}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <View
+                  style={[styles.iconCircle, { backgroundColor: card.iconBg }]}
+                >
+                  <Ionicons
+                    name={card.icon as keyof typeof Ionicons.glyphMap}
+                    size={24}
+                    color={colors.primary}
+                  />
+                </View>
+                <Text style={styles.accName}>{card.name}</Text>
+                <Text style={styles.accBalance}>
+                  R {card.balance.toLocaleString()}
+                </Text>
+                {card.isDecoyView && (
+                  <Text style={styles.decoyBadge}>⚠ Decoy View</Text>
+                )}
+              </LinearGradient>
             </TouchableOpacity>
           ))}
         </View>
-      </View>
-    </ScrollView>
+
+        {/* Favourites */}
+        <View style={styles.favouritesSection}>
+          <View style={styles.favouritesHeader}>
+            <Text style={styles.favTitle}>Favourites</Text>
+            <TouchableOpacity>
+              <Text style={styles.editLink}>edit ›</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.favGrid}>
+            {favourites.map((item, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={styles.favTile}
+                activeOpacity={0.7}
+                onPress={() => handleFavPress(item)}
+              >
+                <View style={[styles.favIcon, { backgroundColor: item.bg }]}>
+                  <Ionicons
+                    name={item.icon as keyof typeof Ionicons.glyphMap}
+                    size={24}
+                    color={colors.primary}
+                  />
+                </View>
+                <Text style={styles.favLabel}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  pageContainer: { flex: 1, backgroundColor: colors.greyBg },
   container: { flex: 1, backgroundColor: colors.greyBg },
   scrollContent: {
     paddingBottom: 40,

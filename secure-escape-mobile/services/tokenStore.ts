@@ -106,7 +106,7 @@ export async function isSessionExpired() {
     return true;
   }
 
-  const inActivityBoundary = 60 * 3000;
-
+  // Keep the session alive for 5 minutes after the last recorded activity.
+  const inActivityBoundary = 5 * 60 * 1000;
   return Date.now() - lastActivity > inActivityBoundary;
 }
