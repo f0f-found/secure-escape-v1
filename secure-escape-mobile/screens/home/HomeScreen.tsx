@@ -184,7 +184,7 @@ export default function HomeScreen() {
               style={styles.cardWrapper}
               onPress={() =>
                 router.push({
-                  pathname: "/(tabs)/accounts/account-history",
+                  pathname: "/(tabs)/accounts/account-detail",
                   params: {
                     accountId: card.id,
                     accountName: card.name,
