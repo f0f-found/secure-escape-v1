@@ -1,3 +1,4 @@
+// app/secure-escape/emergency-contact.tsx
 import React, { useState, useRef } from "react";
 import {
   View,
@@ -159,11 +160,12 @@ export default function EmergencyContact() {
     return null;
   };
 
+  // ----- NAVIGATION: defaults to congrats unless from === "manage" -----
   const goToNextScreen = () => {
-    if (from === "onboarding") {
-      router.push("/secure-escape/congrats");
-    } else {
+    if (from === "manage") {
       router.push("/secure-escape/manage-secure-escape");
+    } else {
+      router.push("/secure-escape/congrats");
     }
   };
 
