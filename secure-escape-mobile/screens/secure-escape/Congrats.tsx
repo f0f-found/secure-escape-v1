@@ -1,4 +1,4 @@
-// screens/Screen8_Congrats.js - Confetti icons only around the shield
+// app/secure-escape/congrats.tsx
 import React, { useEffect, useRef, useState } from "react";
 import {
   View,
@@ -23,15 +23,15 @@ export default function Congrats() {
   const scaleAnim = useRef(new Animated.Value(0.6)).current;
   const lockShake = useRef(new Animated.Value(0)).current;
 
-  // Confetti pieces positioned relative to the shield (center at 0,0)
+  // Confetti pieces
   const [confettiItems] = useState(() => {
     const items = [];
     const icons = ["✨", "⭐", "🌟", "💫", "⚡", "🔒"];
-    const angles = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330]; // degrees
+    const angles = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330];
     for (let i = 0; i < 12; i++) {
       const angle = angles[i % angles.length];
       const rad = (angle * Math.PI) / 180;
-      const radius = 60 + Math.random() * 20; // distance from center
+      const radius = 60 + Math.random() * 20;
       const startX = Math.cos(rad) * radius;
       const startY = Math.sin(rad) * radius;
       items.push({
@@ -48,68 +48,38 @@ export default function Congrats() {
     return items;
   });
 
-  // Animated values: translateX, translateY, opacity
   const [animations] = useState(() =>
     confettiItems.map(() => ({
       translateX: new Animated.Value(0),
       translateY: new Animated.Value(0),
       opacity: new Animated.Value(0),
-    })),
+    }))
   );
 
   useEffect(() => {
-    // Entrance animations for text and shield
+    // Entrance animations
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 4,
-        tension: 60,
-        useNativeDriver: true,
-      }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, friction: 4, tension: 60, useNativeDriver: true }),
     ]).start();
 
-    // Shield shake celebration
+    // Shield shake celebration (3 loops)
     Animated.loop(
       Animated.sequence([
-        Animated.timing(lockShake, {
-          toValue: 4,
-          duration: 50,
-          useNativeDriver: true,
-        }),
-        Animated.timing(lockShake, {
-          toValue: -4,
-          duration: 50,
-          useNativeDriver: true,
-        }),
-        Animated.timing(lockShake, {
-          toValue: 2,
-          duration: 50,
-          useNativeDriver: true,
-        }),
-        Animated.timing(lockShake, {
-          toValue: -2,
-          duration: 50,
-          useNativeDriver: true,
-        }),
-        Animated.timing(lockShake, {
-          toValue: 0,
-          duration: 50,
-          useNativeDriver: true,
-        }),
+        Animated.timing(lockShake, { toValue: 4, duration: 50, useNativeDriver: true }),
+        Animated.timing(lockShake, { toValue: -4, duration: 50, useNativeDriver: true }),
+        Animated.timing(lockShake, { toValue: 2, duration: 50, useNativeDriver: true }),
+        Animated.timing(lockShake, { toValue: -2, duration: 50, useNativeDriver: true }),
+        Animated.timing(lockShake, { toValue: 0, duration: 50, useNativeDriver: true }),
       ]),
-      { iterations: 3 },
+      { iterations: 3 }
     ).start();
 
-    // Animate each confetti piece: burst outward and fade
+    // Confetti burst
     confettiItems.forEach((item, idx) => {
       const anim = animations[idx];
       const rad = (item.angle * Math.PI) / 180;
-      const outX = Math.cos(rad) * 100; // outward by 100px
+      const outX = Math.cos(rad) * 100;
       const outY = Math.sin(rad) * 100;
       Animated.sequence([
         Animated.delay(item.delay),
@@ -140,9 +110,9 @@ export default function Congrats() {
     });
   }, []);
 
-  const handleOk = () => {
+  const handleGoHome = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push("/(tabs)/settings");
+    router.replace("/(tabs)");
   };
 
   const shakeInterpolate = lockShake.interpolate({
@@ -156,18 +126,15 @@ export default function Congrats() {
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      <LinearGradient
-        colors={["#5B8DEF", "#6C63FF"]}
-        style={styles.gradientHeader}
-      >
-        <Text style={styles.backArrow} onPress={() => router.back()}>
-          ‹
-        </Text>
-        <Text style={styles.headerTitle}>Secure Escape Active</Text>
+      <LinearGradient colors={["#5B8DEF", "#6C63FF"]} style={styles.gradientHeader}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Protection Active</Text>
       </LinearGradient>
 
       <View style={styles.whiteCard}>
-        {/* Shield icon container with confetti anchored */}
+        {/* Shield + confetti */}
         <View style={styles.iconWrapper}>
           <Animated.View
             style={[
@@ -177,19 +144,11 @@ export default function Congrats() {
               },
             ]}
           >
-            <LinearGradient
-              colors={["#EDE9FE", "#DBEAFE"]}
-              style={styles.iconCircle}
-            >
-              <Ionicons
-                name="shield-checkmark"
-                size={64}
-                color={colors.primary}
-              />
+            <LinearGradient colors={["#EDE9FE", "#DBEAFE"]} style={styles.iconCircle}>
+              <Ionicons name="shield-checkmark" size={64} color={colors.primary} />
             </LinearGradient>
           </Animated.View>
 
-          {/* Confetti icons positioned relative to this wrapper */}
           {confettiItems.map((item, idx) => (
             <Animated.Text
               key={item.id}
@@ -198,7 +157,7 @@ export default function Congrats() {
                 {
                   fontSize: item.size,
                   left: width / 2 - 60 + item.startX,
-                  top: 60 + item.startY, // roughly center of the shield
+                  top: 60 + item.startY,
                   transform: [
                     { translateX: animations[idx].translateX },
                     { translateY: animations[idx].translateY },
@@ -212,35 +171,49 @@ export default function Congrats() {
           ))}
         </View>
 
-        {/* Message box */}
-        <Animated.View style={{ opacity: fadeAnim, width: "100%" }}>
-          <View style={styles.messageBox}>
-            <Text style={styles.title}>Congratulations!!!</Text>
-            <Text style={styles.message}>Your duress PIN is now active.</Text>
-            <View style={styles.divider} />
-            <Text style={styles.message}>
-              If you&apos;re ever forced to{" "}
-              <Text style={{ fontWeight: "bold" }}>transact under threat,</Text>
-              {"\n"}entering this PIN will silently alert the bank and police,
-              without the attacker knowing.
-            </Text>
-            <Text style={styles.message}>
-              <Text style={{ fontWeight: "bold" }}>
-                Your normal banking remains unchanged.
-              </Text>
-              {"\n"}Stay safe. We&apos;ve got your back.
-            </Text>
-          </View>
-        </Animated.View>
+        {/* Main content – clean and celebratory */}
+        <Animated.View style={{ opacity: fadeAnim, width: "100%", alignItems: "center" }}>
+          <Text style={styles.mainTitle}>You&apos;re Protected</Text>
 
-        <TouchableOpacity style={styles.okButton} onPress={handleOk}>
-          <LinearGradient
-            colors={["#7C6EF7", "#4A6CF7"]}
-            style={styles.gradientButton}
-          >
-            <Text style={styles.buttonText}>Continue Banking</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+          <View style={styles.divider} />
+
+          <Text style={styles.greeting}>Congratulations!</Text>
+          <Text style={styles.message}>
+            Your Silent Lifeline is ready – and it&apos;s completely invisible to everyone but you.
+          </Text>
+
+          {/* Security badge – trust signal */}
+          <View style={styles.badgeContainer}>
+            <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+            <Text style={styles.badgeText}>Bank‑guaranteed protection</Text>
+          </View>
+
+          {/* Tips */}
+          <View style={styles.tipsContainer}>
+            <View style={styles.tipRow}>
+              <Ionicons name="bulb-outline" size={22} color={colors.primary} />
+              <Text style={styles.tipText}>
+                If you&apos;re ever forced to transact, stay calm. Enter your duress PIN and let the system work.
+              </Text>
+            </View>
+            <View style={[styles.tipRow, { marginTop: 12 }]}>
+              <Ionicons name="shield-outline" size={22} color={colors.primary} />
+              <Text style={styles.tipText}>
+                After you&apos;re safe, contact your bank with a police case number to get your protection amount refunded.
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.footerText}>
+            Your normal banking remains unchanged. No one will know you&apos;re protected.
+          </Text>
+
+          <TouchableOpacity style={styles.okButton} onPress={handleGoHome}>
+            <LinearGradient colors={["#7C6EF7", "#4A6CF7"]} style={styles.gradientButton}>
+              <Text style={styles.buttonText}>Go to Home</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
     </ScrollView>
   );
@@ -251,15 +224,18 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   gradientHeader: {
-    paddingTop: 60,
+    paddingTop: 100,
     paddingHorizontal: 20,
-    paddingBottom: 24,
+    paddingBottom: 30,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
   },
-  backArrow: { fontSize: 18, color: "#fff" },
-  headerTitle: { fontSize: 20, fontWeight: "800", color: "#fff" },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#fff",
+  },
   whiteCard: {
     flex: 1,
     backgroundColor: "#fff",
@@ -273,7 +249,7 @@ const styles = StyleSheet.create({
     position: "relative",
     alignItems: "center",
     justifyContent: "center",
-    marginVertical: 20,
+    marginVertical: 8,
   },
   illustration: {
     alignItems: "center",
@@ -291,40 +267,85 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
   },
-  messageBox: {
+  mainTitle: {
+    fontSize: 32,
+    fontWeight: "800",
+    color: colors.primary,
+    textAlign: "center",
+    marginTop: 4,
+  },
+  divider: {
+    width: 60,
+    height: 3,
+    backgroundColor: colors.primary,
+    borderRadius: 2,
+    marginVertical: 12,
+  },
+  greeting: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: colors.navy,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  message: {
+    fontSize: 15,
+    color: colors.textSub,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 16,
+    paddingHorizontal: 8,
+  },
+  badgeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F0FDF4",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 20,
+    gap: 8,
+  },
+  badgeText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#22C55E",
+  },
+  tipsContainer: {
     backgroundColor: "#F8F9FC",
-    borderRadius: 24,
-    padding: 24,
-    marginVertical: 20,
+    borderRadius: 16,
+    padding: 16,
+    marginVertical: 12,
     width: "100%",
     borderWidth: 1,
     borderColor: colors.greyLine,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: colors.primary,
-    textAlign: "center",
-    marginBottom: 16,
+  tipRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
   },
-  message: {
+  tipText: {
     fontSize: 14,
     color: colors.textSub,
-    textAlign: "center",
-    marginBottom: 12,
     lineHeight: 20,
+    flex: 1,
   },
-  divider: {
-    height: 1,
-    backgroundColor: colors.greyLine,
-    marginVertical: 16,
+  footerText: {
+    fontSize: 13,
+    color: colors.textSub,
+    textAlign: "center",
+    fontStyle: "italic",
+    marginTop: 8,
+    marginBottom: 4,
   },
   okButton: {
-    marginTop: 8,
+    marginTop: 16,
     borderRadius: 50,
     overflow: "hidden",
     width: "80%",
     marginBottom: 20,
+    alignSelf: "center",
   },
   gradientButton: {
     paddingVertical: 16,
