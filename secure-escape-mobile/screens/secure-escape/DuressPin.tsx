@@ -11,13 +11,14 @@ import {
   Modal,
   TouchableWithoutFeedback,
   Linking,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/utils/theme";
 import { useRouter } from "expo-router";
-import { verifyPin } from "@/services/authService"; // adjust path as needed
+import { verifyPin } from "@/services/authService";
 
 export default function DuressPinScreen() {
   const router = useRouter();
@@ -32,6 +33,9 @@ export default function DuressPinScreen() {
   const [duressPinError, setDuressPinError] = useState("");
   const [confirmPinError, setConfirmPinError] = useState("");
   const [duressMatchesNormalError, setDuressMatchesNormalError] = useState("");
+
+  // Verification state
+  const [isVerifying, setIsVerifying] = useState(false);
 
   // Modals
   const [infoModalVisible, setInfoModalVisible] = useState(false);
@@ -120,7 +124,10 @@ export default function DuressPinScreen() {
     const cleaned = value.replace(/[^0-9]/g, "").slice(0, 4);
     setNormalPin(cleaned);
     setNormalPinError(validateNormalPin(cleaned));
-    // Re‑evaluate duress‑vs‑normal if duress has content
+    // Clear verification error when user types
+    if (normalPinError === "Incorrect PIN. Please try again.") {
+      setNormalPinError("");
+    }
     if (duressPin.length === 4) {
       setDuressMatchesNormalError(validateDuressNotEqualNormal(duressPin, cleaned));
     }
@@ -130,11 +137,9 @@ export default function DuressPinScreen() {
     const cleaned = value.replace(/[^0-9]/g, "").slice(0, 4);
     setDuressPin(cleaned);
     setDuressPinError(validateDuressPin(cleaned));
-    // Re‑validate confirm if it has content
     if (confirmPin.length > 0) {
       setConfirmPinError(validateConfirmPin(confirmPin, cleaned));
     }
-    // Check duress vs normal if normal is filled
     if (normalPin.length === 4) {
       setDuressMatchesNormalError(validateDuressNotEqualNormal(cleaned, normalPin));
     }
@@ -178,6 +183,7 @@ export default function DuressPinScreen() {
 
     // Verify normal PIN with backend
     try {
+      setIsVerifying(true);
       const isValid = await verifyPin(normalPin);
       if (!isValid) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -189,6 +195,8 @@ export default function DuressPinScreen() {
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setNormalPinError("Verification failed. Please try again.");
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -265,22 +273,29 @@ export default function DuressPinScreen() {
         />
         {!!confirmPinError && <Text style={styles.errorText}>{confirmPinError}</Text>}
 
-        {/* Activate button */}
+        {/* Activate button – shows loading state during verification */}
         <TouchableOpacity
-          style={[styles.enableButton, !isFormValid && styles.disabledButton]}
+          style={[
+            styles.enableButton,
+            (!isFormValid || isVerifying) && styles.disabledButton,
+          ]}
           onPress={handleEnable}
-          disabled={!isFormValid}
+          disabled={!isFormValid || isVerifying}
         >
           <LinearGradient
-            colors={isFormValid ? ["#7C6EF7", "#4A6CF7"] : ["#ccc", "#ccc"]}
+            colors={isFormValid && !isVerifying ? ["#7C6EF7", "#4A6CF7"] : ["#ccc", "#ccc"]}
             style={styles.gradientButton}
           >
-            <Text style={styles.buttonText}>Activate Silent Protection</Text>
+            {isVerifying ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.buttonText}>Activate Silent Protection</Text>
+            )}
           </LinearGradient>
         </TouchableOpacity>
       </View>
 
-      {/* Modal: "What is a Duress PIN?" */}
+     
       <Modal
         transparent
         visible={infoModalVisible}
@@ -338,7 +353,7 @@ export default function DuressPinScreen() {
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* T&C Modal */}
+      
       <Modal
         transparent
         visible={termsModalVisible}
@@ -519,7 +534,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   boldText: { fontWeight: "700" },
-  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
