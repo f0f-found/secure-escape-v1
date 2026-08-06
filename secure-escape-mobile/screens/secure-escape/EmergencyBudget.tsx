@@ -130,6 +130,110 @@ export default function EmergencyBudgetScreen() {
     openTermsModal();
   };
 
+  // Protection Amount modal handlers
+  const openProtectionModal = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setProtectionModalVisible(true);
+    Animated.parallel([
+      Animated.timing(protectionFadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.spring(protectionScaleAnim, {
+        toValue: 1,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeProtectionModal = () => {
+    Animated.parallel([
+      Animated.timing(protectionFadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.spring(protectionScaleAnim, {
+        toValue: 0.9,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setProtectionModalVisible(false));
+  };
+
+  // T&C modal handlers
+  const openTermsModal = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setModalAgreed(false);
+    setTermsModalVisible(true);
+    Animated.parallel([
+      Animated.timing(termsFadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.spring(termsScaleAnim, {
+        toValue: 1,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeTermsModal = () => {
+    Animated.parallel([
+      Animated.timing(termsFadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.spring(termsScaleAnim, {
+        toValue: 0.9,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setTermsModalVisible(false));
+  };
+
+  // Confirm & Agree inside the modal: actually saves and navigates
+  const handleConfirm = async () => {
+    if (!modalAgreed) return;
+
+    try {
+      setIsSaving(true);
+      clearError();
+
+      await upsertDecoyProfile({
+        profileType: profileType ?? "LowProfile",
+        displayBalance: mode === "LowProfile" ? lowAmount : displayBalance,
+        emergencyBudget: mode === "LowProfile" ? lowAmount : tier1,
+        tier1Limit: mode === "LowProfile" ? lowAmount : tier1,
+        tier2Limit: mode === "LowProfile" ? lowAmount : tier2,
+        tier2DelayHours: 24,
+      });
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      closeTermsModal();
+      router.push("/secure-escape/duress-pin");
+    } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      closeTermsModal();
+      showError(
+        err instanceof Error
+          ? err.message
+          : "Failed to save Secure Escape setup",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const formatCurrency = (value: number) => `R ${value.toLocaleString()}`;
   const rotateInterpolate = rotateAnim.interpolate({
     inputRange: [-0.05, 0.05],
