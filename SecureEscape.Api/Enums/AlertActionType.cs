@@ -9,6 +9,8 @@ namespace SecureEscape.Api.Enums
         ContactedAuthorities = 5,
         MarkedFalseAlarm = 6,
         Resolved = 7,
-        VoucherInvalidated = 8
+        VoucherInvalidated = 8,
+        ReportSubmitted = 9,
+        ReturnedForChanges = 10
     }
 }

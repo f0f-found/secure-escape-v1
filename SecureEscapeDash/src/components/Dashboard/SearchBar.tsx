@@ -1,3 +1,5 @@
+import { Search, X } from "lucide-react";
+
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
@@ -7,33 +9,36 @@ interface SearchBarProps {
 export default function SearchBar({
   value,
   onChange,
-  placeholder = "Search by customer, email, session ID or alert...",
+  placeholder = "Search customer, email, case ID, severity or alert...",
 }: SearchBarProps) {
   return (
-    <div className="dashboard-card dashboard-card-body">
-      <div className="flex items-center gap-3">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-5 h-5 text-slate-400"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
+    <div className="border border-[#D5E1EB] bg-white shadow-sm">
+      <div className="flex items-center">
+        <div className="flex h-[54px] w-14 shrink-0 items-center justify-center border-r border-[#E5EDF3] bg-[#F4F8FB] text-[#1769AA]">
+          <Search size={19} strokeWidth={1.8} />
+        </div>
 
         <input
-          type="text"
+          type="search"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(event) =>
+            onChange(event.target.value)
+          }
           placeholder={placeholder}
-          className="w-full bg-transparent outline-none text-slate-800 placeholder:text-slate-400"
+          autoComplete="off"
+          className="h-[54px] min-w-0 flex-1 bg-white px-4 text-sm text-[#102A43] outline-none placeholder:text-slate-400"
         />
+
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="mr-3 flex h-8 w-8 items-center justify-center text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Clear search"
+          >
+            <X size={17} />
+          </button>
+        )}
       </div>
     </div>
   );

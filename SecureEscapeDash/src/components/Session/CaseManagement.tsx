@@ -1,3 +1,9 @@
+import {
+  BellRing,
+  LockKeyhole,
+  ShieldAlert,
+} from "lucide-react";
+
 import type { DuressSessionDetail } from "../../types/session";
 
 interface CaseManagementProps {
@@ -27,43 +33,139 @@ export default function CaseManagement({
   }
 
   return (
-    <div className="bg-white   border border-slate-200 shadow-sm">
-      <div className="p-6 border-b border-slate-200">
-        <h2 className="text-lg font-semibold text-slate-900">
-          Emergency Actions
-        </h2>
+    <section className="dashboard-panel overflow-hidden">
+      <div className="dashboard-panel-header">
+        <div className="flex items-start gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-red-50 text-red-600">
+            <ShieldAlert size={18} strokeWidth={1.8} />
+          </div>
 
-        <p className="text-sm text-slate-500 mt-1">
-          Actions available during live duress response.
-        </p>
+          <div>
+            <p className="eyebrow">
+              Response controls
+            </p>
+
+            <h2 className="panel-heading">
+              Emergency actions
+            </h2>
+
+            <p className="panel-description">
+              Protective actions available during the
+              duress response.
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div className="p-6 space-y-3">
+      <div className="space-y-4 p-5">
         {canFreezeAccounts && (
-          <button
-            onClick={handleFreezeAccounts}
-            disabled={freezingAccounts || session.accountsFrozen}
-            className="w-full   bg-red-600 py-3 text-white font-semibold hover:bg-red-500 disabled:opacity-50"
+          <ActionCard
+            icon={<LockKeyhole size={18} />}
+            title="Protect customer accounts"
+            description={
+              session.accountsFrozen
+                ? "Account protection has already been activated for this incident."
+                : "Freeze the customer's accounts to prevent further unauthorised transactions."
+            }
+            tone="danger"
           >
-            {session.accountsFrozen
-              ? "Accounts Frozen"
-              : freezingAccounts
-                ? "Freezing..."
-                : "Freeze Customer Accounts"}
-          </button>
+            <button
+              onClick={handleFreezeAccounts}
+              disabled={
+                freezingAccounts ||
+                session.accountsFrozen
+              }
+              className={`w-full border px-4 py-3 text-sm font-semibold transition ${
+                session.accountsFrozen
+                  ? "cursor-not-allowed border-green-200 bg-green-50 text-green-700"
+                  : "border-red-600 bg-red-600 text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              }`}
+            >
+              {session.accountsFrozen
+                ? "Accounts protected"
+                : freezingAccounts
+                  ? "Protecting accounts..."
+                  : "Freeze customer accounts"}
+            </button>
+          </ActionCard>
         )}
 
         {canDispatchNotifications && (
-          <button
-            onClick={handleDispatchNotifications}
-            disabled={dispatchingNotifications}
-            className="w-full   bg-indigo-600 py-3 text-white font-semibold hover:bg-indigo-500 disabled:opacity-50"
+          <ActionCard
+            icon={<BellRing size={18} />}
+            title="Emergency notifications"
+            description="Retry any emergency notifications that are still pending or were not successfully delivered."
+            tone="primary"
           >
-            {dispatchingNotifications
-              ? "Dispatching..."
-              : "Retry Pending Notifications"}
-          </button>
+            <button
+              onClick={
+                handleDispatchNotifications
+              }
+              disabled={
+                dispatchingNotifications
+              }
+              className="w-full border border-[#1769AA] bg-white px-4 py-3 text-sm font-semibold text-[#1769AA] transition hover:bg-[#1769AA] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {dispatchingNotifications
+                ? "Dispatching notifications..."
+                : "Retry pending notifications"}
+            </button>
+          </ActionCard>
         )}
+      </div>
+
+      <div className="border-t border-[#E5EDF3] bg-[#FBFDFE] px-5 py-3">
+        <p className="text-xs leading-5 text-slate-500">
+          Emergency actions are recorded as part of the
+          incident response history.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+interface ActionCardProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  tone: "danger" | "primary";
+  children: React.ReactNode;
+}
+
+function ActionCard({
+  icon,
+  title,
+  description,
+  tone,
+  children,
+}: ActionCardProps) {
+  const iconStyles =
+    tone === "danger"
+      ? "bg-red-50 text-red-600"
+      : "bg-[#EAF4FB] text-[#1769AA]";
+
+  return (
+    <div className="border border-[#DCE6EE] bg-[#FBFDFE] p-4">
+      <div className="flex items-start gap-3">
+        <div
+          className={`flex h-9 w-9 shrink-0 items-center justify-center ${iconStyles}`}
+        >
+          {icon}
+        </div>
+
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-[#102A43]">
+            {title}
+          </h3>
+
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            {description}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        {children}
       </div>
     </div>
   );

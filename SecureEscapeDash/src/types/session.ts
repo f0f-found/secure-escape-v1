@@ -17,10 +17,18 @@ export type DuressSessionSummary = {
   managerReviewStatus: string;
   resolutionSubmittedAt: string | null;
   managerReviewedAt: string | null;
+
   lastAlertAt: string | null;
+
+  lastLocationAt: string | null;
+  latestLatitude: number | null;
+  latestLongitude: number | null;
+  latestAccuracyMeters: number | null;
+
   alertCount: number;
   highestSeverity: string;
   alertTypes: string[];
+
   assignedAdminUserId?: string;
   assignedAdminName?: string;
   assignedAt?: string;
