@@ -1,3 +1,3 @@
-import AccountDetailScreen from "@/screens/accounts/AccountDetailScreen";
+import AccountDetailScreen from "@/screens/accounts/account-History";
 
 export default AccountDetailScreen;
