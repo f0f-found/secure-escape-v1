@@ -15,11 +15,11 @@ public class AdminSessionService : IAdminSessionService
     private readonly INotificationDispatchService _notificationDispatchService;
 
     public AdminSessionService(
-    INotificationDispatchService notificationDispatchService,
-    IUserSessionRepository userSessionRepository,
-    IBankAccountRepository bankAccountRepository,
-    IAuditService auditService,
-    IUnitOfWork unitOfWork)
+        INotificationDispatchService notificationDispatchService,
+        IUserSessionRepository userSessionRepository,
+        IBankAccountRepository bankAccountRepository,
+        IAuditService auditService,
+        IUnitOfWork unitOfWork)
     {
         _userSessionRepository = userSessionRepository;
         _bankAccountRepository = bankAccountRepository;
@@ -31,7 +31,9 @@ public class AdminSessionService : IAdminSessionService
     public async Task<List<DuressSessionSummaryResponseDto>> GetDuressSessionsAsync(Guid? bankIntegrationId)
     {
         await ExpireStaleActiveSessionsAsync();
+
         var sessions = await _userSessionRepository.GetDuressSessionsAsync(bankIntegrationId);
+
         return sessions.Select(MapToSummary).ToList();
     }
 
@@ -61,34 +63,46 @@ public class AdminSessionService : IAdminSessionService
         await _unitOfWork.SaveChangesAsync();
     }
 
-    public async Task<DuressSessionDetailResponseDto?> GetDuressSessionDetailAsync(Guid sessionId, Guid? bankIntegrationId)
+    public async Task<DuressSessionDetailResponseDto?> GetDuressSessionDetailAsync(
+        Guid sessionId,
+        Guid? bankIntegrationId)
     {
-        var session = await _userSessionRepository.GetDuressSessionDetailAsync(sessionId);
+        var session = await _userSessionRepository
+            .GetDuressSessionDetailAsync(sessionId);
 
-        if (session == null) return null;
-
-        if (bankIntegrationId.HasValue && session.User?.BankIntegrationId != bankIntegrationId.Value)
+        if (session == null)
         {
-            return null; // treat as not found
+            return null;
+        }
+
+        if (bankIntegrationId.HasValue &&
+            session.User?.BankIntegrationId != bankIntegrationId.Value)
+        {
+            return null;
         }
 
         return MapToDetail(session);
     }
 
-    //Assign Analyst to Session
+    // Assign Analyst to Session
     public async Task<DuressSessionDetailResponseDto?> AssignSessionAsync(
-    Guid sessionId,
-    AssignSessionRequestDto request,
-    Guid? bankIntegrationId,
-    Guid assignedByAdminUserId)
+        Guid sessionId,
+        AssignSessionRequestDto request,
+        Guid? bankIntegrationId,
+        Guid assignedByAdminUserId)
     {
         var session = await _userSessionRepository.GetByIdAsync(sessionId);
 
-        if (session == null) return null;
+        if (session == null)
+        {
+            return null;
+        }
 
-        var detail = await _userSessionRepository.GetDuressSessionDetailAsync(sessionId);
+        var detail = await _userSessionRepository
+            .GetDuressSessionDetailAsync(sessionId);
 
-        if (bankIntegrationId.HasValue && detail?.User?.BankIntegrationId != bankIntegrationId.Value)
+        if (bankIntegrationId.HasValue &&
+            detail?.User?.BankIntegrationId != bankIntegrationId.Value)
         {
             return null;
         }
@@ -123,9 +137,12 @@ public class AdminSessionService : IAdminSessionService
             userId: session.UserId,
             userSessionId: session.Id,
             adminUserId: assignedByAdminUserId,
-            metadataJson: $"{{\"assignedAdminUserId\":\"{request.AdminUserId}\"}}");
+            metadataJson:
+                $"{{\"assignedAdminUserId\":\"{request.AdminUserId}\"}}");
 
-        return await GetDuressSessionDetailAsync(sessionId, bankIntegrationId);
+        return await GetDuressSessionDetailAsync(
+            sessionId,
+            bankIntegrationId);
     }
 
     public async Task<DuressSessionDetailResponseDto?> ClaimSessionAsync(
@@ -135,11 +152,16 @@ public class AdminSessionService : IAdminSessionService
     {
         var session = await _userSessionRepository.GetByIdAsync(sessionId);
 
-        if (session == null) return null;
+        if (session == null)
+        {
+            return null;
+        }
 
-        var detail = await _userSessionRepository.GetDuressSessionDetailAsync(sessionId);
+        var detail = await _userSessionRepository
+            .GetDuressSessionDetailAsync(sessionId);
 
-        if (bankIntegrationId.HasValue && detail?.User?.BankIntegrationId != bankIntegrationId.Value)
+        if (bankIntegrationId.HasValue &&
+            detail?.User?.BankIntegrationId != bankIntegrationId.Value)
         {
             return null;
         }
@@ -177,15 +199,20 @@ public class AdminSessionService : IAdminSessionService
             userId: session.UserId,
             userSessionId: session.Id,
             adminUserId: adminUserId,
-            metadataJson: $"{{\"claimedByAdminUserId\":\"{adminUserId}\"}}");
+            metadataJson:
+                $"{{\"claimedByAdminUserId\":\"{adminUserId}\"}}");
 
-        return await GetDuressSessionDetailAsync(sessionId, bankIntegrationId);
+        return await GetDuressSessionDetailAsync(
+            sessionId,
+            bankIntegrationId);
     }
+
     public async Task<DuressSessionDetailResponseDto?> DispatchSessionNotificationsAsync(
         Guid sessionId,
         Guid? bankIntegrationId)
     {
-        var session = await _userSessionRepository.GetDuressSessionDetailAsync(sessionId);
+        var session = await _userSessionRepository
+            .GetDuressSessionDetailAsync(sessionId);
 
         if (session == null)
         {
@@ -198,9 +225,12 @@ public class AdminSessionService : IAdminSessionService
             return null;
         }
 
-        await _notificationDispatchService.DispatchPendingForSessionAsync(session.Id);
+        await _notificationDispatchService
+            .DispatchPendingForSessionAsync(session.Id);
 
-        return await GetDuressSessionDetailAsync(sessionId, bankIntegrationId);
+        return await GetDuressSessionDetailAsync(
+            sessionId,
+            bankIntegrationId);
     }
 
     public async Task<DuressSessionDetailResponseDto?> UpdateCaseStatusAsync(
@@ -211,12 +241,16 @@ public class AdminSessionService : IAdminSessionService
     {
         var session = await _userSessionRepository.GetByIdAsync(sessionId);
 
-        if (session == null) return null;
+        if (session == null)
+        {
+            return null;
+        }
 
-        // re-fetch with User included to verify bank ownership
-        var detail = await _userSessionRepository.GetDuressSessionDetailAsync(sessionId);
+        var detail = await _userSessionRepository
+            .GetDuressSessionDetailAsync(sessionId);
 
-        if (bankIntegrationId.HasValue && detail?.User?.BankIntegrationId != bankIntegrationId.Value)
+        if (bankIntegrationId.HasValue &&
+            detail?.User?.BankIntegrationId != bankIntegrationId.Value)
         {
             return null;
         }
@@ -228,7 +262,8 @@ public class AdminSessionService : IAdminSessionService
 
         session.CaseStatus = request.CaseStatus;
 
-        if (request.CaseStatus == CaseStatus.Resolved || request.CaseStatus == CaseStatus.FalseAlarm)
+        if (request.CaseStatus == CaseStatus.Resolved ||
+            request.CaseStatus == CaseStatus.FalseAlarm)
         {
             session.CaseResolvedAt = DateTime.UtcNow;
         }
@@ -262,9 +297,12 @@ public class AdminSessionService : IAdminSessionService
             userId: session.UserId,
             userSessionId: session.Id,
             adminUserId: adminUserId,
-            metadataJson: $"{{\"caseStatus\":\"{request.CaseStatus}\"}}");
+            metadataJson:
+                $"{{\"caseStatus\":\"{request.CaseStatus}\"}}");
 
-        return await GetDuressSessionDetailAsync(sessionId, bankIntegrationId);
+        return await GetDuressSessionDetailAsync(
+            sessionId,
+            bankIntegrationId);
     }
 
     public async Task<DuressSessionDetailResponseDto?> AddCaseActionAsync(
@@ -275,11 +313,16 @@ public class AdminSessionService : IAdminSessionService
     {
         var session = await _userSessionRepository.GetByIdAsync(sessionId);
 
-        if (session == null) return null;
+        if (session == null)
+        {
+            return null;
+        }
 
-        var detail = await _userSessionRepository.GetDuressSessionDetailAsync(sessionId);
+        var detail = await _userSessionRepository
+            .GetDuressSessionDetailAsync(sessionId);
 
-        if (bankIntegrationId.HasValue && detail?.User?.BankIntegrationId != bankIntegrationId.Value)
+        if (bankIntegrationId.HasValue &&
+            detail?.User?.BankIntegrationId != bankIntegrationId.Value)
         {
             return null;
         }
@@ -305,9 +348,12 @@ public class AdminSessionService : IAdminSessionService
             userId: session.UserId,
             userSessionId: session.Id,
             adminUserId: adminUserId,
-            metadataJson: $"{{\"actionType\":\"{request.ActionType}\"}}");
+            metadataJson:
+                $"{{\"actionType\":\"{request.ActionType}\"}}");
 
-        return await GetDuressSessionDetailAsync(sessionId, bankIntegrationId);
+        return await GetDuressSessionDetailAsync(
+            sessionId,
+            bankIntegrationId);
     }
 
     public async Task<DuressSessionDetailResponseDto?> FreezeAccountAsync(
@@ -315,19 +361,28 @@ public class AdminSessionService : IAdminSessionService
         Guid? bankIntegrationId,
         Guid adminUserId)
     {
-        var session = await _userSessionRepository.GetDuressSessionDetailAsync(sessionId);
+        var session = await _userSessionRepository
+            .GetDuressSessionDetailAsync(sessionId);
 
-        if (session == null) return null;
-
-        if (bankIntegrationId.HasValue && session.User?.BankIntegrationId != bankIntegrationId.Value)
+        if (session == null)
+        {
             return null;
+        }
 
-        var accounts = await _bankAccountRepository.GetByUserIdForAdminAsync(session.UserId);
+        if (bankIntegrationId.HasValue &&
+            session.User?.BankIntegrationId != bankIntegrationId.Value)
+        {
+            return null;
+        }
+
+        var accounts = await _bankAccountRepository
+            .GetByUserIdForAdminAsync(session.UserId);
 
         foreach (var account in accounts)
         {
             account.Status = AccountStatus.Frozen;
             account.UpdatedAt = DateTime.UtcNow;
+
             await _bankAccountRepository.UpdateAsync(account);
         }
 
@@ -337,11 +392,13 @@ public class AdminSessionService : IAdminSessionService
             UserSessionId = session.Id,
             ActionType = AlertActionType.FrozeAccount,
             AdminUserId = adminUserId,
-            Notes = $"All accounts frozen by fraud team at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC.",
+            Notes =
+                $"All accounts frozen by fraud team at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC.",
             CreatedAt = DateTime.UtcNow
         };
 
         await _userSessionRepository.AddActionAsync(action);
+
         await _unitOfWork.SaveChangesAsync();
 
         await _auditService.LogAsync(
@@ -350,24 +407,32 @@ public class AdminSessionService : IAdminSessionService
             userId: session.UserId,
             userSessionId: session.Id,
             adminUserId: adminUserId,
-            metadataJson: $"{{\"accountCount\":{accounts.Count},\"frozenBy\":\"FraudTeam\"}}");
+            metadataJson:
+                $"{{\"accountCount\":{accounts.Count},\"frozenBy\":\"FraudTeam\"}}");
 
-        return await GetDuressSessionDetailAsync(sessionId, bankIntegrationId);
+        return await GetDuressSessionDetailAsync(
+            sessionId,
+            bankIntegrationId);
     }
 
     public async Task<DuressSessionDetailResponseDto?> SubmitCaseReportAsync(
-    Guid sessionId,
-    SubmitCaseReportRequestDto request,
-    Guid? bankIntegrationId,
-    Guid adminUserId)
+        Guid sessionId,
+        SubmitCaseReportRequestDto request,
+        Guid? bankIntegrationId,
+        Guid adminUserId)
     {
         var session = await _userSessionRepository.GetByIdAsync(sessionId);
 
-        if (session == null) return null;
+        if (session == null)
+        {
+            return null;
+        }
 
-        var detail = await _userSessionRepository.GetDuressSessionDetailAsync(sessionId);
+        var detail = await _userSessionRepository
+            .GetDuressSessionDetailAsync(sessionId);
 
-        if (bankIntegrationId.HasValue && detail?.User?.BankIntegrationId != bankIntegrationId.Value)
+        if (bankIntegrationId.HasValue &&
+            detail?.User?.BankIntegrationId != bankIntegrationId.Value)
         {
             return null;
         }
@@ -379,11 +444,23 @@ public class AdminSessionService : IAdminSessionService
 
         session.InvestigationSummary = request.InvestigationSummary;
         session.ResolutionSummary = request.ResolutionSummary;
-        session.ResolvedByAdminUserId = adminUserId;
         session.ResolutionSubmittedAt = DateTime.UtcNow;
-        session.CaseStatus = CaseStatus.Resolved;
-        session.CaseResolvedAt = DateTime.UtcNow;
-        session.ManagerReviewStatus = ManagerReviewStatus.PendingReview;
+
+        // The analyst submits a recommendation for manager review.
+        // The case is NOT resolved at this point.
+        session.CaseStatus = CaseStatus.Investigating;
+        session.CaseResolvedAt = null;
+        session.ResolvedByAdminUserId = null;
+
+        session.ManagerReviewStatus =
+            ManagerReviewStatus.PendingReview;
+
+        // Clear any previous manager decision when the analyst
+        // submits or resubmits the report.
+        session.ManagerReviewedByAdminUserId = null;
+        session.ManagerReviewedAt = null;
+        session.ManagerReviewNotes = null;
+
         session.UpdatedAt = DateTime.UtcNow;
 
         await _userSessionRepository.UpdateAsync(session);
@@ -393,8 +470,9 @@ public class AdminSessionService : IAdminSessionService
             Id = Guid.NewGuid(),
             UserSessionId = session.Id,
             AdminUserId = adminUserId,
-            ActionType = AlertActionType.Resolved,
-            Notes = "Analyst submitted resolution report for manager review.",
+            ActionType = AlertActionType.ReportSubmitted,
+            Notes =
+                "Analyst submitted investigation report for manager review.",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -409,9 +487,12 @@ public class AdminSessionService : IAdminSessionService
             userId: session.UserId,
             userSessionId: session.Id,
             adminUserId: adminUserId,
-            metadataJson: "{\"managerReviewStatus\":\"PendingReview\"}");
+            metadataJson:
+                "{\"caseStatus\":\"Investigating\",\"managerReviewStatus\":\"PendingReview\"}");
 
-        return await GetDuressSessionDetailAsync(sessionId, bankIntegrationId);
+        return await GetDuressSessionDetailAsync(
+            sessionId,
+            bankIntegrationId);
     }
 
     public async Task<DuressSessionDetailResponseDto?> ManagerReviewCaseAsync(
@@ -422,11 +503,16 @@ public class AdminSessionService : IAdminSessionService
     {
         var session = await _userSessionRepository.GetByIdAsync(sessionId);
 
-        if (session == null) return null;
+        if (session == null)
+        {
+            return null;
+        }
 
-        var detail = await _userSessionRepository.GetDuressSessionDetailAsync(sessionId);
+        var detail = await _userSessionRepository
+            .GetDuressSessionDetailAsync(sessionId);
 
-        if (bankIntegrationId.HasValue && detail?.User?.BankIntegrationId != bankIntegrationId.Value)
+        if (bankIntegrationId.HasValue &&
+            detail?.User?.BankIntegrationId != bankIntegrationId.Value)
         {
             return null;
         }
@@ -437,21 +523,55 @@ public class AdminSessionService : IAdminSessionService
             return null;
         }
 
-        if (session.ManagerReviewStatus != ManagerReviewStatus.PendingReview)
+        if (session.ManagerReviewStatus !=
+            ManagerReviewStatus.PendingReview)
         {
             return null;
         }
 
         session.ManagerReviewStatus = request.ReviewStatus;
-        session.ManagerReviewedByAdminUserId = managerAdminUserId;
+        session.ManagerReviewedByAdminUserId =
+            managerAdminUserId;
         session.ManagerReviewedAt = DateTime.UtcNow;
         session.ManagerReviewNotes = request.ReviewNotes;
         session.UpdatedAt = DateTime.UtcNow;
 
-        if (request.ReviewStatus == ManagerReviewStatus.Rejected)
+        AlertActionType actionType;
+        string actionNotes;
+
+        if (request.ReviewStatus ==
+            ManagerReviewStatus.Approved)
         {
+            // Manager approval is the formal resolution point.
+            session.CaseStatus = CaseStatus.Resolved;
+            session.CaseResolvedAt = DateTime.UtcNow;
+            session.ResolvedByAdminUserId =
+                managerAdminUserId;
+
+            actionType = AlertActionType.Resolved;
+
+            actionNotes =
+                string.IsNullOrWhiteSpace(
+                    request.ReviewNotes)
+                    ? "Manager approved the analyst report and resolved the case."
+                    : request.ReviewNotes;
+        }
+        else
+        {
+            // Rejected reports go back to the analyst
+            // for further investigation.
             session.CaseStatus = CaseStatus.Investigating;
             session.CaseResolvedAt = null;
+            session.ResolvedByAdminUserId = null;
+
+            actionType =
+                AlertActionType.ReturnedForChanges;
+
+            actionNotes =
+                string.IsNullOrWhiteSpace(
+                    request.ReviewNotes)
+                    ? "Manager returned the report for further investigation."
+                    : request.ReviewNotes;
         }
 
         await _userSessionRepository.UpdateAsync(session);
@@ -461,12 +581,8 @@ public class AdminSessionService : IAdminSessionService
             Id = Guid.NewGuid(),
             UserSessionId = session.Id,
             AdminUserId = managerAdminUserId,
-            ActionType = request.ReviewStatus == ManagerReviewStatus.Approved
-                ? AlertActionType.Resolved
-                : AlertActionType.Assigned,
-            Notes = string.IsNullOrWhiteSpace(request.ReviewNotes)
-                ? $"Manager review: {request.ReviewStatus}."
-                : request.ReviewNotes,
+            ActionType = actionType,
+            Notes = actionNotes,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -481,109 +597,228 @@ public class AdminSessionService : IAdminSessionService
             userId: session.UserId,
             userSessionId: session.Id,
             adminUserId: managerAdminUserId,
-            metadataJson: $"{{\"managerReviewStatus\":\"{request.ReviewStatus}\"}}");
+            metadataJson:
+                $"{{\"caseStatus\":\"{session.CaseStatus}\",\"managerReviewStatus\":\"{request.ReviewStatus}\"}}");
 
-        return await GetDuressSessionDetailAsync(sessionId, bankIntegrationId);
+        return await GetDuressSessionDetailAsync(
+            sessionId,
+            bankIntegrationId);
     }
 
-    private static DuressSessionSummaryResponseDto MapToSummary(UserSession session)
+    private static DuressSessionSummaryResponseDto MapToSummary(
+        UserSession session)
     {
         var highestSeverity = session.Alerts.Any()
             ? session.Alerts.Max(a => a.Severity)
             : RiskLevel.Low;
 
+        var latestLocation = session.LocationEvents
+            .OrderByDescending(l => l.CapturedAt)
+            .FirstOrDefault();
+
         return new DuressSessionSummaryResponseDto
         {
             Id = session.Id,
             UserId = session.UserId,
-            CustomerName = session.User?.FullName ?? string.Empty,
-            CustomerEmail = session.User?.Email ?? string.Empty,
+
+            CustomerName =
+                session.User?.FullName ?? string.Empty,
+
+            CustomerEmail =
+                session.User?.Email ?? string.Empty,
+
             Status = session.Status,
             StartedAt = session.StartedAt,
             CaseStatus = session.CaseStatus,
+
             LastAlertAt = session.Alerts
                 .OrderByDescending(a => a.CreatedAt)
                 .Select(a => (DateTime?)a.CreatedAt)
                 .FirstOrDefault(),
+
+            LastLocationAt =
+                latestLocation?.CapturedAt,
+
+            LatestLatitude =
+                latestLocation?.Latitude,
+
+            LatestLongitude =
+                latestLocation?.Longitude,
+
+            LatestAccuracyMeters =
+                latestLocation?.AccuracyMeters,
+
             EndedAt = session.EndedAt,
+
             AlertCount = session.Alerts.Count,
+
             HighestSeverity = highestSeverity,
-            AlertTypes = session.Alerts.Select(a => a.Type.ToString()).Distinct().ToList(),
-            AssignedAdminUserId = session.AssignedAdminUserId,
-            AssignedAdminName = session.AssignedAdminUser?.FullName,
-            AssignedAt = session.AssignedAt,
-            ManagerReviewStatus = session.ManagerReviewStatus,
-            ResolutionSubmittedAt = session.ResolutionSubmittedAt,
-            ManagerReviewedAt = session.ManagerReviewedAt,
+
+            AlertTypes = session.Alerts
+                .Select(a => a.Type.ToString())
+                .Distinct()
+                .ToList(),
+
+            AssignedAdminUserId =
+                session.AssignedAdminUserId,
+
+            AssignedAdminName =
+                session.AssignedAdminUser?.FullName,
+
+            AssignedAt =
+                session.AssignedAt,
+
+            ManagerReviewStatus =
+                session.ManagerReviewStatus,
+
+            ResolutionSubmittedAt =
+                session.ResolutionSubmittedAt,
+
+            ManagerReviewedAt =
+                session.ManagerReviewedAt,
         };
     }
 
-    private static DuressSessionDetailResponseDto MapToDetail(UserSession session)
+    private static DuressSessionDetailResponseDto MapToDetail(
+        UserSession session)
     {
         return new DuressSessionDetailResponseDto
         {
             Id = session.Id,
             UserId = session.UserId,
-            CustomerName = session.User?.FullName ?? string.Empty,
-            CustomerEmail = session.User?.Email ?? string.Empty,
-            CustomerPhoneNumber = session.User?.PhoneNumber ?? string.Empty,
+
+            CustomerName =
+                session.User?.FullName ?? string.Empty,
+
+            CustomerEmail =
+                session.User?.Email ?? string.Empty,
+
+            CustomerPhoneNumber =
+                session.User?.PhoneNumber ?? string.Empty,
+
             Mode = session.Mode,
             Status = session.Status,
             CaseStatus = session.CaseStatus,
-            AssignedAdminName = session.AssignedAdminUser?.FullName,
-            AssignedAdminUserId = session.AssignedAdminUserId,
-            AssignedAt = session.AssignedAt,
+
+            AssignedAdminName =
+                session.AssignedAdminUser?.FullName,
+
+            AssignedAdminUserId =
+                session.AssignedAdminUserId,
+
+            AssignedAt =
+                session.AssignedAt,
+
             IpAddress = session.IpAddress,
             DeviceInfo = session.DeviceInfo,
+
             StartedAt = session.StartedAt,
             EndedAt = session.EndedAt,
-            CaseResolvedAt = session.CaseResolvedAt,
-            InvestigationSummary = session.InvestigationSummary,
-            ResolutionSummary = session.ResolutionSummary,
-            ResolvedByAdminUserId = session.ResolvedByAdminUserId,
-            ResolutionSubmittedAt = session.ResolutionSubmittedAt,
-            ManagerReviewStatus = session.ManagerReviewStatus,
-            ManagerReviewedByAdminUserId = session.ManagerReviewedByAdminUserId,
-            ManagerReviewedAt = session.ManagerReviewedAt,
-            ManagerReviewNotes = session.ManagerReviewNotes,
-            AlertCount = session.Alerts.Count,
-            TransactionCount = session.Transactions.Count,
-            LocationCount = session.LocationEvents.Count,
-            NotificationAttemptCount = session.Alerts
-                .SelectMany(a => a.NotificationAttempts)
-                .Count(),
-            HighestSeverity = session.Alerts.Any()
-                ? session.Alerts.Max(a => a.Severity)
-                : RiskLevel.Low,
-            LastLocationAt = session.LocationEvents
-                .OrderByDescending(l => l.CapturedAt)
-                .Select(l => (DateTime?)l.CapturedAt)
-                .FirstOrDefault(),
-            LastAlertAt = session.Alerts
-                .OrderByDescending(a => a.CreatedAt)
-                .Select(a => (DateTime?)a.CreatedAt)
-                .FirstOrDefault(),
-            AccountsFrozen = session.User?.BankAccounts.Any(a => a.Status == AccountStatus.Frozen) ?? false,
-            Alerts = session.Alerts
-                .OrderByDescending(a => a.CreatedAt)
-                .Select(MapToAlertLog)
-                .ToList(),
-            Transactions = session.Transactions
-                .OrderByDescending(t => t.CreatedAt)
-                .Select(MapToTransaction)
-                .ToList(),
-            Locations = session.LocationEvents
-                .OrderByDescending(l => l.CapturedAt)
-                .Select(MapToLocation)
-                .ToList(),
-            Actions = session.AlertActions
-                .OrderByDescending(a => a.CreatedAt)
-                .Select(MapToAction)
-                .ToList()
+
+            CaseResolvedAt =
+                session.CaseResolvedAt,
+
+            InvestigationSummary =
+                session.InvestigationSummary,
+
+            ResolutionSummary =
+                session.ResolutionSummary,
+
+            ResolvedByAdminUserId =
+                session.ResolvedByAdminUserId,
+
+            ResolutionSubmittedAt =
+                session.ResolutionSubmittedAt,
+
+            ManagerReviewStatus =
+                session.ManagerReviewStatus,
+
+            ManagerReviewedByAdminUserId =
+                session.ManagerReviewedByAdminUserId,
+
+            ManagerReviewedAt =
+                session.ManagerReviewedAt,
+
+            ManagerReviewNotes =
+                session.ManagerReviewNotes,
+
+            AlertCount =
+                session.Alerts.Count,
+
+            TransactionCount =
+                session.Transactions.Count,
+
+            LocationCount =
+                session.LocationEvents.Count,
+
+            NotificationAttemptCount =
+                session.Alerts
+                    .SelectMany(
+                        a => a.NotificationAttempts)
+                    .Count(),
+
+            HighestSeverity =
+                session.Alerts.Any()
+                    ? session.Alerts.Max(
+                        a => a.Severity)
+                    : RiskLevel.Low,
+
+            LastLocationAt =
+                session.LocationEvents
+                    .OrderByDescending(
+                        l => l.CapturedAt)
+                    .Select(
+                        l => (DateTime?)l.CapturedAt)
+                    .FirstOrDefault(),
+
+            LastAlertAt =
+                session.Alerts
+                    .OrderByDescending(
+                        a => a.CreatedAt)
+                    .Select(
+                        a => (DateTime?)a.CreatedAt)
+                    .FirstOrDefault(),
+
+            AccountsFrozen =
+                session.User?.BankAccounts
+                    .Any(
+                        a =>
+                            a.Status ==
+                            AccountStatus.Frozen)
+                ?? false,
+
+            Alerts =
+                session.Alerts
+                    .OrderByDescending(
+                        a => a.CreatedAt)
+                    .Select(MapToAlertLog)
+                    .ToList(),
+
+            Transactions =
+                session.Transactions
+                    .OrderByDescending(
+                        t => t.CreatedAt)
+                    .Select(MapToTransaction)
+                    .ToList(),
+
+            Locations =
+                session.LocationEvents
+                    .OrderByDescending(
+                        l => l.CapturedAt)
+                    .Select(MapToLocation)
+                    .ToList(),
+
+            Actions =
+                session.AlertActions
+                    .OrderByDescending(
+                        a => a.CreatedAt)
+                    .Select(MapToAction)
+                    .ToList()
         };
     }
 
-    private static SessionAlertLogResponseDto MapToAlertLog(Alert alert)
+    private static SessionAlertLogResponseDto MapToAlertLog(
+        Alert alert)
     {
         return new SessionAlertLogResponseDto
         {
@@ -594,14 +829,19 @@ public class AdminSessionService : IAdminSessionService
             Status = alert.Status,
             ResolvedAt = alert.ResolvedAt,
             CreatedAt = alert.CreatedAt,
-            NotificationAttempts = alert.NotificationAttempts
-                .OrderByDescending(n => n.CreatedAt)
-                .Select(MapToNotificationAttempt)
-                .ToList()
+
+            NotificationAttempts =
+                alert.NotificationAttempts
+                    .OrderByDescending(
+                        n => n.CreatedAt)
+                    .Select(
+                        MapToNotificationAttempt)
+                    .ToList()
         };
     }
 
-    private static AlertLocationResponseDto MapToLocation(LocationEvent location)
+    private static AlertLocationResponseDto MapToLocation(
+        LocationEvent location)
     {
         return new AlertLocationResponseDto
         {
@@ -615,7 +855,8 @@ public class AdminSessionService : IAdminSessionService
         };
     }
 
-    private static AlertTransactionResponseDto MapToTransaction(BankTransaction transaction)
+    private static AlertTransactionResponseDto MapToTransaction(
+        BankTransaction transaction)
     {
         return new AlertTransactionResponseDto
         {
@@ -632,25 +873,32 @@ public class AdminSessionService : IAdminSessionService
             RiskLevel = transaction.RiskLevel,
             RiskScore = transaction.RiskScore,
             Description = transaction.Description,
-            SecureEscapeCode = transaction.SecureEscapeCode,
+            SecureEscapeCode =
+                transaction.SecureEscapeCode,
             CreatedAt = transaction.CreatedAt
         };
     }
 
-    private static AlertActionResponseDto MapToAction(AlertAction action)
+    private static AlertActionResponseDto MapToAction(
+        AlertAction action)
     {
         return new AlertActionResponseDto
         {
             Id = action.Id,
             AdminUserId = action.AdminUserId,
-            AdminName = action.AdminUser?.FullName ?? string.Empty,
+
+            AdminName =
+                action.AdminUser?.FullName
+                ?? string.Empty,
+
             ActionType = action.ActionType,
             Notes = action.Notes,
             CreatedAt = action.CreatedAt
         };
     }
 
-    private static NotificationAttemptResponseDto MapToNotificationAttempt(NotificationAttempt attempt)
+    private static NotificationAttemptResponseDto MapToNotificationAttempt(
+        NotificationAttempt attempt)
     {
         return new NotificationAttemptResponseDto
         {
@@ -661,7 +909,8 @@ public class AdminSessionService : IAdminSessionService
             ErrorMessage = attempt.ErrorMessage,
             MessageBody = attempt.MessageBody,
             SentAt = attempt.SentAt,
-            ResponseMessage = attempt.ResponseMessage,
+            ResponseMessage =
+                attempt.ResponseMessage,
             AttemptedAt = attempt.AttemptedAt,
             CreatedAt = attempt.CreatedAt
         };

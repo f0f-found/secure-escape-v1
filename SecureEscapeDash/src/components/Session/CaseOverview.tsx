@@ -1,3 +1,15 @@
+import {
+  BellRing,
+  Clock3,
+  Hash,
+  Mail,
+  MapPin,
+  Phone,
+  ShieldAlert,
+  UserRound,
+  WalletCards,
+} from "lucide-react";
+
 import SeverityBadge from "../SeverityBadge";
 import StatusBadge from "../StatusBadge";
 import type { DuressSessionDetail } from "../../types/session";
@@ -13,158 +25,260 @@ export default function CaseOverview({
 }: CaseOverviewProps) {
   const started = new Date(session.startedAt);
 
+  const assignedAnalyst =
+    session.assignedAdminName?.trim() ||
+    (assignedToMe ? "You" : "Unassigned");
+
+  const formattedCaseStatus =
+    session.caseStatus === "FalseAlarm"
+      ? "False alarm"
+      : session.caseStatus;
+
   return (
-    <div className="bg-white   border border-slate-200 shadow-sm">
-      {/* Header */}
-      <div className="flex items-start justify-between p-8 border-b border-slate-200">
-        <div>
-          <div className="flex items-center gap-2">
-            {session.status === "Active" && (
-              <span className="relative flex h-3 w-3">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-                <span className="relative inline-flex h-3 w-3 rounded-full bg-red-600" />
-              </span>
-            )}
+    <section className="dashboard-panel overflow-hidden">
+      <div className="border-b border-[#DCE7EF] bg-gradient-to-r from-[#F7FAFD] via-white to-[#F4F8FB]">
+        <div className="flex flex-col gap-6 px-6 py-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              {session.status === "Active" && (
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-70" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-600" />
+                </span>
+              )}
 
-            <p
-              className={`text-sm font-semibold uppercase tracking-wide ${
-                session.status === "Active" ? "text-red-600" : "text-indigo-600"
-              }`}
-            >
-              {session.status === "Active"
-                ? "Live Duress Session"
-                : "Fraud Case"}
-            </p>
+              <p
+                className={`text-[11px] font-bold uppercase tracking-[0.12em] ${
+                  session.status === "Active"
+                    ? "text-red-600"
+                    : "text-[#1769AA]"
+                }`}
+              >
+                {session.status === "Active"
+                  ? "Live Duress Incident"
+                  : "Duress Case"}
+              </p>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-tight text-[#102A43] sm:text-3xl">
+                {session.customerName || "Unknown customer"}
+              </h1>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-500">
+              {session.customerEmail && (
+                <span className="inline-flex items-center gap-2">
+                  <Mail size={15} className="text-slate-400" />
+                  {session.customerEmail}
+                </span>
+              )}
+
+              {session.customerPhoneNumber && (
+                <span className="inline-flex items-center gap-2">
+                  <Phone size={15} className="text-slate-400" />
+                  {session.customerPhoneNumber}
+                </span>
+              )}
+            </div>
           </div>
 
-          <h1 className="mt-2 text-3xl font-bold text-slate-900">
-            {session.customerName}
-          </h1>
-
-          <div className="mt-2 flex flex-wrap gap-4 text-sm text-slate-600">
-            <span>{session.customerEmail}</span>
-
-            <span>•</span>
-
-            <span>{session.customerPhoneNumber}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge status={session.status} />
+            <SeverityBadge severity={session.highestSeverity} />
+            <ReviewStatusBadge status={session.managerReviewStatus} />
           </div>
-        </div>
-
-        <div className="flex gap-3">
-          <StatusBadge status={session.status} />
-          <SeverityBadge severity={session.highestSeverity} />
-          <ReviewStatusBadge status={session.managerReviewStatus} />
         </div>
       </div>
 
-      {/* Case Information */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 divide-x divide-slate-200">
-        <InfoItem label="Case Status" value={session.caseStatus} />
+      <div className="grid grid-cols-1 border-b border-[#E5EDF3] sm:grid-cols-2 xl:grid-cols-5">
+        <InfoItem
+          icon={<ShieldAlert size={16} />}
+          label="Case Status"
+          value={formattedCaseStatus}
+        />
 
         <InfoItem
+          icon={<UserRound size={16} />}
           label="Assigned To"
-          value={
-            session.assignedAdminName
-              ? assignedToMe
-                ? "You"
-                : ""
-              : session.assignedAdminUserId
+          value={assignedAnalyst}
+          secondary={
+            assignedToMe && session.assignedAdminName
+              ? session.assignedAdminName
+              : undefined
           }
         />
 
-        <InfoItem label="Started" value={started.toLocaleString()} />
+        <InfoItem
+          icon={<Clock3 size={16} />}
+          label="Started"
+          value={started.toLocaleDateString("en-ZA")}
+          secondary={started.toLocaleTimeString("en-ZA", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        />
 
-        <InfoItem label="Mode" value={session.mode} />
-        <InfoItem label="Case ID" value={session.id} />
+        <InfoItem
+          icon={<WalletCards size={16} />}
+          label="Mode"
+          value={session.mode}
+        />
+
+        <InfoItem
+          icon={<Hash size={16} />}
+          label="Case ID"
+          value={session.id}
+          mono
+        />
       </div>
 
-      {/* Statistics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 p-8 border-t border-slate-200">
-        <StatCard
+      <div className="grid grid-cols-2 divide-x divide-y divide-[#E5EDF3] sm:grid-cols-4 sm:divide-y-0">
+        <StatItem
+          icon={<ShieldAlert size={17} />}
           label="Alerts"
           value={session.alertCount}
-          valueClass="text-red-600"
+          emphasis="danger"
         />
 
-        <StatCard
+        <StatItem
+          icon={<WalletCards size={17} />}
           label="Transactions"
           value={session.transactionCount}
-          valueClass="text-slate-900"
         />
 
-        <StatCard
+        <StatItem
+          icon={<MapPin size={17} />}
           label="Locations"
           value={session.locationCount}
-          valueClass="text-indigo-600"
+          emphasis="blue"
         />
 
-        <StatCard
+        <StatItem
+          icon={<BellRing size={17} />}
           label="Notifications"
           value={session.notificationAttemptCount}
-          valueClass="text-amber-600"
+          emphasis="amber"
         />
       </div>
-    </div>
+    </section>
   );
 }
 
 interface InfoItemProps {
+  icon: React.ReactNode;
   label: string;
   value: React.ReactNode;
+  secondary?: React.ReactNode;
+  mono?: boolean;
 }
 
-function InfoItem({ label, value }: InfoItemProps) {
-  return (
-    <div className="p-6">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-        {label}
-      </p>
-
-      <p className="mt-2 font-semibold text-slate-900 wrap-break-word">
-        {value}
-      </p>
-    </div>
-  );
-}
-
-interface StatCardProps {
-  label: string;
-  value: number;
-  valueClass?: string;
-}
-
-function StatCard({
+function InfoItem({
+  icon,
   label,
   value,
-  valueClass = "text-slate-900",
-}: StatCardProps) {
+  secondary,
+  mono = false,
+}: InfoItemProps) {
   return (
-    <div className="  border border-slate-200 p-5">
-      <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
+    <div className="min-w-0 border-b border-[#E5EDF3] px-5 py-4 sm:border-b-0 sm:border-r last:border-r-0">
+      <div className="flex items-center gap-2 text-slate-400">
+        {icon}
 
-      <p className={`mt-3 text-3xl font-bold ${valueClass}`}>{value}</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.1em]">
+          {label}
+        </p>
+      </div>
+
+      <p
+        className={`mt-2 truncate text-sm font-semibold text-[#102A43] ${
+          mono ? "font-mono text-xs" : ""
+        }`}
+        title={typeof value === "string" ? value : undefined}
+      >
+        {value || "—"}
+      </p>
+
+      {secondary && (
+        <p className="mt-1 truncate text-xs text-slate-400">
+          {secondary}
+        </p>
+      )}
     </div>
   );
 }
 
-function ReviewStatusBadge({ status }: { status: string }) {
+interface StatItemProps {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  emphasis?: "danger" | "blue" | "amber";
+}
+
+function StatItem({
+  icon,
+  label,
+  value,
+  emphasis,
+}: StatItemProps) {
+  const iconStyle =
+    emphasis === "danger"
+      ? "bg-red-50 text-red-600"
+      : emphasis === "blue"
+        ? "bg-blue-50 text-[#1769AA]"
+        : emphasis === "amber"
+          ? "bg-amber-50 text-amber-600"
+          : "bg-slate-100 text-slate-500";
+
+  return (
+    <div className="flex items-center gap-4 px-5 py-5">
+      <div
+        className={`flex h-9 w-9 shrink-0 items-center justify-center ${iconStyle}`}
+      >
+        {icon}
+      </div>
+
+      <div>
+        <p className="text-2xl font-bold tracking-tight text-[#102A43]">
+          {value}
+        </p>
+
+        <p className="mt-0.5 text-xs font-medium text-slate-500">
+          {label}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ReviewStatusBadge({
+  status,
+}: {
+  status: string;
+}) {
   if (status === "NotSubmitted") return null;
 
   const styles: Record<string, string> = {
-    PendingReview: "bg-amber-100 text-amber-700",
-    Approved: "bg-green-100 text-green-700",
-    Rejected: "bg-red-100 text-red-700",
+    PendingReview:
+      "border-amber-200 bg-amber-50 text-amber-700",
+    Approved:
+      "border-green-200 bg-green-50 text-green-700",
+    Rejected:
+      "border-red-200 bg-red-50 text-red-700",
   };
 
   const labels: Record<string, string> = {
-    PendingReview: "Pending Manager Review",
-    Approved: "Manager Approved",
-    Rejected: "Manager Rejected",
+    PendingReview: "Pending review",
+    Approved: "Approved",
+    Rejected: "Rejected",
   };
 
   return (
     <span
-      className={`px-3 py-1 rounded-full text-xs font-semibold ${styles[status] ?? "bg-slate-100 text-slate-700"}`}
+      className={`inline-flex items-center border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${
+        styles[status] ??
+        "border-slate-200 bg-slate-50 text-slate-600"
+      }`}
     >
       {labels[status] ?? status}
     </span>
