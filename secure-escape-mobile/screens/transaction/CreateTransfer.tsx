@@ -113,7 +113,7 @@ export default function CreateTransfer() {
       cleaned = "0";
     }
 
-    if (selectedAccount && !isNaN(numeric) && numeric > selectedAccount.availableBalance) {
+    if (selectedAccount && !selectedAccount.isDecoyView && !isNaN(numeric) && numeric > selectedAccount.availableBalance) {
       setAmount("");
       setAmountError(`Amount exceeds available balance of R ${selectedAccount.availableBalance.toLocaleString()}`);
       clearError();
@@ -135,7 +135,7 @@ export default function CreateTransfer() {
       setAmountError("Enter a valid amount");
       return false;
     }
-    if (selectedAccount && numeric > selectedAccount.availableBalance) {
+    if (selectedAccount && !selectedAccount.isDecoyView && numeric > selectedAccount.availableBalance) {
       setAmountError(`Exceeds balance of R ${selectedAccount.availableBalance.toLocaleString()}`);
       return false;
     }
@@ -250,7 +250,7 @@ export default function CreateTransfer() {
   );
 
   const amountNumber = parseFloat(amount) || 0;
-  const exceedsBalance = selectedAccount && amountNumber > selectedAccount.availableBalance;
+  const exceedsBalance = selectedAccount && !selectedAccount.isDecoyView && amountNumber > selectedAccount.availableBalance;
 
   return (
     <View style={styles.container}>

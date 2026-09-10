@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Threading.Tasks;
 using SecureEscape.Api.Enums;
@@ -40,6 +41,9 @@ namespace SecureEscape.Api.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? InitialDecoyBalance { get; set; }
 
         public CaseStatus CaseStatus { get; set; } = CaseStatus.Open;
         public bool HadStepUpDuressEvent { get; set; } = false;

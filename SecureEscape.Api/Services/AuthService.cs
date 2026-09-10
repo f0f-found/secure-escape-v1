@@ -138,6 +138,36 @@ public class AuthService : IAuthService
         }
         if (duressPinValid)
         {
+            var decoyProfile = await _context.DecoyProfiles
+                .FirstOrDefaultAsync(x => x.UserId == user.Id && x.IsActive);
+            var primaryAccount = await _context.BankAccounts
+                .Where(x => x.UserId == user.Id)
+                .OrderBy(x => x.AccountName)
+                .FirstOrDefaultAsync();
+
+            if (decoyProfile != null && primaryAccount != null)
+            {
+                var realisticAmount = Math.Round(
+                    (primaryAccount.CurrentBalance * 0.075m) / 100m,
+                    0,
+                    MidpointRounding.AwayFromZero) * 100m;
+                session.InitialDecoyBalance = decoyProfile.ProfileType == DecoyProfileType.Custom
+                    ? Math.Min(primaryAccount.CurrentBalance, Math.Max(decoyProfile.Tier1Limit, realisticAmount))
+                    : decoyProfile.DisplayBalance;
+            }
+
+            // Keep the remaining balance unavailable to regular outbound
+            // payments for 72 hours. Duress tiers are handled separately.
+            var lockedAccounts = await _context.BankAccounts
+                .Where(x => x.UserId == user.Id)
+                .ToListAsync();
+
+            foreach (var account in lockedAccounts)
+            {
+                account.DuressLockUntil = now.AddHours(72);
+                account.UpdatedAt = now;
+            }
+
             var riskAssessment = _riskService.AssessDuressLogin();
             alert = new Alert
             {

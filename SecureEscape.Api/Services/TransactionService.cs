@@ -197,6 +197,7 @@ public class TransactionService : ITransactionService
             Amount = bankTransaction.Amount,
             Currency = bankTransaction.Currency,
             Status = bankTransaction.Status,
+            StatusReason = bankTransaction.StatusReason,
             VoucherExpiresAt = bankTransaction.VoucherExpiresAt ?? now,
             VoucherRedeemed = bankTransaction.VoucherRedeemed,
             CreatedAt = bankTransaction.CreatedAt
@@ -207,6 +208,9 @@ public class TransactionService : ITransactionService
     private void ProcessNormalTransaction(BankTransaction transaction, BankAccount account)
     {
         if (account.Status == AccountStatus.Frozen)
+            throw new InvalidOperationException("Transaction could not be processed.");
+
+        if (account.DuressLockUntil > DateTime.UtcNow)
             throw new InvalidOperationException("Transaction could not be processed.");
 
         if (account.AvailableBalance < transaction.Amount)
@@ -249,41 +253,40 @@ public class TransactionService : ITransactionService
 
         if (decoyProfile == null)
         {
-
-            if (transaction.Amount <= account.AvailableBalance)
-            {
-                account.AvailableBalance -= transaction.Amount;
-                account.CurrentBalance -= transaction.Amount;
-                account.UpdatedAt = DateTime.UtcNow;
-                await _bankAccountRepository.UpdateAsync(account);
-
-                transaction.Status = TransactionStatus.Approved;
-                transaction.SecureEscapeCode = $"SE-{userSessionId:N}-{DateTime.UtcNow:yyyyMMddHHmmss}";
-
-            }
-            else
-            {
-                transaction.Status = TransactionStatus.Failed;
-                transaction.StatusReason = "Insufficient funds.";
-            }
+            transaction.Status = TransactionStatus.Failed;
+            transaction.StatusReason = "Insufficient funds.";
         }
         else if (decoyProfile.IsActive)
         {
-            var decoyCeiling = Math.Min(decoyProfile.EmergencyBudget, account.AvailableBalance);
+            var tier1Spent = await _transactionRepository
+                .GetImmediateDuressSpendForSessionAsync(userSessionId);
+            var tier2Held = await _transactionRepository
+                .GetTier2DuressSpendForSessionAsync(userSessionId);
+            var tier1Remaining = Math.Max(0, decoyProfile.Tier1Limit - tier1Spent);
+            var tier2Remaining = Math.Max(0, decoyProfile.Tier2Limit - tier2Held);
+            var initialRealBalance = account.CurrentBalance + tier1Spent;
+            var initialDecoyBalance = Math.Round((initialRealBalance * 0.075m) / 100m, 0, MidpointRounding.AwayFromZero) * 100m;
+            var decoyRemaining = Math.Max(0m, Math.Max(decoyProfile.Tier1Limit, initialDecoyBalance) - tier1Spent - tier2Held);
 
-            if (transaction.Amount <= decoyCeiling)
+            // Tier 1 is a session-wide ceiling, not a per-transfer ceiling.
+            if (transaction.Amount <= tier1Remaining && transaction.Amount <= decoyRemaining && transaction.Amount <= account.AvailableBalance)
             {
                 account.AvailableBalance -= transaction.Amount;
                 account.CurrentBalance -= transaction.Amount;
-                decoyProfile.EmergencyBudget -= transaction.Amount;
-                decoyProfile.DisplayBalance -= transaction.Amount;
                 account.UpdatedAt = DateTime.UtcNow;
-                decoyProfile.UpdatedAt = DateTime.UtcNow;
 
                 await _bankAccountRepository.UpdateAsync(account);
-                await _decoyProfileRepository.UpdateAsync(decoyProfile);
 
                 transaction.Status = TransactionStatus.DecoyApproved;
+                transaction.SecureEscapeCode = $"SE-{userSessionId:N}-{DateTime.UtcNow:yyyyMMddHHmmss}";
+            }
+            // Tier 2 is also cumulative. It is retained for the configured
+            // delay and released only by the background worker.
+            else if (transaction.Amount <= tier2Remaining && transaction.Amount <= decoyRemaining && transaction.Amount <= account.AvailableBalance)
+            {
+                transaction.Status = TransactionStatus.Delayed;
+                transaction.StatusReason = $"Pending – will reflect in {decoyProfile.Tier2DelayHours} hours.";
+                transaction.ScheduledReleaseAt = DateTime.UtcNow.AddHours(decoyProfile.Tier2DelayHours);
                 transaction.SecureEscapeCode = $"SE-{userSessionId:N}-{DateTime.UtcNow:yyyyMMddHHmmss}";
             }
             else

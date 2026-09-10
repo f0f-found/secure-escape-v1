@@ -30,35 +30,8 @@ public class AdminSessionService : IAdminSessionService
 
     public async Task<List<DuressSessionSummaryResponseDto>> GetDuressSessionsAsync(Guid? bankIntegrationId)
     {
-        await ExpireStaleActiveSessionsAsync();
         var sessions = await _userSessionRepository.GetDuressSessionsAsync(bankIntegrationId);
         return sessions.Select(MapToSummary).ToList();
-    }
-
-    private async Task ExpireStaleActiveSessionsAsync()
-    {
-        var cutoffTime = DateTime.UtcNow.AddMinutes(-1);
-
-        var staleSessions = await _userSessionRepository
-            .GetStaleActiveSessionsAsync(cutoffTime);
-
-        if (!staleSessions.Any())
-        {
-            return;
-        }
-
-        var now = DateTime.UtcNow;
-
-        foreach (var session in staleSessions)
-        {
-            session.Status = SessionStatus.Expired;
-            session.EndedAt = now;
-            session.UpdatedAt = now;
-
-            await _userSessionRepository.UpdateAsync(session);
-        }
-
-        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task<DuressSessionDetailResponseDto?> GetDuressSessionDetailAsync(Guid sessionId, Guid? bankIntegrationId)

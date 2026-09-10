@@ -8,7 +8,11 @@ namespace SecureEscape.Api.Data
     {
         public static async Task SeedAsync(AppDbContext context)
         {
-            if (await context.BankIntegrations.AnyAsync()) return;
+            if (await context.BankIntegrations.AnyAsync())
+            {
+                await SeedFreshTierTestUsersAsync(context);
+                return;
+            }
 
             // ── BANK INTEGRATIONS ──────────────────────────────────────────
             var zenithBank = new BankIntegration
@@ -302,6 +306,108 @@ namespace SecureEscape.Api.Data
                 }
             );
 
+            await context.SaveChangesAsync();
+            await SeedFreshTierTestUsersAsync(context);
+        }
+
+        // These users deliberately have no DecoyProfile. They are safe,
+        // repeatable accounts for setting up and testing Secure Escape tiers.
+        private static async Task SeedFreshTierTestUsersAsync(AppDbContext context)
+        {
+            var bank = await context.BankIntegrations
+                .FirstOrDefaultAsync(x => x.Status == BankIntegrationStatus.Active);
+
+            if (bank == null)
+            {
+                return;
+            }
+
+            var usersToSeed = new[]
+            {
+                ("Bongani Mahlangu", "bongani.mahlangu@email.co.za", "6001", "9001"),
+                ("Precious Ndlovu", "precious.ndlovu@email.co.za", "6002", "9002"),
+                ("Tshepo Radebe", "tshepo.radebe@email.co.za", "6003", "9003"),
+                ("Nomvula Mabaso", "nomvula.mabaso@email.co.za", "6004", "9004"),
+                ("Sibusiso Khoza", "sibusiso.khoza@email.co.za", "6005", "9005"),
+                ("Palesa Motaung", "palesa.motaung@email.co.za", "6006", "9006"),
+                ("Themba Mnisi", "themba.mnisi@email.co.za", "6007", "9007"),
+                ("Ayanda Cele", "ayanda.cele@email.co.za", "6008", "9008"),
+                ("Refilwe Sithole", "refilwe.sithole@email.co.za", "6009", "9009"),
+                ("Mpho Baloyi", "mpho.baloyi@email.co.za", "6010", "9010")
+            };
+
+            var newUsers = new List<User>();
+            var credentials = new List<AuthCredential>();
+            var accounts = new List<BankAccount>();
+            var beneficiaries = new List<Beneficiary>();
+
+            for (var index = 0; index < usersToSeed.Length; index++)
+            {
+                var (fullName, email, normalPin, duressPin) = usersToSeed[index];
+                if (await context.Users.AnyAsync(x => x.Email == email))
+                {
+                    continue;
+                }
+
+                var userId = Guid.NewGuid();
+                var accountNumber = $"610000{index + 1:0000}";
+                var user = new User
+                {
+                    Id = userId,
+                    BankIntegrationId = bank.Id,
+                    BankCustomerId = $"TIER-TEST-{index + 1:0000}",
+                    FullName = fullName,
+                    Email = email,
+                    PhoneNumber = $"080000{index + 1:0000}",
+                    Status = UserStatus.Active,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                newUsers.Add(user);
+                credentials.Add(new AuthCredential
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password@123"),
+                    NormalPinHash = BCrypt.Net.BCrypt.HashPassword(normalPin),
+                    DuressPinHash = BCrypt.Net.BCrypt.HashPassword(duressPin),
+                    CreatedAt = DateTime.UtcNow
+                });
+                accounts.Add(new BankAccount
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    AccountNumber = accountNumber,
+                    AccountName = $"{fullName} Test Account",
+                    AccountType = AccountType.Cheque,
+                    AvailableBalance = 50_000m,
+                    CurrentBalance = 50_000m,
+                    Currency = "ZAR",
+                    Status = AccountStatus.Active,
+                    CreatedAt = DateTime.UtcNow
+                });
+                beneficiaries.Add(new Beneficiary
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    Name = "Secure Escape Test Recipient",
+                    BankName = bank.BankName,
+                    AccountNumber = $"710000{index + 1:0000}",
+                    Reference = "Tier testing",
+                    Status = BeneficiaryStatus.Active,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
+            if (newUsers.Count == 0)
+            {
+                return;
+            }
+
+            await context.Users.AddRangeAsync(newUsers);
+            await context.AuthCredentials.AddRangeAsync(credentials);
+            await context.BankAccounts.AddRangeAsync(accounts);
+            await context.Beneficiaries.AddRangeAsync(beneficiaries);
             await context.SaveChangesAsync();
         }
     }

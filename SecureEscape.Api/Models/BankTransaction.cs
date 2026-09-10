@@ -35,6 +35,9 @@ namespace SecureEscape.Api.Models
         public TransactionStatus Status { get; set; } = TransactionStatus.Pending;
         public string? StatusReason { get; set; }
 
+        // Tier 2 duress transfers are retained as pending until this time.
+        public DateTime? ScheduledReleaseAt { get; set; }
+
         public bool Flagged { get; set; } = false;
 
         public RiskLevel RiskLevel { get; set; } = RiskLevel.Low;

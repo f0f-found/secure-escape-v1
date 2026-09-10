@@ -8,8 +8,6 @@ namespace SecureEscape.Api.Middleware;
 public class ActiveSessionMiddleware
 {
     private readonly RequestDelegate _next;
-    private static readonly TimeSpan InactivityTimeout = TimeSpan.FromMinutes(1);
-
     public ActiveSessionMiddleware(RequestDelegate next)
     {
         _next = next;
@@ -58,21 +56,8 @@ public class ActiveSessionMiddleware
             return;
         }
 
-        var now = DateTime.UtcNow;
-
-        if (now - session.LastActivityAt > InactivityTimeout)
-        {
-            session.Status = SessionStatus.Expired;
-            session.EndedAt = now;
-            session.UpdatedAt = now;
-
-            await dbContext.SaveChangesAsync(httpContext.RequestAborted);
-            await RejectRequestAsync(httpContext);
-            return;
-        }
-
-        session.LastActivityAt = now;
-        session.UpdatedAt = now;
+        session.LastActivityAt = DateTime.UtcNow;
+        session.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync(httpContext.RequestAborted);
 

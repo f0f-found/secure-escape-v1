@@ -19,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/utils/theme";
 import { useRouter } from "expo-router";
 import { verifyPin } from "@/services/authService";
+import { setDuressPin as saveDuressPin } from "@/services/secureEscapeService";
 
 export default function DuressPinScreen() {
   const router = useRouter();
@@ -46,6 +47,8 @@ export default function DuressPinScreen() {
   const termsFadeAnim = useRef(new Animated.Value(0)).current;
   const termsScaleAnim = useRef(new Animated.Value(0.9)).current;
   const [modalAgreed, setModalAgreed] = useState(false);
+  const [isSavingDuressPin, setIsSavingDuressPin] = useState(false);
+  const [termsError, setTermsError] = useState("");
 
   // Open/close Info modal
   const openInfoModal = () => {
@@ -68,6 +71,7 @@ export default function DuressPinScreen() {
   const openTermsModal = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setModalAgreed(false);
+    setTermsError("");
     setTermsModalVisible(true);
     Animated.parallel([
       Animated.timing(termsFadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
@@ -82,11 +86,28 @@ export default function DuressPinScreen() {
     ]).start(() => setTermsModalVisible(false));
   };
 
-  const handleConfirm = () => {
-    if (modalAgreed) {
+  const handleConfirm = async () => {
+    if (!modalAgreed || isSavingDuressPin) return;
+
+    try {
+      setIsSavingDuressPin(true);
+      setTermsError("");
+      await saveDuressPin({
+        currentPin: normalPin,
+        duressPin,
+      });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       closeTermsModal();
       router.push("/secure-escape/emergency-contact");
+    } catch (error) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setTermsError(
+        error instanceof Error
+          ? error.message
+          : "Failed to save your duress PIN. Please try again.",
+      );
+    } finally {
+      setIsSavingDuressPin(false);
     }
   };
 
@@ -417,7 +438,10 @@ export default function DuressPinScreen() {
                 {/* Internal checkbox */}
                 <TouchableOpacity
                   style={styles.modalCheckRow}
-                  onPress={() => setModalAgreed(!modalAgreed)}
+                  onPress={() => {
+                    setModalAgreed(!modalAgreed);
+                    setTermsError("");
+                  }}
                   activeOpacity={0.7}
                 >
                   <View style={[styles.modalCheckbox, modalAgreed && styles.modalCheckboxChecked]}>
@@ -426,17 +450,24 @@ export default function DuressPinScreen() {
                   <Text style={styles.modalCheckText}>I have read and agree to the Terms & Conditions</Text>
                 </TouchableOpacity>
 
+                {!!termsError && <Text style={styles.errorText}>{termsError}</Text>}
+
                 <TouchableOpacity
-                  style={[styles.modalConfirmButton, !modalAgreed && styles.modalConfirmDisabled]}
+                  style={[
+                    styles.modalConfirmButton,
+                    (!modalAgreed || isSavingDuressPin) && styles.modalConfirmDisabled,
+                  ]}
                   onPress={handleConfirm}
-                  disabled={!modalAgreed}
+                  disabled={!modalAgreed || isSavingDuressPin}
                   activeOpacity={0.7}
                 >
                   <LinearGradient
-                    colors={modalAgreed ? ["#7C6EF7", "#4A6CF7"] : ["#ccc", "#ccc"]}
+                    colors={modalAgreed && !isSavingDuressPin ? ["#7C6EF7", "#4A6CF7"] : ["#ccc", "#ccc"]}
                     style={styles.modalGradientButton}
                   >
-                    <Text style={styles.buttonText}>Confirm & Agree</Text>
+                    <Text style={styles.buttonText}>
+                      {isSavingDuressPin ? "Saving..." : "Confirm & Agree"}
+                    </Text>
                   </LinearGradient>
                 </TouchableOpacity>
               </Animated.View>

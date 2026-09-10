@@ -116,6 +116,7 @@ builder.Services.AddScoped<ISecureEscapeService, SecureEscapeService>();
 builder.Services.AddScoped<IFraudReportingService, FraudReportingService>();
 builder.Services.AddScoped<IEmergencyContactService, EmergencyContactService>();
 builder.Services.AddScoped<INotificationDispatchService, NotificationDispatchService>();
+builder.Services.AddHostedService<DelayedDuressTransferReleaseService>();
 
 
 

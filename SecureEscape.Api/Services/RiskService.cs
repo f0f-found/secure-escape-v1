@@ -61,25 +61,25 @@ public class RiskService : IRiskService
             };
         }
 
-        if (transaction.Amount > decoyProfile.EmergencyBudget)
+        if (transaction.Amount > decoyProfile.Tier2Limit)
         {
             return new RiskAssessmentResult
             {
                 Score = 0.98m,
                 RiskLevel = RiskLevel.Critical,
-                Reason = "Duress transaction exceeds emergency budget"
+                Reason = "Duress transaction exceeds tier 2 limit"
             };
         }
 
-        // if (transaction.Amount > decoyProfile.Tier1Limit)
-        // {
-        //     return new RiskAssessmentResult
-        //     {
-        //         Score = 0.85m,
-        //         RiskLevel = RiskLevel.High,
-        //         Reason = "Duress transaction exceeds tier 1 limit"
-        //     };
-        // }
+        if (transaction.Amount > decoyProfile.Tier1Limit)
+        {
+            return new RiskAssessmentResult
+            {
+                Score = 0.85m,
+                RiskLevel = RiskLevel.High,
+                Reason = "Duress transaction held for tier 2 review"
+            };
+        }
 
         return new RiskAssessmentResult
         {

@@ -40,6 +40,10 @@ namespace SecureEscape.Api.Models
         [MaxLength(30)]
         public AccountStatus Status { get; set; } = AccountStatus.Active;
 
+        // Set after a duress event. Ordinary outbound payments remain blocked
+        // until the bank's protection window expires.
+        public DateTime? DuressLockUntil { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }
