@@ -309,6 +309,9 @@ namespace SecureEscape.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<DateTime?>("DuressLockUntil")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(10)
@@ -429,6 +432,9 @@ namespace SecureEscape.Api.Migrations
 
                     b.Property<decimal>("RiskScore")
                         .HasColumnType("decimal(5,2)");
+
+                    b.Property<DateTime?>("ScheduledReleaseAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("SecureEscapeCode")
                         .HasColumnType("longtext");
