@@ -1,16 +1,22 @@
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import {
+  MapContainer,
+  Marker,
+  Popup,
+  TileLayer,
+} from "react-leaflet";
 import L from "leaflet";
 
 import "leaflet/dist/leaflet.css";
 
-// Fix missing marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
 interface LocationEvent {
@@ -24,38 +30,107 @@ interface Props {
   locations: LocationEvent[];
 }
 
-export default function SessionMap({ locations }: Props) {
-  if (!locations.length) return null;
+const latestLocationIcon = L.divIcon({
+  className: "",
+  html: `
+    <div
+      style="
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #DC2626;
+        border: 4px solid white;
+        box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.22),
+                    0 4px 12px rgba(15, 23, 42, 0.25);
+      "
+    ></div>
+  `,
+  iconSize: [30, 30],
+  iconAnchor: [15, 15],
+});
 
-  const latest = locations[locations.length - 1];
+export default function SessionMap({
+  locations,
+}: Props) {
+  if (!locations.length) {
+    return null;
+  }
+
+  const sortedLocations = [...locations].sort(
+    (a, b) =>
+      new Date(b.capturedAt).getTime() -
+      new Date(a.capturedAt).getTime(),
+  );
+
+  const latest = sortedLocations[0];
 
   return (
-    <MapContainer
-      center={[latest.latitude, latest.longitude]}
-      zoom={15}
-      scrollWheelZoom
-      style={{
-        height: "400px",
-        width: "100%",
-        borderRadius: "16px",
-      }}
-    >
-      <TileLayer
-        attribution="&copy; OpenStreetMap contributors"
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+    <div className="overflow-hidden border border-[#D5E1EB] bg-white">
+      <MapContainer
+        key={`${latest.latitude}-${latest.longitude}`}
+        center={[
+          Number(latest.latitude),
+          Number(latest.longitude),
+        ]}
+        zoom={16}
+        scrollWheelZoom
+        style={{
+          height: "390px",
+          width: "100%",
+        }}
+      >
+        <TileLayer
+          attribution="&copy; OpenStreetMap contributors"
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
 
-      {locations.map((loc) => (
-        <Marker key={loc.id} position={[loc.latitude, loc.longitude]}>
-          <Popup>
-            <strong>Captured</strong>
-            <br />
-            {new Date(loc.capturedAt).toLocaleString()}
-            <br />
-            {loc.latitude}, {loc.longitude}
-          </Popup>
-        </Marker>
-      ))}
-    </MapContainer>
+        {sortedLocations.map(
+          (location, index) => {
+            const isLatest = index === 0;
+
+            return (
+              <Marker
+                key={location.id}
+                position={[
+                  Number(location.latitude),
+                  Number(location.longitude),
+                ]}
+                icon={
+                  isLatest
+                    ? latestLocationIcon
+                    : new L.Icon.Default()
+                }
+              >
+                <Popup>
+                  <div className="min-w-[180px]">
+                    <p className="font-semibold text-slate-900">
+                      {isLatest
+                        ? "Latest captured location"
+                        : "Previous location"}
+                    </p>
+
+                    <p className="mt-1 text-sm text-slate-600">
+                      {new Date(
+                        location.capturedAt,
+                      ).toLocaleString("en-ZA")}
+                    </p>
+
+                    <p className="mt-2 font-mono text-xs text-slate-500">
+                      {Number(
+                        location.latitude,
+                      ).toFixed(6)}
+                      ,{" "}
+                      {Number(
+                        location.longitude,
+                      ).toFixed(6)}
+                    </p>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          },
+        )}
+      </MapContainer>
+    </div>
   );
 }

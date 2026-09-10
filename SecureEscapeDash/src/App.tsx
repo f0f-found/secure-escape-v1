@@ -8,20 +8,17 @@ import SessionDetail from "./pages/SessionDetailsPage";
 import { getAdminUser } from "./utils/tokenStore";
 import { hasPermission } from "./constants/permission";
 import AnalystSearchPage from "./pages/Analyst/AnalystSearchPage";
-import AnalystMyCasesPage from "./pages/Analyst/AnalystMyCasesPage";
 import AnalystDashboard from "./pages/Analyst/AnalystDashboard";
 import ManagerDashboard from "./pages/Manager/ManagerDashboard";
-import ManagerAssignmentsPage from "./pages/Manager/ManagerAssignmentsPage";
 import ManagerResolvedPage from "./pages/Manager/ManagerResolvedPage";
-import ManagerReportsPage from "./pages/Manager/ManagerReportsPage";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
 import AdminBanksPage from "./pages/Admin/AdminBanksPage";
 import AdminAuditLogsPage from "./pages/Admin/AdminAuditLogsPage";
 import AdminUsersPage from "./pages/Admin/AdminUsersPage";
-import AnalystOpenCasesPage from "./pages/Analyst/AnalystOpenCasesPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = getToken();
+
   return token ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
@@ -61,22 +58,6 @@ export default function App() {
             </RoleProtectedRoute>
           }
         />
-        <Route
-          path="/analyst/open-cases"
-          element={
-            <RoleProtectedRoute permission="viewAnalystDashboard">
-              <AnalystOpenCasesPage />
-            </RoleProtectedRoute>
-          }
-        />
-        <Route
-          path="/analyst/cases"
-          element={
-            <RoleProtectedRoute permission="viewAnalystDashboard">
-              <AnalystMyCasesPage />
-            </RoleProtectedRoute>
-          }
-        />
 
         <Route
           path="/analyst/search"
@@ -87,19 +68,12 @@ export default function App() {
           }
         />
 
+        {/* MANAGER ROUTES */}
         <Route
           path="/manager"
           element={
             <RoleProtectedRoute permission="viewManagerDashboard">
               <ManagerDashboard />
-            </RoleProtectedRoute>
-          }
-        />
-        <Route
-          path="/manager/assignments"
-          element={
-            <RoleProtectedRoute permission="assignCases">
-              <ManagerAssignmentsPage />
             </RoleProtectedRoute>
           }
         />
@@ -113,15 +87,7 @@ export default function App() {
           }
         />
 
-        <Route
-          path="/manager/reports"
-          element={
-            <RoleProtectedRoute permission="viewManagerDashboard">
-              <ManagerReportsPage />
-            </RoleProtectedRoute>
-          }
-        />
-
+        {/* ADMIN ROUTES */}
         <Route
           path="/admin"
           element={
@@ -130,6 +96,7 @@ export default function App() {
             </RoleProtectedRoute>
           }
         />
+
         <Route
           path="/admin/banks"
           element={
@@ -165,6 +132,7 @@ export default function App() {
             </RoleProtectedRoute>
           }
         />
+
         <Route
           path="*"
           element={

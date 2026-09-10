@@ -30,7 +30,6 @@ export default function EmergencyBudgetScreen() {
   const [lowAmount, setLowAmount] = useState(200);
   const [tier1, setTier1] = useState(2000);
   const [tier2, setTier2] = useState(20000);
-  const fadeAnim = useState(new Animated.Value(0))[0];
 
   // Protection Amount modal
   // Display balance no longer has its own slider in this design — for
@@ -93,52 +92,6 @@ export default function EmergencyBudgetScreen() {
   };
 
   // Main Continue: open T&C modal (no validation needed, sliders always valid)
-  const handleContinue = () => {
-    openTermsModal();
-  };
-
-  // Modal handlers for Protection Amount
-  const openProtectionModal = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setProtectionModalVisible(true);
-    Animated.parallel([
-      Animated.timing(protectionFadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-      Animated.spring(protectionScaleAnim, { toValue: 1, friction: 6, tension: 40, useNativeDriver: true }),
-    ]).start();
-  };
-
-  const closeProtectionModal = () => {
-    Animated.parallel([
-      Animated.timing(protectionFadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-      Animated.spring(protectionScaleAnim, { toValue: 0.9, friction: 6, tension: 40, useNativeDriver: true }),
-    ]).start(() => setProtectionModalVisible(false));
-  };
-
-  // T&C modal handlers
-  const openTermsModal = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setModalAgreed(false);
-    setTermsModalVisible(true);
-    Animated.parallel([
-      Animated.timing(termsFadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-      Animated.spring(termsScaleAnim, { toValue: 1, friction: 6, tension: 40, useNativeDriver: true }),
-    ]).start();
-  };
-
-  const closeTermsModal = () => {
-    Animated.parallel([
-      Animated.timing(termsFadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-      Animated.spring(termsScaleAnim, { toValue: 0.9, friction: 6, tension: 40, useNativeDriver: true }),
-    ]).start(() => setTermsModalVisible(false));
-  };
-
-  // Confirm from modal: navigate to DuressPin
-  const handleConfirm = () => {
-    if (modalAgreed) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      closeTermsModal();
-      router.push("/secure-escape/duress-pin");
-    }
   const showError = (message: string) => {
     setError(message);
     setShowErrorModal(true);
@@ -175,110 +128,6 @@ export default function EmergencyBudgetScreen() {
     }
 
     openTermsModal();
-  };
-
-  // Protection Amount modal handlers
-  const openProtectionModal = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setProtectionModalVisible(true);
-    Animated.parallel([
-      Animated.timing(protectionFadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.spring(protectionScaleAnim, {
-        toValue: 1,
-        friction: 6,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
-
-  const closeProtectionModal = () => {
-    Animated.parallel([
-      Animated.timing(protectionFadeAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.spring(protectionScaleAnim, {
-        toValue: 0.9,
-        friction: 6,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start(() => setProtectionModalVisible(false));
-  };
-
-  // T&C modal handlers
-  const openTermsModal = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setModalAgreed(false);
-    setTermsModalVisible(true);
-    Animated.parallel([
-      Animated.timing(termsFadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.spring(termsScaleAnim, {
-        toValue: 1,
-        friction: 6,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
-
-  const closeTermsModal = () => {
-    Animated.parallel([
-      Animated.timing(termsFadeAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.spring(termsScaleAnim, {
-        toValue: 0.9,
-        friction: 6,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start(() => setTermsModalVisible(false));
-  };
-
-  // Confirm & Agree inside the modal: actually saves and navigates
-  const handleConfirm = async () => {
-    if (!modalAgreed) return;
-
-    try {
-      setIsSaving(true);
-      clearError();
-
-      await upsertDecoyProfile({
-        profileType: profileType ?? "LowProfile",
-        displayBalance: mode === "LowProfile" ? lowAmount : displayBalance,
-        emergencyBudget: mode === "LowProfile" ? lowAmount : tier1,
-        tier1Limit: mode === "LowProfile" ? lowAmount : tier1,
-        tier2Limit: mode === "LowProfile" ? lowAmount : tier2,
-        tier2DelayHours: 24,
-      });
-
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      closeTermsModal();
-      router.push("/secure-escape/duress-pin");
-    } catch (err) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      closeTermsModal();
-      showError(
-        err instanceof Error
-          ? err.message
-          : "Failed to save Secure Escape setup",
-      );
-    } finally {
-      setIsSaving(false);
-    }
   };
 
   const formatCurrency = (value: number) => `R ${value.toLocaleString()}`;
@@ -382,12 +231,6 @@ export default function EmergencyBudgetScreen() {
         </Text>
         <TouchableOpacity onPress={openProtectionModal}>
           <Text style={styles.link}>What is the protection amount?</Text>
-          This amount is fully insured by the bank. If you&apos;re forced to
-          transact under duress, this is the maximum that can leave your
-          account.
-        </Text>
-        <TouchableOpacity onPress={openProtectionModal}>
-          <Text style={styles.link}>What is the protection amount? </Text>
         </TouchableOpacity>
 
         <Animated.View
@@ -410,19 +253,6 @@ export default function EmergencyBudgetScreen() {
           <Ionicons name="information-circle" size={20} color={colors.primary} style={styles.noteIcon} />
           <Text style={styles.noteText}>
             <Text style={styles.boldText}>Note:</Text> This is the amount an attacker can force you to send. It will leave your account, but it&apos;s fully insured and guaranteed to be refunded by the bank. Your safety is the priority.
-          </Text>
-        </View>
-          <Ionicons
-            name="information-circle"
-            size={20}
-            color={colors.primary}
-            style={styles.noteIcon}
-          />
-          <Text style={styles.noteText}>
-            <Text style={styles.boldText}>Note:</Text> This is the amount an
-            attacker can force you to send. It will leave your account, but
-            it&apos;s fully insured and guaranteed to be refunded by the bank.
-            Your safety is the priority.
           </Text>
         </View>
 
@@ -463,7 +293,6 @@ export default function EmergencyBudgetScreen() {
               styles.modalOverlay,
               { opacity: protectionFadeAnim },
             ]}
-            style={[styles.modalOverlay, { opacity: protectionFadeAnim }]}
           >
             <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
               <Animated.View
@@ -472,7 +301,6 @@ export default function EmergencyBudgetScreen() {
                   { transform: [{ scale: protectionScaleAnim }] },
                 ]}
               >
-                <TouchableOpacity style={styles.closeButton} onPress={closeProtectionModal}>
                 <TouchableOpacity
                   style={styles.closeButton}
                   onPress={closeProtectionModal}
@@ -510,21 +338,6 @@ export default function EmergencyBudgetScreen() {
                     <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
                     <Text style={styles.bulletText}>
                       The <Text style={styles.boldText}>bank and police are silently alerted</Text> the moment your duress PIN is used.
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={20}
-                      color={colors.primary}
-                    />
-                    <Text style={styles.bulletText}>
-                      It is{" "}
-                      <Text style={styles.boldText}>
-                        guaranteed by the bank
-                      </Text>
-                      . You will be{" "}
-                      <Text style={styles.boldText}>
-                        refunded within 72 hours
-                      </Text>{" "}
-                      of reporting the incident with a police case number.
                     </Text>
                   </View>
                   <View style={styles.bulletItem}>
@@ -750,19 +563,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 6,
   },
-  sub: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: colors.navy,
-    marginBottom: 4,
-    lineHeight: 22,
-  },
-  subDescription: {
-    fontSize: 14,
-    color: colors.textSub,
-    lineHeight: 20,
-    marginBottom: 6,
-  },
   link: {
     fontSize: 13,
     color: colors.primary,
@@ -801,16 +601,6 @@ const styles = StyleSheet.create({
   },
   valueLabel: { fontSize: 13, color: colors.textSub },
   value: { fontSize: 18, fontWeight: "800", color: colors.primary },
-  noteBox: {
-    flexDirection: "row",
-    backgroundColor: "#F5F3FF",
-    padding: 14,
-    borderRadius: 12,
-    marginTop: 8,
-    marginBottom: 20,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
-  },
   noteBox: {
     flexDirection: "row",
     backgroundColor: "#F5F3FF",
