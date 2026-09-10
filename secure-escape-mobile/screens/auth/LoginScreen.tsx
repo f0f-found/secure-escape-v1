@@ -17,6 +17,11 @@ import { login } from "@/services/authService";
 import { saveAuthSession } from "@/services/tokenStore";
 import * as Location from "expo-location";
 import Constants from "expo-constants";
+import {
+  enableBiometricLogin,
+  isBiometricLoginAvailable,
+  loginWithBiometrics,
+} from "@/services/biometricAuthService";
 
 interface LoginScreenProps {
   onLoginSuccess?: () => void;
@@ -34,6 +39,15 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   // Field-level error states
   const [emailError, setEmailError] = useState<string | null>(null);
   const [pinError, setPinError] = useState<string | null>(null);
+  const [biometricOption, setBiometricOption] = useState<{
+    available: boolean;
+    label: string | null;
+  }>({ available: false, label: null });
+
+  // Check once on mount — reads a plain local flag, never prompts Face ID.
+  React.useEffect(() => {
+    isBiometricLoginAvailable().then(setBiometricOption);
+  }, []);
 
   const showError = (message: string) => {
     setError(message);
@@ -103,13 +117,25 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     // If it's a string, we can try to match common patterns
     if (typeof error === "string") {
       const lower = error.toLowerCase();
-      if (lower.includes("network") || lower.includes("connection") || lower.includes("timeout")) {
+      if (
+        lower.includes("network") ||
+        lower.includes("connection") ||
+        lower.includes("timeout")
+      ) {
         return "Network error. Please check your connection.";
       }
-      if (lower.includes("invalid") || lower.includes("credentials") || lower.includes("incorrect")) {
+      if (
+        lower.includes("invalid") ||
+        lower.includes("credentials") ||
+        lower.includes("incorrect")
+      ) {
         return "Invalid email or PIN. Please try again.";
       }
-      if (lower.includes("server") || lower.includes("internal") || lower.includes("500")) {
+      if (
+        lower.includes("server") ||
+        lower.includes("internal") ||
+        lower.includes("500")
+      ) {
         return "Something went wrong. Please try again later.";
       }
       // If it's a known backend message, we can still return a generic one
@@ -120,13 +146,25 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     if (error instanceof Error) {
       const message = error.message;
       const lower = message.toLowerCase();
-      if (lower.includes("network") || lower.includes("connection") || lower.includes("timeout")) {
+      if (
+        lower.includes("network") ||
+        lower.includes("connection") ||
+        lower.includes("timeout")
+      ) {
         return "Network error. Please check your connection.";
       }
-      if (lower.includes("invalid") || lower.includes("credentials") || lower.includes("incorrect")) {
+      if (
+        lower.includes("invalid") ||
+        lower.includes("credentials") ||
+        lower.includes("incorrect")
+      ) {
         return "Invalid email or PIN. Please try again.";
       }
-      if (lower.includes("server") || lower.includes("internal") || lower.includes("500")) {
+      if (
+        lower.includes("server") ||
+        lower.includes("internal") ||
+        lower.includes("500")
+      ) {
         return "Something went wrong. Please try again later.";
       }
       // For any other Error, return a generic but polite message
@@ -165,6 +203,15 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
         userSessionId: response.userSessionId,
         userId: response.userId,
       });
+
+      if (biometricsEnabled) {
+        await enableBiometricLogin({
+          token: response.token,
+          sessionMode: response.sessionMode,
+          userSessionId: response.userSessionId,
+          userId: response.userId,
+        });
+      }
 
       onLoginSuccess?.();
     } catch (error) {
@@ -246,9 +293,18 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const isFormValid = () => {
     const trimmedEmail = email.trim();
     const trimmedPin = pin.trim();
-    const emailValid = trimmedEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
+    const emailValid =
+      trimmedEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
     const pinValid = trimmedPin && /^\d{4}$/.test(trimmedPin);
     return emailValid && pinValid;
+  };
+
+  const handleBiometricLogin = async () => {
+    const session = await loginWithBiometrics();
+    if (!session) return; // cancelled/failed — user still has the PIN form right there
+
+    await saveAuthSession(session);
+    onLoginSuccess?.();
   };
 
   return (
@@ -270,11 +326,23 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           ne
         </Text>
       </View>
+      {biometricOption.available && (
+        <TouchableOpacity
+          style={styles.biometricLoginButton}
+          onPress={handleBiometricLogin}
+        >
+          <Text style={styles.biometricLoginText}>
+            Log in with {biometricOption.label}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       <View style={styles.pinArea}>
         {/* Email field */}
         <View style={styles.pinLabelRow}>
-          <Text style={styles.pinLabel}>Email <Text style={styles.required}></Text></Text>
+          <Text style={styles.pinLabel}>
+            Email <Text style={styles.required}></Text>
+          </Text>
         </View>
         <TextInput
           style={[styles.textInput, emailError && styles.inputError]}
@@ -291,7 +359,9 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
         {/* PIN field */}
         <View style={[styles.pinLabelRow, { marginTop: 16 }]}>
-          <Text style={styles.pinLabel}>Enter app PIN  <Text style={styles.required}></Text></Text>
+          <Text style={styles.pinLabel}>
+            Enter app PIN <Text style={styles.required}></Text>
+          </Text>
           <TouchableOpacity>
             <Text style={styles.forgotPin}>Forgot PIN</Text>
           </TouchableOpacity>
@@ -365,13 +435,9 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           <View
             style={[styles.checkbox, dontShowAgain && styles.checkboxChecked]}
           >
-            {dontShowAgain && (
-              <Text style={styles.checkmark}>✓</Text>
-            )}
+            {dontShowAgain && <Text style={styles.checkmark}>✓</Text>}
           </View>
-          <Text style={styles.dontShowText}>
-            Don&apos;t show me this again
-          </Text>
+          <Text style={styles.dontShowText}>Don&apos;t show me this again</Text>
         </TouchableOpacity>
       </View>
 
@@ -483,7 +549,12 @@ const styles = StyleSheet.create({
   },
   submitButton: { marginTop: 28, borderRadius: 50, overflow: "hidden" },
   gradientButton: { paddingVertical: 16, alignItems: "center" },
-  submitText: { color: "#fff", fontSize: 17, fontWeight: "700", letterSpacing: 0.5 },
+  submitText: {
+    color: "#fff",
+    fontSize: 17,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
   disabledButton: { opacity: 0.6 },
   errorBanner: {
     flexDirection: "row",
@@ -552,7 +623,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
+  checkboxChecked: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
   checkmark: { color: "#fff", fontSize: 14, fontWeight: "bold" },
   dontShowText: { fontSize: 13, color: colors.textSub },
   bottomSpacer: { height: 30 },
@@ -614,6 +688,20 @@ const styles = StyleSheet.create({
   modalButtonText: {
     color: "#fff",
     fontWeight: "800",
+    fontSize: 15,
+  },
+  biometricLoginButton: {
+    marginHorizontal: 24,
+    marginBottom: 20,
+    paddingVertical: 14,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    alignItems: "center",
+  },
+  biometricLoginText: {
+    color: colors.primary,
+    fontWeight: "700",
     fontSize: 15,
   },
 });
