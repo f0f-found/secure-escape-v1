@@ -1,11 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "PS4+FVJmQ9Q=",
+  "dgSpecHash": "nD9hxJO2/bE=",
   "success": true,
   "projectFilePath": "/Users/roriputu/Documents/Web-Dev/secure-escape/secure-escape-v1/SecureEscape.Api.Tests/SecureEscape.Api.Tests.csproj",
   "expectedPackageFiles": [
     "/Users/roriputu/.nuget/packages/bcrypt.net-next/4.2.0/bcrypt.net-next.4.2.0.nupkg.sha512",
     "/Users/roriputu/.nuget/packages/castle.core/5.1.1/castle.core.5.1.1.nupkg.sha512",
+    "/Users/roriputu/.nuget/packages/coverlet.collector/10.0.1/coverlet.collector.10.0.1.nupkg.sha512",
     "/Users/roriputu/.nuget/packages/fluentassertions/6.12.1/fluentassertions.6.12.1.nupkg.sha512",
     "/Users/roriputu/.nuget/packages/microsoft.aspnetcore.authentication.jwtbearer/8.0.23/microsoft.aspnetcore.authentication.jwtbearer.8.0.23.nupkg.sha512",
     "/Users/roriputu/.nuget/packages/microsoft.aspnetcore.openapi/8.0.7/microsoft.aspnetcore.openapi.8.0.7.nupkg.sha512",
