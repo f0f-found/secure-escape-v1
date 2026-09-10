@@ -145,3 +145,4 @@
 /Users/roriputu/Documents/Web-Dev/secure-escape/secure-escape-v1/SecureEscape.Api.Tests/obj/Debug/net8.0/SecureEscape.Api.Tests.pdb
 /Users/roriputu/Documents/Web-Dev/secure-escape/secure-escape-v1/SecureEscape.Api.Tests/obj/Debug/net8.0/SecureEscape.Api.Tests.genruntimeconfig.cache
 /Users/roriputu/Documents/Web-Dev/secure-escape/secure-escape-v1/SecureEscape.Api.Tests/obj/Debug/net8.0/ref/SecureEscape.Api.Tests.dll
+/Users/roriputu/Documents/Web-Dev/secure-escape/secure-escape-v1/SecureEscape.Api.Tests/bin/Debug/net8.0/CoverletSourceRootsMapping_SecureEscape.Api.Tests
