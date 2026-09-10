@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureEscape.Api", "SecureEscape.Api\SecureEscape.Api.csproj", "{38AAEBD9-E7FB-485A-8FFD-B5DB2394E708}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureEscape.Api.Tests", "SecureEscape.Api.Tests\SecureEscape.Api.Tests.csproj", "{0005CDFB-ECFA-4354-B4B0-41C56854F99D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{38AAEBD9-E7FB-485A-8FFD-B5DB2394E708}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{38AAEBD9-E7FB-485A-8FFD-B5DB2394E708}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{38AAEBD9-E7FB-485A-8FFD-B5DB2394E708}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{38AAEBD9-E7FB-485A-8FFD-B5DB2394E708}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0005CDFB-ECFA-4354-B4B0-41C56854F99D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0005CDFB-ECFA-4354-B4B0-41C56854F99D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0005CDFB-ECFA-4354-B4B0-41C56854F99D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0005CDFB-ECFA-4354-B4B0-41C56854F99D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

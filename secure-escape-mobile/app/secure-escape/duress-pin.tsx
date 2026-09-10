@@ -513,6 +513,3 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
 });
-import DuressPin from "@/screens/secure-escape/DuressPin";
-
-export default DuressPin;
