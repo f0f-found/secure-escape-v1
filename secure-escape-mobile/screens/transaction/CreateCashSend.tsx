@@ -96,7 +96,7 @@ export default function CreateCashSend() {
       return;
     }
 
-    if (selectedAccount && numericAmount > selectedAccount.availableBalance) {
+    if (selectedAccount && !selectedAccount.isDecoyView && numericAmount > selectedAccount.availableBalance) {
       showError("Insufficient funds. Please enter a lower amount.");
       return;
     }
