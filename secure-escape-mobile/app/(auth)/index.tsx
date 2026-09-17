@@ -1,16 +1,13 @@
+import LoginScreen from "@/screens/auth/LoginScreen";
 import { useRouter } from "expo-router";
-import SplashScreen from "@/screens/auth/SplashScreen";
 
-export default function AuthIndex() {
+export default function LoginRoute() {
   const router = useRouter();
 
-  const handleLoginPress = () => {
-    router.push("/(auth)/pin-login");
-  };
-
   const handleLoginSuccess = () => {
+    console.log("[AUTH ROUTE] Login successful — navigating to app");
     router.replace("/(tabs)");
   };
 
-  return <SplashScreen onLoginPress={handleLoginPress} />;
+  return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
 }

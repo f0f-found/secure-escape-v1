@@ -12,7 +12,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/utils/theme";
 import { useRouter } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router";
 
 import {
   TransactionType,
@@ -301,3 +301,4 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 11, fontWeight: "600" },
   emptyText: { textAlign: "center", marginTop: 40, color: "#aaa" },
 });
+
