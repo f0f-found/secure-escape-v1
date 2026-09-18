@@ -16,10 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors, shadows } from "@/utils/theme";
 import { getProfileMe } from "@/services/profileService";
 import { ProfileMeResponse } from "@/types/profile";
-import { useRouter } from "expo-router";
-import { logout } from "@/services/authService";
-import { useFocusEffect } from "expo-router";
-// BottomNav is provided by the (tabs) layout now.
+import { useRouter, useFocusEffect } from "expo-router";
 
 const { width } = Dimensions.get("window");
 
@@ -45,6 +42,7 @@ export default function HomeScreen() {
     try {
       setIsLoading(true);
       setError(null);
+
       const user = await getProfileMe();
       setProfile(user);
     } catch (error) {
@@ -60,30 +58,25 @@ export default function HomeScreen() {
     try {
       setIsLoading(true);
       setError(null);
+
       const data = await getAccounts();
       setAccounts(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load accounts.");
+      setError(
+        err instanceof Error ? err.message : "Failed to load accounts."
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logoutButton = async () => {
-    try {
-      await logout();
-      router.replace("/(auth)");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to Logout");
-    }
-  };
-
-  // Build account cards from API data
+  // Build account cards from API data.
+  // The customer-facing UI intentionally does not reveal whether
+  // the backend is serving a normal or protected/decoy account view.
   const accountCards = accounts.map((account, index) => ({
     id: account.id,
     name: account.accountName,
     balance: account.availableBalance,
-    isDecoyView: account.isDecoyView,
     icon: index === 0 ? "wallet" : "trending-up",
     gradient:
       index === 0
@@ -92,7 +85,6 @@ export default function HomeScreen() {
     iconBg: index === 0 ? "#9F8FEF20" : "#60A5FA20",
   }));
 
-  // Favourites list
   const favourites = [
     {
       label: "Pay Beneficiary",
@@ -157,7 +149,6 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Header – with logout button */}
         <View style={styles.headerComponent}>
           <View style={styles.header}>
             <Text style={styles.title}>My Dashboard</Text>
@@ -167,15 +158,16 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Loading / Error states */}
-        {isLoading && <Text style={styles.stateText}>Loading accounts...</Text>}
+        {isLoading && (
+          <Text style={styles.stateText}>Loading accounts...</Text>
+        )}
+
         {error && (
           <TouchableOpacity onPress={loadAccounts}>
             <Text style={styles.errorText}>{error}</Text>
           </TouchableOpacity>
         )}
 
-        {/* Account Cards – now clickable */}
         <View style={styles.cardsRow}>
           {accountCards.map((card) => (
             <TouchableOpacity
@@ -200,7 +192,10 @@ export default function HomeScreen() {
                 end={{ x: 1, y: 1 }}
               >
                 <View
-                  style={[styles.iconCircle, { backgroundColor: card.iconBg }]}
+                  style={[
+                    styles.iconCircle,
+                    { backgroundColor: card.iconBg },
+                  ]}
                 >
                   <Ionicons
                     name={card.icon as keyof typeof Ionicons.glyphMap}
@@ -208,26 +203,26 @@ export default function HomeScreen() {
                     color={colors.primary}
                   />
                 </View>
+
                 <Text style={styles.accName}>{card.name}</Text>
+
                 <Text style={styles.accBalance}>
                   R {card.balance.toLocaleString()}
                 </Text>
-                {card.isDecoyView && (
-                  <Text style={styles.decoyBadge}>⚠ Decoy View</Text>
-                )}
               </LinearGradient>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Favourites */}
         <View style={styles.favouritesSection}>
           <View style={styles.favouritesHeader}>
             <Text style={styles.favTitle}>Favourites</Text>
+
             <TouchableOpacity>
               <Text style={styles.editLink}>edit ›</Text>
             </TouchableOpacity>
           </View>
+
           <View style={styles.favGrid}>
             {favourites.map((item, idx) => (
               <TouchableOpacity
@@ -236,13 +231,19 @@ export default function HomeScreen() {
                 activeOpacity={0.7}
                 onPress={() => handleFavPress(item)}
               >
-                <View style={[styles.favIcon, { backgroundColor: item.bg }]}>
+                <View
+                  style={[
+                    styles.favIcon,
+                    { backgroundColor: item.bg },
+                  ]}
+                >
                   <Ionicons
                     name={item.icon as keyof typeof Ionicons.glyphMap}
                     size={24}
                     color={colors.primary}
                   />
                 </View>
+
                 <Text style={styles.favLabel}>{item.label}</Text>
               </TouchableOpacity>
             ))}
@@ -254,11 +255,20 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  pageContainer: { flex: 1, backgroundColor: colors.greyBg },
-  container: { flex: 1, backgroundColor: colors.greyBg },
+  pageContainer: {
+    flex: 1,
+    backgroundColor: colors.greyBg,
+  },
+
+  container: {
+    flex: 1,
+    backgroundColor: colors.greyBg,
+  },
+
   scrollContent: {
     paddingBottom: 40,
   },
+
   headerComponent: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -266,42 +276,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
   },
+
   header: {
     flex: 1,
   },
+
   title: {
     fontSize: 28,
     fontWeight: "800",
     color: colors.navy,
   },
+
   greeting: {
     fontSize: 14,
     color: colors.textSub,
     marginTop: 6,
   },
-  logoutButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.danger,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 14,
-    marginTop: 10,
-    gap: 6,
-    ...shadows.medium,
-  },
-  logoutText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: "700",
-  },
+
   stateText: {
     paddingHorizontal: 20,
     marginBottom: 12,
     color: colors.textSub,
     fontSize: 13,
   },
+
   errorText: {
     paddingHorizontal: 20,
     marginBottom: 12,
@@ -309,6 +307,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
+
   cardsRow: {
     flexDirection: "row",
     paddingHorizontal: 16,
@@ -316,14 +315,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 28,
   },
+
   cardWrapper: {
     flex: 1,
   },
+
   accountCard: {
     borderRadius: 28,
     padding: 18,
     ...shadows.medium,
   },
+
   iconCircle: {
     width: 44,
     height: 44,
@@ -332,50 +334,52 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 12,
   },
+
   accName: {
     fontSize: 14,
     fontWeight: "600",
     color: colors.white,
     opacity: 0.9,
   },
+
   accBalance: {
     fontSize: 22,
     fontWeight: "800",
     color: colors.white,
     marginTop: 6,
   },
-  decoyBadge: {
-    fontSize: 10,
-    color: "rgba(255,255,255,0.7)",
-    marginTop: 4,
-    fontWeight: "600",
-  },
+
   favouritesSection: {
     paddingHorizontal: 16,
     marginTop: 4,
   },
+
   favouritesHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 16,
   },
+
   favTitle: {
     fontSize: 18,
     fontWeight: "800",
     color: colors.navy,
   },
+
   editLink: {
     fontSize: 14,
     fontWeight: "600",
     color: colors.primary,
     opacity: 0.75,
   },
+
   favGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
   },
+
   favTile: {
     width: (width - 48) / 3,
     backgroundColor: colors.white,
@@ -385,6 +389,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     ...shadows.medium,
   },
+
   favIcon: {
     width: 52,
     height: 52,
@@ -393,6 +398,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 10,
   },
+
   favLabel: {
     fontSize: 11,
     fontWeight: "600",

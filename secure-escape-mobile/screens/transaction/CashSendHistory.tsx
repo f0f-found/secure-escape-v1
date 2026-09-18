@@ -1,20 +1,33 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   FlatList,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-colors;
-// import BottomNav from "../components/BottomNav";
+import { useLocalSearchParams, useRouter } from "expo-router";
+
 import { colors } from "@/utils/theme";
 
-// ---------- MOCK DATA (all redeemed) ----------
-const generateMockTransactions = () => {
+type CashSendFilter = "All" | "Redeemed" | "Unredeemed";
+
+type CashSendTransaction = {
+  id: string;
+  code: string;
+  date: Date;
+  amount: number;
+  redeemed: boolean;
+};
+
+type GroupedTransactions = Record<string, CashSendTransaction[]>;
+
+// Temporary screen data.
+// This screen is not yet connected to a Cash Send history API.
+const generateMockTransactions = (): CashSendTransaction[] => {
   const codes = [
     "C2958464139",
     "C3659407088",
@@ -32,6 +45,7 @@ const generateMockTransactions = () => {
     "C2890123456",
     "C1901234567",
   ];
+
   const dates = [
     "2026-07-02T10:00:00Z",
     "2026-07-02T14:30:00Z",
@@ -49,56 +63,123 @@ const generateMockTransactions = () => {
     "2026-04-30T12:00:00Z",
     "2026-03-15T16:45:00Z",
   ];
+
   const amounts = [
-    100, 80, 280, 60, 60, 40, 150, 200, 90, 120, 75, 45, 110, 95, 130,
+    100,
+    80,
+    280,
+    60,
+    60,
+    40,
+    150,
+    200,
+    90,
+    120,
+    75,
+    45,
+    110,
+    95,
+    130,
   ];
-  return codes.map((code, idx) => ({
-    id: idx.toString(),
+
+  return codes.map((code, index) => ({
+    id: index.toString(),
     code,
-    date: new Date(dates[idx % dates.length]),
-    amount: amounts[idx % amounts.length],
-    redeemed: true, // all redeemed
+    date: new Date(dates[index % dates.length]),
+    amount: amounts[index % amounts.length],
+    redeemed: true,
   }));
 };
 
 const allTransactions = generateMockTransactions();
 
-export default function Screen_cashHistory() {
-  const initialFilter = route.params?.initialFilter || "All";
-  const [activeFilter, setActiveFilter] = useState(initialFilter);
+function isCashSendFilter(value: string | string[] | undefined): value is CashSendFilter {
+  return (
+    typeof value === "string" &&
+    (value === "All" ||
+      value === "Redeemed" ||
+      value === "Unredeemed")
+  );
+}
 
-  const filtered = allTransactions.filter((tx) => {
-    if (activeFilter === "Redeemed") return tx.redeemed === true;
-    if (activeFilter === "Unredeemed") return tx.redeemed === false;
-    return true;
+function groupByMonth(
+  transactions: CashSendTransaction[],
+): GroupedTransactions {
+  const groups: GroupedTransactions = {};
+
+  transactions.forEach((transaction) => {
+    const monthYear = transaction.date.toLocaleString("en-US", {
+      month: "short",
+      year: "numeric",
+    });
+
+    if (!groups[monthYear]) {
+      groups[monthYear] = [];
+    }
+
+    groups[monthYear].push(transaction);
   });
 
-  const groupByMonth = (transactions: string) => {
-    const groups = {};
-    transactions.forEach((tx) => {
-      const monthYear = tx.date.toLocaleString("en-US", {
-        month: "short",
-        year: "numeric",
-      });
-      if (!groups[monthYear]) groups[monthYear] = [];
-      groups[monthYear].push(tx);
-    });
-    const sortedKeys = Object.keys(groups).sort(
-      (a, b) => new Date(b) - new Date(a),
-    );
-    const sorted = {};
-    sortedKeys.forEach((k) => {
-      sorted[k] = groups[k];
-    });
-    return sorted;
-  };
+  const sortedKeys = Object.keys(groups).sort((a, b) => {
+    const aDate = groups[a][0]?.date.getTime() ?? 0;
+    const bDate = groups[b][0]?.date.getTime() ?? 0;
 
-  const grouped = groupByMonth(filtered);
+    return bDate - aDate;
+  });
 
-  const renderItem = ({ item }) => (
+  const sortedGroups: GroupedTransactions = {};
+
+  sortedKeys.forEach((key) => {
+    sortedGroups[key] = groups[key];
+  });
+
+  return sortedGroups;
+}
+
+export default function ScreenCashHistory() {
+  const router = useRouter();
+
+  const params = useLocalSearchParams<{
+    initialFilter?: string | string[];
+  }>();
+
+  const initialFilter: CashSendFilter = isCashSendFilter(
+    params.initialFilter,
+  )
+    ? params.initialFilter
+    : "All";
+
+  const [activeFilter, setActiveFilter] =
+    useState<CashSendFilter>(initialFilter);
+
+  const filteredTransactions = useMemo(() => {
+    return allTransactions.filter((transaction) => {
+      if (activeFilter === "Redeemed") {
+        return transaction.redeemed;
+      }
+
+      if (activeFilter === "Unredeemed") {
+        return !transaction.redeemed;
+      }
+
+      return true;
+    });
+  }, [activeFilter]);
+
+  const groupedTransactions = useMemo(
+    () => groupByMonth(filteredTransactions),
+    [filteredTransactions],
+  );
+
+  const renderItem = ({
+    item,
+  }: {
+    item: CashSendTransaction;
+  }) => (
     <View style={styles.historyItem}>
       <View style={styles.historyLeft}>
         <Text style={styles.historyCode}>{item.code}</Text>
+
         <View style={styles.historyMeta}>
           <Text style={styles.historyDate}>
             {item.date.toLocaleDateString("en-US", {
@@ -106,28 +187,43 @@ export default function Screen_cashHistory() {
               month: "short",
             })}
           </Text>
+
           <Text
             style={[
               styles.historyStatus,
-              { color: item.redeemed ? "#4CAF50" : "#FF6B6B" },
+              item.redeemed
+                ? styles.redeemedStatus
+                : styles.unredeemedStatus,
             ]}
           >
             {item.redeemed ? "Redeemed" : "Unredeemed"}
           </Text>
         </View>
       </View>
+
       <View style={styles.historyRight}>
-        <Text style={styles.historyAmount}>-R{item.amount.toFixed(2)}</Text>
-        <TouchableOpacity style={styles.detailBtn}>
-          <Ionicons name="search-outline" size={18} color={colors.purple} />
-        </TouchableOpacity>
+        <Text style={styles.historyAmount}>
+          -R{item.amount.toFixed(2)}
+        </Text>
+
+        <View style={styles.detailBtn}>
+          <Ionicons
+            name="search-outline"
+            size={18}
+            color={colors.primary}
+          />
+        </View>
       </View>
     </View>
   );
 
-  const renderGroup = (month, transactions) => (
+  const renderGroup = (
+    month: string,
+    transactions: CashSendTransaction[],
+  ) => (
     <View key={month} style={styles.groupContainer}>
       <Text style={styles.monthHeader}>{month}</Text>
+
       <FlatList
         data={transactions}
         keyExtractor={(item) => item.id}
@@ -139,39 +235,68 @@ export default function Screen_cashHistory() {
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="cash-outline" size={60} color="#ddd" />
+      <Ionicons
+        name="cash-outline"
+        size={60}
+        color={colors.greyLine}
+      />
+
       <Text style={styles.emptyText}>
         You have no {activeFilter.toLowerCase()} transactions.
       </Text>
     </View>
   );
 
+  const filters: CashSendFilter[] = [
+    "All",
+    "Redeemed",
+    "Unredeemed",
+  ];
+
   return (
     <View style={styles.container}>
-      <LinearGradient colors={["#5B8DEF", "#6C63FF"]} style={styles.header}>
+      <LinearGradient
+        colors={["#5B8DEF", "#6C63FF"]}
+        style={styles.header}
+      >
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={() => router.back()}
           style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
         >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons
+            name="arrow-back"
+            size={24}
+            color="#fff"
+          />
         </TouchableOpacity>
+
         <Text style={styles.headerTitle}>History</Text>
-        <View style={{ width: 40 }} />
+
+        <View style={styles.headerSpacer} />
       </LinearGradient>
 
       <View style={styles.content}>
-        {/* Centered tabs */}
         <View style={styles.tabRow}>
-          {["All", "Redeemed", "Unredeemed"].map((tab) => (
+          {filters.map((tab) => (
             <TouchableOpacity
               key={tab}
-              style={[styles.tab, activeFilter === tab && styles.activeTab]}
+              style={[
+                styles.tab,
+                activeFilter === tab && styles.activeTab,
+              ]}
               onPress={() => setActiveFilter(tab)}
+              accessibilityRole="button"
+              accessibilityState={{
+                selected: activeFilter === tab,
+              }}
             >
               <Text
                 style={[
                   styles.tabText,
-                  activeFilter === tab && styles.activeTabText,
+                  activeFilter === tab &&
+                    styles.activeTabText,
                 ]}
               >
                 {tab}
@@ -184,10 +309,11 @@ export default function Screen_cashHistory() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {Object.keys(grouped).length === 0
+          {Object.keys(groupedTransactions).length === 0
             ? renderEmpty()
-            : Object.keys(grouped).map((month) =>
-                renderGroup(month, grouped[month]),
+            : Object.entries(groupedTransactions).map(
+                ([month, transactions]) =>
+                  renderGroup(month, transactions),
               )}
         </ScrollView>
       </View>
@@ -196,7 +322,10 @@ export default function Screen_cashHistory() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f6fa" },
+  container: {
+    flex: 1,
+    backgroundColor: "#f5f6fa",
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -205,41 +334,62 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 24,
   },
-  backBtn: { padding: 4 },
+  backBtn: {
+    padding: 4,
+  },
+  headerSpacer: {
+    width: 32,
+  },
   headerTitle: {
     fontSize: 20,
     fontWeight: "700",
     color: "#fff",
     letterSpacing: 0.5,
   },
-  content: { flex: 1, paddingHorizontal: 20, paddingTop: 12 },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
   tabRow: {
     flexDirection: "row",
-    justifyContent: "center", // center tabs
+    justifyContent: "center",
     backgroundColor: "#f0f0f5",
     borderRadius: 30,
     padding: 4,
     marginBottom: 20,
-    alignSelf: "center", // center the pill
-    minWidth: 200,
+    alignSelf: "center",
   },
   tab: {
     paddingVertical: 8,
-    paddingHorizontal: 24,
+    paddingHorizontal: 18,
     borderRadius: 30,
   },
   activeTab: {
     backgroundColor: "#fff",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
   },
-  tabText: { fontSize: 14, fontWeight: "600", color: "#888" },
-  activeTabText: { color: colors.primary },
-  scrollContent: { paddingBottom: 40 },
-  groupContainer: { marginBottom: 24 },
+  tabText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#888",
+  },
+  activeTabText: {
+    color: colors.primary,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  groupContainer: {
+    marginBottom: 24,
+  },
   monthHeader: {
     fontSize: 15,
     fontWeight: "700",
@@ -255,7 +405,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f5",
   },
-  historyLeft: { flex: 1 },
+  historyLeft: {
+    flex: 1,
+  },
   historyCode: {
     fontSize: 15,
     fontWeight: "600",
@@ -276,6 +428,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "500",
   },
+  redeemedStatus: {
+    color: "#4CAF50",
+  },
+  unredeemedStatus: {
+    color: "#FF6B6B",
+  },
   historyRight: {
     flexDirection: "row",
     alignItems: "center",
@@ -286,7 +444,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#333",
   },
-  detailBtn: { padding: 4 },
+  detailBtn: {
+    padding: 4,
+  },
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
@@ -296,5 +456,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#aaa",
     marginTop: 16,
+    textAlign: "center",
   },
 });

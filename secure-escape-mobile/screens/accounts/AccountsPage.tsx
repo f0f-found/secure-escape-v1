@@ -10,8 +10,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, shadows } from "@/utils/theme";
-import { useRouter } from "expo-router";
-import { useFocusEffect } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { getAccounts } from "@/services/accountService";
 import { AccountResponse } from "@/types/account";
 
@@ -43,10 +42,13 @@ export default function AccountsScreen() {
     try {
       setIsLoading(true);
       setError(null);
+
       const data = await getAccounts();
       setAccounts(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load accounts.");
+      setError(
+        err instanceof Error ? err.message : "Failed to load accounts."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -55,7 +57,7 @@ export default function AccountsScreen() {
   useFocusEffect(
     useCallback(() => {
       loadAccounts();
-    }, []),
+    }, [])
   );
 
   const handleAccountPress = (account: AccountResponse) => {
@@ -67,7 +69,10 @@ export default function AccountsScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={["#5B8DEF", "#6C63FF"]} style={styles.header}>
+      <LinearGradient
+        colors={["#5B8DEF", "#6C63FF"]}
+        style={styles.header}
+      >
         <Text style={styles.headerTitle}>Accounts</Text>
       </LinearGradient>
 
@@ -76,7 +81,10 @@ export default function AccountsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {isLoading && (
-          <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
+          <ActivityIndicator
+            color={colors.primary}
+            style={styles.loadingIndicator}
+          />
         )}
 
         {error && (
@@ -87,13 +95,18 @@ export default function AccountsScreen() {
 
         {!isLoading && !error && accounts.length === 0 && (
           <View style={styles.emptyState}>
-            <Ionicons name="wallet-outline" size={40} color={colors.greyLine} />
+            <Ionicons
+              name="wallet-outline"
+              size={40}
+              color={colors.greyLine}
+            />
             <Text style={styles.emptyText}>No accounts found</Text>
           </View>
         )}
 
         {accounts.map((account, index) => {
-          const statusMeta = STATUS_META[account.status] ?? STATUS_META.Active;
+          const statusMeta =
+            STATUS_META[account.status] ?? STATUS_META.Active;
 
           return (
             <TouchableOpacity
@@ -103,13 +116,20 @@ export default function AccountsScreen() {
               style={styles.cardWrapper}
             >
               <LinearGradient
-                colors={ACCOUNT_GRADIENTS[index % ACCOUNT_GRADIENTS.length]}
+                colors={
+                  ACCOUNT_GRADIENTS[
+                    index % ACCOUNT_GRADIENTS.length
+                  ]
+                }
                 style={styles.card}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
                 <View style={styles.cardHeader}>
-                  <Text style={styles.cardType}>{account.accountType}</Text>
+                  <Text style={styles.cardType}>
+                    {account.accountType}
+                  </Text>
+
                   <View
                     style={[
                       styles.statusBadge,
@@ -117,7 +137,10 @@ export default function AccountsScreen() {
                     ]}
                   >
                     <Text
-                      style={[styles.statusText, { color: statusMeta.color }]}
+                      style={[
+                        styles.statusText,
+                        { color: statusMeta.color },
+                      ]}
                     >
                       {account.status}
                     </Text>
@@ -129,14 +152,16 @@ export default function AccountsScreen() {
                 </Text>
 
                 <View style={styles.cardFooter}>
-                  <View>
-                    <Text style={styles.accName}>{account.accountName}</Text>
-                    {account.isDecoyView && (
-                      <Text style={styles.decoyBadge}>⚠ Decoy View</Text>
-                    )}
+                  <View style={styles.accountInfo}>
+                    <Text style={styles.accName}>
+                      {account.accountName}
+                    </Text>
                   </View>
+
                   <Text style={styles.balance}>
-                    {account.currency === "ZAR" ? "R" : account.currency}{" "}
+                    {account.currency === "ZAR"
+                      ? "R"
+                      : account.currency}{" "}
                     {account.availableBalance.toLocaleString("en-ZA", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
@@ -153,7 +178,11 @@ export default function AccountsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.greyBg ?? "#f5f6fa" },
+  container: {
+    flex: 1,
+    backgroundColor: colors.greyBg ?? "#f5f6fa",
+  },
+
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -162,41 +191,59 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 24,
   },
+
   headerTitle: {
     fontSize: 20,
     fontWeight: "700",
     color: colors.white,
     letterSpacing: 0.5,
   },
+
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 40,
   },
-  cardWrapper: { marginBottom: 20 },
+
+  loadingIndicator: {
+    marginTop: 40,
+  },
+
+  cardWrapper: {
+    marginBottom: 20,
+  },
+
   card: {
     borderRadius: 16,
     padding: 20,
     ...shadows.medium,
   },
+
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
   },
+
   cardType: {
     fontSize: 16,
     fontWeight: "700",
     color: colors.white,
     letterSpacing: 0.5,
   },
+
   statusBadge: {
     paddingHorizontal: 14,
     paddingVertical: 4,
     borderRadius: 20,
   },
-  statusText: { fontSize: 12, fontWeight: "600" },
+
+  statusText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
   cardNumber: {
     fontSize: 18,
     fontWeight: "600",
@@ -204,34 +251,43 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginBottom: 16,
   },
+
   cardFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
   },
+
+  accountInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+
   accName: {
     fontSize: 14,
     fontWeight: "600",
     color: colors.white,
     opacity: 0.9,
   },
-  decoyBadge: {
-    fontSize: 10,
-    color: "rgba(255,255,255,0.7)",
-    marginTop: 2,
-    fontWeight: "600",
-  },
+
   balance: {
     fontSize: 18,
     fontWeight: "800",
     color: colors.white,
   },
+
   emptyState: {
     alignItems: "center",
     paddingVertical: 40,
     gap: 8,
   },
-  emptyText: { fontSize: 14, fontWeight: "600", color: colors.navy },
+
+  emptyText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.navy,
+  },
+
   errorText: {
     marginTop: 20,
     marginBottom: 12,
