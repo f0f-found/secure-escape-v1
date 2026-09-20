@@ -9,5 +9,7 @@ public interface ISecureEscapeService
 
     Task<DecoyProfileResponseDto> UpsertDecoyProfileAsync(UpsertDecoyProfileRequestDto request);
 
+    Task<bool> CompleteSetupAsync();
+
     Task<bool> SetDuressPinAsync(SetDuressPinRequestDto request);
 }

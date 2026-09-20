@@ -21,4 +21,6 @@ public class UpsertDecoyProfileRequestDto
 
     [Range(0, 168)]
     public int Tier2DelayHours { get; set; } = 24;
+
+    public bool IsComplete { get; set; }
 }

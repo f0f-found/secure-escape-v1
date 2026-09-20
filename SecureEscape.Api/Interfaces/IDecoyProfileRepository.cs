@@ -6,6 +6,8 @@ public interface IDecoyProfileRepository
 {
     Task<DecoyProfile?> GetActiveByUserIdAsync(Guid userId);
 
+    Task<DecoyProfile?> GetLatestByUserIdAsync(Guid userId);
+
     Task<DecoyProfile?> GetByIdForUserAsync(Guid decoyProfileId, Guid userId);
 
     Task AddAsync(DecoyProfile decoyProfile);
