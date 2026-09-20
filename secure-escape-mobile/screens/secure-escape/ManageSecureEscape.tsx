@@ -11,47 +11,56 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/utils/theme";
 import { useRouter } from "expo-router";
-import {
-  getEmergencyContacts,
-  deleteEmergencyContact,
-} from "@/services/emergencyContactService";
+import { getEmergencyContacts } from "@/services/emergencyContactService";
+import { getActiveDecoyProfile } from "@/services/secureEscapeService";
 import { EmergencyContactResponse } from "@/types/emergencyContact";
+import { DecoyProfileResponse } from "@/types/secureEscape";
+import VerifyPinModal from "@/components/VerifyPinModal";
 
 export default function ManageSecureEscape() {
   const router = useRouter();
   const [contacts, setContacts] = useState<EmergencyContactResponse[]>([]);
+  const [profile, setProfile] = useState<DecoyProfileResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [identityVerified, setIdentityVerified] = useState(false);
+  const [verifyVisible, setVerifyVisible] = useState(true);
 
-  useEffect(() => {
-    loadContacts();
-  }, []);
-
-  const loadContacts = async () => {
+  const loadDetails = async () => {
     try {
-      const data = await getEmergencyContacts();
-      setContacts(data);
+      setLoading(true);
+      const [contactData, profileData] = await Promise.all([
+        getEmergencyContacts(),
+        getActiveDecoyProfile(),
+      ]);
+      setContacts(contactData);
+      setProfile(profileData);
     } catch (error) {
-      console.error("Failed to load contacts:", error);
+      console.error("Failed to load Secure Escape details:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteEmergencyContact(id);
-      setContacts((prev) => prev.filter((c) => c.id !== id));
-    } catch (error) {
-      console.error("Failed to delete contact:", error);
-    }
+  const handleIdentityVerified = async () => {
+    setVerifyVisible(false);
+    setIdentityVerified(true);
+    await loadDetails();
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: "#fff" }}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-    >
+    <>
+      <VerifyPinModal
+        visible={verifyVisible}
+        onCancel={() => router.back()}
+        onVerified={handleIdentityVerified}
+        title="Confirm your identity"
+        subtitle="Enter your normal banking PIN to view Secure Escape details"
+      />
+      {identityVerified && <ScrollView
+        style={{ flex: 1, backgroundColor: "#fff" }}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
       <LinearGradient
         colors={["#5B8DEF", "#6C63FF"]}
         style={styles.gradientHeader}
@@ -70,19 +79,39 @@ export default function ManageSecureEscape() {
 
         <Text style={styles.mainTitle}>Manage Secure Escape</Text>
         <Text style={styles.sub}>
-          To update your emergency budget or duress PIN, please visit your
-          nearest branch or call the bank directly.
+          Your Secure Escape protection is active. Review your safety details
+          below and keep them private.
         </Text>
+
+        <View style={styles.protectionCard}>
+          <View style={styles.protectionIcon}>
+            <Ionicons name="shield-checkmark" size={24} color="#0F766E" />
+          </View>
+          <View style={styles.protectionCopy}>
+            <Text style={styles.cardEyebrow}>Protection amount</Text>
+            <Text style={styles.protectionAmount}>
+              {profile ? `R ${profile.emergencyBudget.toLocaleString("en-ZA", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}` : "Unavailable"}
+            </Text>
+            <Text style={styles.cardHint}>
+              Maximum amount available under duress
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.pinStatusCard}>
+          <Ionicons name="key-outline" size={21} color={colors.primary} />
+          <View style={styles.pinStatusCopy}>
+            <Text style={styles.pinStatusTitle}>Duress PIN</Text>
+            <Text style={styles.pinStatusValue}>Set  •  •  •  •</Text>
+          </View>
+          <Ionicons name="lock-closed-outline" size={18} color={colors.primary} />
+        </View>
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Emergency Contacts</Text>
-          <TouchableOpacity
-            onPress={() =>
-              router.push("/secure-escape/emergency-contact?from=manage")
-            }
-          >
-            <Text style={styles.addLink}>+ Add Contact</Text>
-          </TouchableOpacity>
         </View>
 
         {loading ? (
@@ -118,22 +147,21 @@ export default function ManageSecureEscape() {
                     </Text>
                   ) : null}
                 </View>
-                <TouchableOpacity
-                  onPress={() => handleDelete(contact.id)}
-                  style={styles.deleteButton}
-                >
-                  <Ionicons
-                    name="trash-outline"
-                    size={20}
-                    color={colors.danger ?? "#EF4444"}
-                  />
-                </TouchableOpacity>
               </View>
             </View>
           ))
         )}
+
+        <View style={styles.branchNotice}>
+          <Ionicons name="information-circle-outline" size={22} color={colors.primary} />
+          <Text style={styles.branchNoticeText}>
+            To change your protection amount, Duress PIN, or emergency contact,
+            please contact your nearest branch.
+          </Text>
+        </View>
       </View>
-    </ScrollView>
+      </ScrollView>}
+    </>
   );
 }
 
@@ -180,6 +208,59 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 28,
   },
+  protectionCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F0FDFA",
+    borderWidth: 1,
+    borderColor: "#99F6E4",
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 14,
+  },
+  protectionIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "#CCFBF1",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  protectionCopy: { flex: 1 },
+  cardEyebrow: {
+    fontSize: 12,
+    color: "#0F766E",
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  protectionAmount: {
+    fontSize: 24,
+    color: colors.navy,
+    fontWeight: "800",
+    marginTop: 2,
+  },
+  cardHint: { fontSize: 12, color: colors.textSub, marginTop: 3 },
+  pinStatusCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#DDD6FE",
+    backgroundColor: "#FAF9FF",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 28,
+  },
+  pinStatusCopy: { flex: 1, marginLeft: 12 },
+  pinStatusTitle: { color: colors.navy, fontSize: 15, fontWeight: "700" },
+  pinStatusValue: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 2,
+    marginTop: 3,
+  },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -187,7 +268,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.navy },
-  addLink: { fontSize: 14, color: colors.primary, fontWeight: "600" },
   emptyState: {
     alignItems: "center",
     paddingVertical: 40,
@@ -234,5 +314,21 @@ const styles = StyleSheet.create({
     color: colors.textSub,
     marginTop: 2,
   },
-  deleteButton: { padding: 4 },
+  branchNotice: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#F5F3FF",
+    borderWidth: 1,
+    borderColor: "#DDD6FE",
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 12,
+    gap: 10,
+  },
+  branchNoticeText: {
+    flex: 1,
+    color: colors.textSub,
+    fontSize: 13,
+    lineHeight: 19,
+  },
 });
