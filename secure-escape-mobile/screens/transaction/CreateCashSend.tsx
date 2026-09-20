@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { getAccounts } from "@/services/accountService";
 import { createCashSend } from "@/services/transactionServices";
 import { AccountResponse } from "@/types/account";
@@ -21,16 +21,25 @@ import { CashSendResponse } from "@/types/transaction";
 import { colors } from "@/utils/theme";
 import VerifyPinModal from "@/components/VerifyPinModal";
 
+const MAX_CASH_SEND_AMOUNT = 4000;
+
+const createCashSendReference = () => {
+  const timestamp = new Date();
+  const date = timestamp.toISOString().slice(0, 10).replace(/-/g, "");
+  const time = timestamp.toTimeString().slice(0, 8).replace(/:/g, "");
+  const suffix = Math.floor(1000 + Math.random() * 9000);
+  return `CASH-${date}-${time}-${suffix}`;
+};
+
 export default function CreateCashSend() {
   const router = useRouter();
-  const { reference } = useLocalSearchParams<{ reference?: string }>();
 
   const [verifyVisible, setVerifyVisible] = useState(false);
   const [accounts, setAccounts] = useState<AccountResponse[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [amount, setAmount] = useState("");
   const [voucherPin, setVoucherPin] = useState("");
-  const [description, setDescription] = useState(reference ?? "");
+  const [description] = useState(createCashSendReference);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +58,11 @@ export default function CreateCashSend() {
 
   const selectedAccount = activeAccounts.find(
     (account) => account.id === selectedAccountId,
+  );
+
+  const maxAmountForSelectedAccount = Math.min(
+    MAX_CASH_SEND_AMOUNT,
+    selectedAccount?.availableBalance ?? MAX_CASH_SEND_AMOUNT,
   );
 
   const showError = (message: string) => {
@@ -79,20 +93,31 @@ export default function CreateCashSend() {
   };
 
   const handleSubmit = () => {
-    const numericAmount = Number(amount);
+    const trimmedAmount = amount.trim();
+    const numericAmount = Number(trimmedAmount);
 
     if (!selectedAccountId) {
       showError("Please choose an account.");
       return;
     }
 
-    if (!amount.trim()) {
+    if (!trimmedAmount) {
       showError("Please enter the cash send amount.");
       return;
     }
 
-    if (!numericAmount || numericAmount <= 0) {
-      showError("Please enter a valid amount.");
+    if (!/^\d+(\.\d{1,2})?$/.test(trimmedAmount) || !Number.isFinite(numericAmount)) {
+      showError("Enter a valid amount with no more than two decimal places.");
+      return;
+    }
+
+    if (numericAmount < 0.01) {
+      showError("Cash send amount must be at least R 0.01.");
+      return;
+    }
+
+    if (numericAmount > MAX_CASH_SEND_AMOUNT) {
+      showError(`Cash send amount cannot exceed R ${MAX_CASH_SEND_AMOUNT.toLocaleString()}.`);
       return;
     }
 
@@ -106,13 +131,8 @@ export default function CreateCashSend() {
       return;
     }
 
-    if (voucherPin.length < 4 || voucherPin.length > 6) {
-      showError("Cash send PIN must be 4 to 6 digits.");
-      return;
-    }
-
-    if (!description.trim()) {
-      showError("Please enter a cash send reference.");
+    if (!/^\d{4}$/.test(voucherPin)) {
+      showError("Cash send PIN must be exactly 4 digits.");
       return;
     }
 
@@ -127,9 +147,9 @@ export default function CreateCashSend() {
       clearError();
       const cashSend = await createCashSend({
         bankAccountId: selectedAccountId,
-        amount: Number(amount),
-        voucherPin,
-        description: description.trim(),
+        amount: Number(amount.trim()),
+        voucherPin: voucherPin.trim(),
+        description,
       });
 
       if (cashSend.status === "Failed" || cashSend.status === "Blocked") {
@@ -175,6 +195,10 @@ export default function CreateCashSend() {
                 ]}
                 onPress={() => {
                   setSelectedAccountId(account.id);
+                  const numericAmount = Number(amount);
+                  if (numericAmount > account.availableBalance) {
+                    setAmount("");
+                  }
                   clearError();
                 }}
               >
@@ -201,7 +225,23 @@ export default function CreateCashSend() {
             style={styles.input}
             value={amount}
             onChangeText={(value) => {
-              setAmount(value);
+              const cleaned = value.replace(/[^0-9.]/g, "");
+              if ((cleaned.match(/\./g) || []).length > 1) return;
+              const [whole, decimal] = cleaned.split(".");
+              const normalized =
+                decimal === undefined
+                  ? whole
+                  : `${whole}.${decimal.slice(0, 2)}`;
+              const numericAmount = Number(normalized);
+
+              if (
+                Number.isFinite(numericAmount) &&
+                numericAmount > maxAmountForSelectedAccount
+              ) {
+                return;
+              }
+
+              setAmount(normalized);
               clearError();
             }}
             keyboardType="decimal-pad"
@@ -214,13 +254,13 @@ export default function CreateCashSend() {
             style={styles.input}
             value={voucherPin}
             onChangeText={(value) => {
-              setVoucherPin(value);
+              setVoucherPin(value.replace(/\D/g, "").slice(0, 4));
               clearError();
             }}
             keyboardType="number-pad"
             secureTextEntry
-            maxLength={6}
-            placeholder="4 to 6 digits"
+            maxLength={4}
+            placeholder="4 digits"
             placeholderTextColor="#A0A4B8"
           />
 
@@ -228,12 +268,11 @@ export default function CreateCashSend() {
           <TextInput
             style={styles.input}
             value={description}
-            onChangeText={(value) => {
-              setDescription(value);
-              clearError();
-            }}
-            placeholder="Cash send reference"
+            editable={false}
+            accessibilityLabel="Automatically generated cash send reference"
             placeholderTextColor="#A0A4B8"
+            selectTextOnFocus={false}
+            placeholder="Automatically generated reference"
           />
 
           {error && (
