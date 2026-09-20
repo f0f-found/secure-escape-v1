@@ -39,7 +39,7 @@ public class AdminSessionService : IAdminSessionService
 
     private async Task ExpireStaleActiveSessionsAsync()
     {
-        var cutoffTime = DateTime.UtcNow.AddMinutes(-1);
+        var cutoffTime = DateTime.UtcNow.AddMinutes(-10);
 
         var staleSessions = await _userSessionRepository
             .GetStaleActiveSessionsAsync(cutoffTime);
