@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/utils/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { addEmergencyContact } from "@/services/emergencyContactService";
+import { completeDecoyProfile } from "@/services/secureEscapeService";
 import { ErrorBanner, ErrorModal } from "@/components/FormErrorMessage";
 import * as Contacts from "expo-contacts";
 
@@ -189,6 +190,10 @@ export default function EmergencyContact() {
           isPrimary: contact.isPrimary,
           notifyOnDuress: true,
         });
+      }
+
+      if (from === "onboarding") {
+        await completeDecoyProfile();
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
