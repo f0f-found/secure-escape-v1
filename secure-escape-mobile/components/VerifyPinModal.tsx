@@ -87,7 +87,7 @@ export default function VerifyPinModal({
 
           <TextInput
             style={styles.pinInput}
-            placeholder="• • • •"
+            placeholder="Enter 4-digit PIN"
             placeholderTextColor="#ccc"
             keyboardType="number-pad"
             secureTextEntry
