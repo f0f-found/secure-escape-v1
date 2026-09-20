@@ -17,10 +17,13 @@ import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/utils/theme";
 import { useRouter } from "expo-router";
-import { verifyPin } from "@/services/authService"; // adjust path as needed
+import { verifyPin } from "@/services/authService";
+import { setDuressPin as saveDuressPin } from "@/services/secureEscapeService";
+import { useLocalSearchParams } from "expo-router";
 
 export default function DuressPinScreen() {
   const router = useRouter();
+  const { from } = useLocalSearchParams<{ from?: string }>();
 
   // PIN fields
   const [normalPin, setNormalPin] = useState("");
@@ -78,11 +81,23 @@ export default function DuressPinScreen() {
     ]).start(() => setTermsModalVisible(false));
   };
 
-  const handleConfirm = () => {
-    if (modalAgreed) {
+  const handleConfirm = async () => {
+    if (!modalAgreed) return;
+
+    try {
+      await saveDuressPin({ currentPin: normalPin, duressPin });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       closeTermsModal();
-      router.push("/secure-escape/emergency-contact");
+      router.push({
+        pathname: "/secure-escape/emergency-contact",
+        params: from ? { from } : undefined,
+      });
+    } catch (error) {
+      setNormalPinError(
+        error instanceof Error
+          ? error.message
+          : "Failed to save your Duress PIN. Please try again.",
+      );
     }
   };
 
@@ -178,8 +193,8 @@ export default function DuressPinScreen() {
 
     // Verify normal PIN with backend
     try {
-      const isValid = await verifyPin(normalPin);
-      if (!isValid) {
+      const verification = await verifyPin(normalPin);
+      if (!verification.verified) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         setNormalPinError("Incorrect PIN. Please try again.");
         return;
@@ -208,15 +223,27 @@ export default function DuressPinScreen() {
       <View style={styles.whiteCard}>
         <Text style={styles.mainTitle}>Your Silent Safety Signal</Text>
         <Text style={styles.sub}>
-          This is the PIN you should ONLY use if you&apos;re being forced to transact under threat.
+          Create a separate safety PIN for use only if you&apos;re being forced to
+          transact under threat.
         </Text>
+        <View style={styles.importantNotice}>
+          <Ionicons name="alert-circle" size={22} color="#B45309" />
+          <Text style={styles.importantNoticeText}>
+            <Text style={styles.boldText}>Important:</Text> Your normal banking
+            PIN will remain unchanged. This Duress PIN is an additional PIN,
+            used only to activate Silent Protection.
+          </Text>
+        </View>
         <TouchableOpacity onPress={openInfoModal}>
           <Text style={styles.link}>What is a Duress PIN?</Text>
         </TouchableOpacity>
 
         {/* Normal PIN (existing PIN) */}
         <Text style={styles.label}>
-          Enter your current PIN <Text style={styles.requiredAsterisk}>*</Text>
+          Verify your current banking PIN <Text style={styles.requiredAsterisk}>*</Text>
+        </Text>
+        <Text style={styles.fieldHelper}>
+          This is only used to verify your identity and will not be changed.
         </Text>
         <TextInput
           style={[styles.input, normalPinError && styles.inputError]}
@@ -232,7 +259,10 @@ export default function DuressPinScreen() {
 
         {/* Duress PIN */}
         <Text style={styles.label}>
-          Create your Duress PIN <Text style={styles.requiredAsterisk}>*</Text>
+          Create a separate Duress PIN <Text style={styles.requiredAsterisk}>*</Text>
+        </Text>
+        <Text style={styles.fieldHelper}>
+          Choose a different 4-digit PIN from your normal banking PIN.
         </Text>
         <TextInput
           style={[styles.input, duressPinError && styles.inputError]}
@@ -465,6 +495,24 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     lineHeight: 20,
   },
+  importantNotice: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#FFF7ED",
+    borderWidth: 1,
+    borderColor: "#FED7AA",
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 12,
+    marginBottom: 6,
+    gap: 10,
+  },
+  importantNoticeText: {
+    flex: 1,
+    color: "#7C2D12",
+    fontSize: 13,
+    lineHeight: 19,
+  },
   link: {
     fontSize: 13,
     color: colors.primary,
@@ -477,6 +525,12 @@ const styles = StyleSheet.create({
     color: colors.navy,
     marginBottom: 6,
     marginTop: 16,
+  },
+  fieldHelper: {
+    color: colors.textSub,
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 6,
   },
   requiredAsterisk: {
     color: "#FF3B30",
