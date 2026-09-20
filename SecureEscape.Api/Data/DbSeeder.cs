@@ -8,7 +8,19 @@ namespace SecureEscape.Api.Data
     {
         public static async Task SeedAsync(AppDbContext context)
         {
-            if (await context.BankIntegrations.AnyAsync()) return;
+            if (string.Equals(
+                    Environment.GetEnvironmentVariable("SECURE_ESCAPE_RESET_TEST_USERS"),
+                    "true",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                await ResetAdditionalTestUserProfilesAsync(context);
+            }
+
+            if (await context.BankIntegrations.AnyAsync())
+            {
+                await SeedAdditionalTestUsersAsync(context);
+                return;
+            }
 
             // ── BANK INTEGRATIONS ──────────────────────────────────────────
             var zenithBank = new BankIntegration
@@ -301,6 +313,129 @@ namespace SecureEscape.Api.Data
                     CreatedAt = DateTime.UtcNow
                 }
             );
+
+            await context.SaveChangesAsync();
+            await SeedAdditionalTestUsersAsync(context);
+        }
+
+        private static async Task ResetAdditionalTestUserProfilesAsync(AppDbContext context)
+        {
+            var testEmails = new[]
+            {
+                "test.user.one@email.co.za",
+                "test.user.two@email.co.za",
+                "test.user.three@email.co.za"
+            };
+
+            var testUserIds = await context.Users
+                .Where(user => testEmails.Contains(user.Email))
+                .Select(user => user.Id)
+                .ToListAsync();
+
+            var profiles = await context.DecoyProfiles
+                .Where(profile => testUserIds.Contains(profile.UserId))
+                .ToListAsync();
+
+            if (profiles.Count == 0)
+            {
+                return;
+            }
+
+            context.DecoyProfiles.RemoveRange(profiles);
+            await context.SaveChangesAsync();
+        }
+
+        private static async Task SeedAdditionalTestUsersAsync(AppDbContext context)
+        {
+            var zenithBank = await context.BankIntegrations
+                .FirstAsync(x => x.BankCode == "ZBA001");
+
+            var testUsers = new[]
+            {
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000001"),
+                    CustomerId = "ZBA-TEST-0001",
+                    Name = "Test User One",
+                    Email = "test.user.one@email.co.za",
+                    Phone = "0827001001",
+                    AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000001"),
+                    AccountNumber = "4901001001",
+                    Balance = 15000.00m,
+                    NormalPin = "1357",
+                    DuressPin = "9753"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000002"),
+                    CustomerId = "ZBA-TEST-0002",
+                    Name = "Test User Two",
+                    Email = "test.user.two@email.co.za",
+                    Phone = "0827001002",
+                    AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000002"),
+                    AccountNumber = "4901001002",
+                    Balance = 27500.00m,
+                    NormalPin = "2468",
+                    DuressPin = "8642"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000003"),
+                    CustomerId = "ZBA-TEST-0003",
+                    Name = "Test User Three",
+                    Email = "test.user.three@email.co.za",
+                    Phone = "0827001003",
+                    AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000003"),
+                    AccountNumber = "4901001003",
+                    Balance = 42000.00m,
+                    NormalPin = "4826",
+                    DuressPin = "6284"
+                }
+            };
+
+            foreach (var testUser in testUsers)
+            {
+                if (await context.Users.AnyAsync(x => x.Email == testUser.Email))
+                {
+                    continue;
+                }
+
+                var user = new User
+                {
+                    Id = testUser.Id,
+                    BankIntegrationId = zenithBank.Id,
+                    BankCustomerId = testUser.CustomerId,
+                    FullName = testUser.Name,
+                    Email = testUser.Email,
+                    PhoneNumber = testUser.Phone,
+                    Status = UserStatus.Active,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await context.Users.AddAsync(user);
+                await context.AuthCredentials.AddAsync(new AuthCredential
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user.Id,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password@123"),
+                    NormalPinHash = BCrypt.Net.BCrypt.HashPassword(testUser.NormalPin),
+                    DuressPinHash = BCrypt.Net.BCrypt.HashPassword(testUser.DuressPin),
+                    CreatedAt = DateTime.UtcNow
+                });
+                await context.BankAccounts.AddAsync(new BankAccount
+                {
+                    Id = testUser.AccountId,
+                    UserId = user.Id,
+                    AccountNumber = testUser.AccountNumber,
+                    AccountName = $"{testUser.Name} Main Account",
+                    AccountType = AccountType.Cheque,
+                    AvailableBalance = testUser.Balance,
+                    CurrentBalance = testUser.Balance,
+                    Currency = "ZAR",
+                    Status = AccountStatus.Active,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
 
             await context.SaveChangesAsync();
         }
