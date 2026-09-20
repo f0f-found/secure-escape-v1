@@ -1,6 +1,7 @@
 // services/biometricAuthService.ts
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 
 const BIOMETRIC_ENABLED_FLAG = "secureescape.biometric.enabled";
 const BIOMETRIC_SESSION_KEY = "secureescape.biometric.session";
@@ -21,6 +22,8 @@ export type StoredSession = {
 export async function enableBiometricLogin(
   session: StoredSession,
 ): Promise<void> {
+  if (Platform.OS === "web") return;
+
   await SecureStore.setItemAsync(
     BIOMETRIC_SESSION_KEY,
     JSON.stringify(session),
@@ -32,6 +35,8 @@ export async function enableBiometricLogin(
 }
 
 export async function disableBiometricLogin(): Promise<void> {
+  if (Platform.OS === "web") return;
+
   await SecureStore.deleteItemAsync(BIOMETRIC_SESSION_KEY).catch(() => {});
   await SecureStore.deleteItemAsync(BIOMETRIC_ENABLED_FLAG).catch(() => {});
 }
@@ -44,6 +49,8 @@ export async function isBiometricLoginAvailable(): Promise<{
   available: boolean;
   label: "Face ID" | "Touch ID" | "Biometric" | null;
 }> {
+  if (Platform.OS === "web") return { available: false, label: null };
+
   const previouslyEnabled = await SecureStore.getItemAsync(
     BIOMETRIC_ENABLED_FLAG,
   );
@@ -73,6 +80,8 @@ export async function isBiometricLoginAvailable(): Promise<{
  * back to the PIN form silently, no error dialog.
  */
 export async function loginWithBiometrics(): Promise<StoredSession | null> {
+  if (Platform.OS === "web") return null;
+
   const result = await LocalAuthentication.authenticateAsync({
     promptMessage: "Log in to SecureEscape",
     cancelLabel: "Use PIN instead",
