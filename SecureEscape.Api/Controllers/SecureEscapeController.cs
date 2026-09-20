@@ -43,6 +43,15 @@ public class SecureEscapeController : ControllerBase
         return Ok(decoyProfile);
     }
 
+    [HttpPost("complete")]
+    public async Task<IActionResult> CompleteSetup()
+    {
+        var completed = await _secureEscapeService.CompleteSetupAsync();
+        return completed
+            ? Ok(new { message = "Secure Escape setup completed." })
+            : NotFound(new { message = "No Secure Escape setup draft found." });
+    }
+
     [HttpPost("duress-pin")]
     public async Task<IActionResult> SetDuressPin([FromBody] SetDuressPinRequestDto request)
     {
