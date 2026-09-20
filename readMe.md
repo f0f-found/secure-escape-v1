@@ -149,6 +149,8 @@ Seed data is automatically checked and added when the backend starts.
 
 If the database already contains bank integration records, the seeder does not add the sample data again.
 
+On every backend start, existing users are checked and receive a persisted randomized set of five beneficiaries from the 50-entry beneficiary pool when they have fewer than five active beneficiaries. Existing and user-created beneficiaries are preserved. This also runs against an already-populated database, so deploy and restart the API after changing `DbSeeder.cs` before testing the mobile app.
+
 No separate seed command is required.
 
 ## Running the Backend API

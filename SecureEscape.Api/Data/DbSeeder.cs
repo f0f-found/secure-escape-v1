@@ -19,6 +19,7 @@ namespace SecureEscape.Api.Data
             if (await context.BankIntegrations.AnyAsync())
             {
                 await SeedAdditionalTestUsersAsync(context);
+                await SeedBeneficiariesAsync(context);
                 return;
             }
 
@@ -316,6 +317,116 @@ namespace SecureEscape.Api.Data
 
             await context.SaveChangesAsync();
             await SeedAdditionalTestUsersAsync(context);
+            await SeedBeneficiariesAsync(context);
+        }
+
+        private static async Task SeedBeneficiariesAsync(AppDbContext context)
+        {
+            const int beneficiariesPerUser = 5;
+            var beneficiaryPool = new[]
+            {
+                ("Nomsa Mthembu", "ABSA", "Grocery Money"),
+                ("Thandiwe Ndlovu", "FNB", "Family Support"),
+                ("Mandla Khumalo", "Nedbank", "Monthly Rent"),
+                ("Anele Jacobs", "Standard Bank", "School Fees"),
+                ("Bongani Dube", "Capitec Bank", "Household Expenses"),
+                ("Zanele Mokoena", "TymeBank", "Utilities"),
+                ("Kabelo Molefe", "Discovery Bank", "Medical Aid"),
+                ("Lindiwe Sithole", "African Bank", "Savings Transfer"),
+                ("Sibusiso Zulu", "Investec", "Vehicle Instalment"),
+                ("Nokuthula Maseko", "Sasfin", "Emergency Fund"),
+                ("Ayanda Cele", "Bidvest Bank", "Insurance"),
+                ("Mpho Radebe", "Grindrod Bank", "Internet"),
+                ("Lerato Mokoena", "ABSA", "Childcare"),
+                ("Sipho Nkosi", "FNB", "Building Materials"),
+                ("Karabo Modise", "Nedbank", "Tuition"),
+                ("Busisiwe Dlamini", "Standard Bank", "Water Account"),
+                ("Themba Mhlongo", "Capitec Bank", "Airtime"),
+                ("Palesa Molefe", "TymeBank", "Household Help"),
+                ("Vusi Ncube", "Discovery Bank", "Pharmacy"),
+                ("Nosipho Qwabe", "African Bank", "Travel"),
+                ("Mzwandile Hadebe", "Investec", "Business Supplies"),
+                ("Refilwe Motloung", "Sasfin", "Electricity"),
+                ("Siyabonga Mthethwa", "Bidvest Bank", "Rent"),
+                ("Puleng Sekwati", "Grindrod Bank", "Groceries"),
+                ("Lungile Buthelezi", "ABSA", "Family Support"),
+                ("Kagiso Sithole", "FNB", "Rent"),
+                ("Nandi Maseko", "Nedbank", "School Transport"),
+                ("Sanele Gumede", "Standard Bank", "Home Repairs"),
+                ("Nompumelelo Hlongwane", "Capitec Bank", "Monthly Support"),
+                ("Buhle Msimang", "TymeBank", "Community Contribution"),
+                ("Lwazi Dlamini", "Discovery Bank", "Doctor"),
+                ("Mbalenhle Zungu", "African Bank", "Funeral Cover"),
+                ("Sakhile Mthembu", "Investec", "Loan Repayment"),
+                ("Amanda van der Merwe", "Sasfin", "Rates and Taxes"),
+                ("Johan Botha", "Bidvest Bank", "Car Service"),
+                ("Naledi Khumalo", "Grindrod Bank", "Savings"),
+                ("Tebogo Mokoena", "ABSA", "Cellphone"),
+                ("Nkosinathi Cele", "FNB", "Security"),
+                ("Charmaine Adams", "Nedbank", "Domestic Services"),
+                ("Dumisani Ndlovu", "Standard Bank", "Furniture"),
+                ("Masechaba Radebe", "Capitec Bank", "School Uniform"),
+                ("Wandile Zulu", "TymeBank", "Fuel"),
+                ("Mokgadi Modise", "Discovery Bank", "Dentist"),
+                ("Luyanda Jacobs", "African Bank", "Donation"),
+                ("Musa Dube", "Investec", "Consulting"),
+                ("Nonhle Mkhize", "Sasfin", "Clothing"),
+                ("Tshepo Mokoena", "Bidvest Bank", "Subscriptions"),
+                ("Nosimilo Zulu", "Grindrod Bank", "Garden Services"),
+                ("Keitumetse Phiri", "ABSA", "Legal Fees"),
+                ("Wendy Naidoo", "FNB", "Optometrist")
+            };
+
+            var users = await context.Users
+                .Select(user => user.Id)
+                .ToListAsync();
+
+            foreach (var userId in users)
+            {
+                var existingBeneficiaries = await context.Beneficiaries
+                    .Where(beneficiary => beneficiary.UserId == userId)
+                    .ToListAsync();
+
+                var existingNames = existingBeneficiaries
+                    .Select(beneficiary => beneficiary.Name)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var activeCount = existingBeneficiaries.Count(
+                    beneficiary => beneficiary.Status == BeneficiaryStatus.Active);
+                var missingCount = beneficiariesPerUser - activeCount;
+                if (missingCount <= 0)
+                {
+                    continue;
+                }
+
+                var selectedPool = beneficiaryPool
+                    .Where(candidate => !existingNames.Contains(candidate.Item1))
+                    .OrderBy(_ => Random.Shared.Next())
+                    .Take(missingCount)
+                    .ToList();
+
+                foreach (var (name, bankName, reference) in selectedPool)
+                {
+                    await context.Beneficiaries.AddAsync(new Beneficiary
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = userId,
+                        Name = name,
+                        BankName = bankName,
+                        AccountNumber = CreateSeedAccountNumber(userId, name),
+                        Reference = reference,
+                        Status = BeneficiaryStatus.Active,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+            }
+
+            await context.SaveChangesAsync();
+        }
+
+        private static string CreateSeedAccountNumber(Guid userId, string beneficiaryName)
+        {
+            var hash = (uint)HashCode.Combine(userId, beneficiaryName);
+            return $"6{hash:000000000000000}"[..16];
         }
 
         private static async Task ResetAdditionalTestUserProfilesAsync(AppDbContext context)
