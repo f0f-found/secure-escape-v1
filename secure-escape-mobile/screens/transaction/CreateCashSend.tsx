@@ -249,13 +249,15 @@ export default function CreateCashSend() {
 
           {createdCashSend && (
             <View style={styles.successBox}>
-              <Text style={styles.successTitle}>Cash send created</Text>
+              <Text style={styles.successTitle}>Cash send ready</Text>
+              <Text style={styles.successText}>
+                Your cash send voucher is ready to be shared with the recipient.
+              </Text>
               <Text style={styles.successText}>
                 Voucher number: {createdCashSend.voucherNumber}
               </Text>
               <Text style={styles.successText}>
-                Status: {createdCashSend.status} • Ref:{" "}
-                {createdCashSend.bankReference}
+                Bank reference: {createdCashSend.bankReference}
               </Text>
               <TouchableOpacity
                 style={styles.doneButton}
