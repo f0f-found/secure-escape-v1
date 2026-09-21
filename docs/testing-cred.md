@@ -33,6 +33,35 @@ accounts, which also makes them suitable for testing the recommended budget.
 The API adds these users when it starts if they do not already exist. Existing
 users and existing Secure Escape profiles are left unchanged.
 
+## Additional Test Users
+
+These 20 users are local seeded demo records with active bank accounts for
+testing. They are not real external bank or customer accounts. Log in with
+the email and normal PIN below, then set the duress PIN during setup.
+
+| Customer | Email | Normal PIN |
+|----------|-------|------------|
+| Ayanda Maseko | ayanda.maseko@email.co.za | 1001 |
+| Sibusiso Ndlovu | sibusiso.ndlovu@email.co.za | 1002 |
+| Palesa Mokoena | palesa.mokoena@email.co.za | 1003 |
+| Kabelo Molefe | kabelo.molefe@email.co.za | 1004 |
+| Nokuthula Dube | nokuthula.dube@email.co.za | 1005 |
+| Mandla Khumalo | mandla.khumalo@email.co.za | 1006 |
+| Busisiwe Zungu | busisiwe.zungu@email.co.za | 1007 |
+| Themba Mthembu | themba.mthembu@email.co.za | 1008 |
+| Zinhle Cele | zinhle.cele@email.co.za | 1009 |
+| Lungile Hadebe | lungile.hadebe@email.co.za | 1010 |
+| Refilwe Modise | refilwe.modise@email.co.za | 1011 |
+| Mpho Radebe | mpho.radebe@email.co.za | 1012 |
+| Karabo Seema | karabo.seema@email.co.za | 1013 |
+| Thandeka Msimang | thandeka.msimang@email.co.za | 1014 |
+| Bongani Mahlangu | bongani.mahlangu@email.co.za | 1015 |
+| Nandi Zwane | nandi.zwane@email.co.za | 1016 |
+| Siyabonga Mkhize | siyabonga.mkhize@email.co.za | 1017 |
+| Keaobaka Tlou | keaobaka.tlou@email.co.za | 1018 |
+| Lindiwe Mabuza | lindiwe.mabuza@email.co.za | 1019 |
+| Tshepo Letsoalo | tshepo.letsoalo@email.co.za | 1020 |
+
 ---
 
 # Fraud Dashboard Administrators
@@ -120,3 +149,13 @@ EvidencePanel.tsx
 CaseManagement.tsx
 Timeline.tsx
 Finally, the new SessionDetail.tsx
+
+Authorization: Basic QUEyRDE2RDZFNjc3NEY3MEEwMkQxNjI2OTBGMDRGQkEtMDEtMjpfR3lrSUltb0R1RVFvakc1QVZ3ZCp4T0NVVUlIZA==
+
+
+tokenID
+AA2D16D6E6774F70A02D162690F04FBA-01-2
+
+
+token secret
+_GykIImoDuEQojG5AVwd*xOCUUIHd

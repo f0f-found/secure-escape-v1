@@ -473,6 +473,7 @@ namespace SecureEscape.Api.Data
                     AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000001"),
                     AccountNumber = "4901001001",
                     Balance = 15000.00m,
+                    Password = "Password@123",
                     NormalPin = "1357",
                     DuressPin = "9753"
                 },
@@ -486,6 +487,7 @@ namespace SecureEscape.Api.Data
                     AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000002"),
                     AccountNumber = "4901001002",
                     Balance = 27500.00m,
+                    Password = "Password@123",
                     NormalPin = "2468",
                     DuressPin = "8642"
                 },
@@ -499,15 +501,107 @@ namespace SecureEscape.Api.Data
                     AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000003"),
                     AccountNumber = "4901001003",
                     Balance = 42000.00m,
+                    Password = "Password@123",
                     NormalPin = "4826",
                     DuressPin = "6284"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000004"), CustomerId = "ZBA-TEST-0004", Name = "Ayanda Maseko", Email = "ayanda.maseko@email.co.za", Phone = "0827001004", AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000004"), AccountNumber = "4901001004", Balance = 18500.00m, Password = "1001", NormalPin = "1001", DuressPin = "9048"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000005"), CustomerId = "ZBA-TEST-0005", Name = "Sibusiso Ndlovu", Email = "sibusiso.ndlovu@email.co.za", Phone = "0827001005", AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000005"), AccountNumber = "4901001005", Balance = 22300.00m, Password = "1002", NormalPin = "1002", DuressPin = "8059"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000006"), CustomerId = "ZBA-TEST-0006", Name = "Palesa Mokoena", Email = "palesa.mokoena@email.co.za", Phone = "0827001006", AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000006"), AccountNumber = "4901001006", Balance = 31750.00m, Password = "1003", NormalPin = "1003", DuressPin = "7160"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000007"), CustomerId = "ZBA-TEST-0007", Name = "Kabelo Molefe", Email = "kabelo.molefe@email.co.za", Phone = "0827001007", AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000007"), AccountNumber = "4901001007", Balance = 14600.00m, Password = "1004", NormalPin = "1004", DuressPin = "6271"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000008"), CustomerId = "ZBA-TEST-0008", Name = "Nokuthula Dube", Email = "nokuthula.dube@email.co.za", Phone = "0827001008", AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000008"), AccountNumber = "4901001008", Balance = 28900.00m, Password = "1005", NormalPin = "1005", DuressPin = "5380"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000009"), CustomerId = "ZBA-TEST-0009", Name = "Mandla Khumalo", Email = "mandla.khumalo@email.co.za", Phone = "0827001009", AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000009"), AccountNumber = "4901001009", Balance = 36200.00m, Password = "1006", NormalPin = "1006", DuressPin = "4493"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000010"), CustomerId = "ZBA-TEST-0010", Name = "Busisiwe Zungu", Email = "busisiwe.zungu@email.co.za", Phone = "0827001010", AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000010"), AccountNumber = "4901001010", Balance = 19800.00m, Password = "1007", NormalPin = "1007", DuressPin = "3504"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000011"), CustomerId = "ZBA-TEST-0011", Name = "Themba Mthembu", Email = "themba.mthembu@email.co.za", Phone = "0827001011", AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000011"), AccountNumber = "4901001011", Balance = 40500.00m, Password = "1008", NormalPin = "1008", DuressPin = "2615"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000012"), CustomerId = "ZBA-TEST-0012", Name = "Zinhle Cele", Email = "zinhle.cele@email.co.za", Phone = "0827001012", AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000012"), AccountNumber = "4901001012", Balance = 25100.00m, Password = "1009", NormalPin = "1009", DuressPin = "1726"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000013"), CustomerId = "ZBA-TEST-0013", Name = "Lungile Hadebe", Email = "lungile.hadebe@email.co.za", Phone = "0827001013", AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000013"), AccountNumber = "4901001013", Balance = 17400.00m, Password = "1010", NormalPin = "1010", DuressPin = "7837"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000014"), CustomerId = "ZBA-TEST-0014", Name = "Refilwe Modise", Email = "refilwe.modise@email.co.za", Phone = "0827001014", AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000014"), AccountNumber = "4901001014", Balance = 33200.00m, Password = "1011", NormalPin = "1011", DuressPin = "6948"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000015"), CustomerId = "ZBA-TEST-0015", Name = "Mpho Radebe", Email = "mpho.radebe@email.co.za", Phone = "0827001015", AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000015"), AccountNumber = "4901001015", Balance = 21900.00m, Password = "1012", NormalPin = "1012", DuressPin = "9059"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000016"), CustomerId = "ZBA-TEST-0016", Name = "Karabo Seema", Email = "karabo.seema@email.co.za", Phone = "0827001016", AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000016"), AccountNumber = "4901001016", Balance = 28700.00m, Password = "1013", NormalPin = "1013", DuressPin = "8160"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000017"), CustomerId = "ZBA-TEST-0017", Name = "Thandeka Msimang", Email = "thandeka.msimang@email.co.za", Phone = "0827001017", AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000017"), AccountNumber = "4901001017", Balance = 15300.00m, Password = "1014", NormalPin = "1014", DuressPin = "7271"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000018"), CustomerId = "ZBA-TEST-0018", Name = "Bongani Mahlangu", Email = "bongani.mahlangu@email.co.za", Phone = "0827001018", AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000018"), AccountNumber = "4901001018", Balance = 37600.00m, Password = "1015", NormalPin = "1015", DuressPin = "4382"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000019"), CustomerId = "ZBA-TEST-0019", Name = "Nandi Zwane", Email = "nandi.zwane@email.co.za", Phone = "0827001019", AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000019"), AccountNumber = "4901001019", Balance = 24400.00m, Password = "1016", NormalPin = "1016", DuressPin = "3493"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000020"), CustomerId = "ZBA-TEST-0020", Name = "Siyabonga Mkhize", Email = "siyabonga.mkhize@email.co.za", Phone = "0827001020", AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000020"), AccountNumber = "4901001020", Balance = 29800.00m, Password = "1017", NormalPin = "1017", DuressPin = "2504"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000021"), CustomerId = "ZBA-TEST-0021", Name = "Keaobaka Tlou", Email = "keaobaka.tlou@email.co.za", Phone = "0827001021", AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000021"), AccountNumber = "4901001021", Balance = 16700.00m, Password = "1018", NormalPin = "1018", DuressPin = "1615"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000022"), CustomerId = "ZBA-TEST-0022", Name = "Lindiwe Mabuza", Email = "lindiwe.mabuza@email.co.za", Phone = "0827001022", AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000022"), AccountNumber = "4901001022", Balance = 35100.00m, Password = "1019", NormalPin = "1019", DuressPin = "8726"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000023"), CustomerId = "ZBA-TEST-0023", Name = "Tshepo Letsoalo", Email = "tshepo.letsoalo@email.co.za", Phone = "0827001023", AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000023"), AccountNumber = "4901001023", Balance = 26300.00m, Password = "1020", NormalPin = "1020", DuressPin = "6837"
                 }
             };
 
             foreach (var testUser in testUsers)
             {
-                if (await context.Users.AnyAsync(x => x.Email == testUser.Email))
+                var existingUser = await context.Users
+                    .Include(x => x.AuthCredential)
+                    .FirstOrDefaultAsync(x => x.Email == testUser.Email);
+
+                if (existingUser != null)
                 {
+                    if (existingUser.AuthCredential != null)
+                    {
+                        existingUser.AuthCredential.PasswordHash = BCrypt.Net.BCrypt.HashPassword(testUser.Password);
+                        existingUser.AuthCredential.NormalPinHash = BCrypt.Net.BCrypt.HashPassword(testUser.NormalPin);
+                        existingUser.AuthCredential.DuressPinHash = BCrypt.Net.BCrypt.HashPassword(testUser.DuressPin);
+                    }
+
                     continue;
                 }
 
@@ -528,7 +622,7 @@ namespace SecureEscape.Api.Data
                 {
                     Id = Guid.NewGuid(),
                     UserId = user.Id,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password@123"),
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(testUser.Password),
                     NormalPinHash = BCrypt.Net.BCrypt.HashPassword(testUser.NormalPin),
                     DuressPinHash = BCrypt.Net.BCrypt.HashPassword(testUser.DuressPin),
                     CreatedAt = DateTime.UtcNow
