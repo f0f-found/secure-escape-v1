@@ -1,2 +1,13 @@
 import LoginScreen from "@/screens/auth/LoginScreen";
-export default LoginScreen;
+import { useRouter } from "expo-router";
+
+export default function LoginRoute() {
+  const router = useRouter();
+
+  const handleLoginSuccess = () => {
+    console.log("[AUTH ROUTE] Login successful — navigating to app");
+    router.replace("/(tabs)");
+  };
+
+  return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+}
