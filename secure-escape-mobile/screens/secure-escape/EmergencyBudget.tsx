@@ -10,6 +10,8 @@ import {
   Modal,
   TouchableWithoutFeedback,
   Linking,
+  ActivityIndicator,
+  TextInput,
 } from "react-native";
 import Slider from "@react-native-community/slider";
 import { LinearGradient } from "expo-linear-gradient";
@@ -18,6 +20,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/utils/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { upsertDecoyProfile } from "@/services/secureEscapeService";
+import { getAccounts } from "@/services/accountService";
+import { AccountResponse } from "@/types/account";
 import { ErrorBanner, ErrorModal } from "@/components/FormErrorMessage";
 
 export default function EmergencyBudgetScreen() {
@@ -28,6 +32,7 @@ export default function EmergencyBudgetScreen() {
   const mode = profileType;
 
   const [lowAmount, setLowAmount] = useState(200);
+  const [manualLowAmount, setManualLowAmount] = useState("200");
   const [tier1, setTier1] = useState(2000);
   const [tier2, setTier2] = useState(20000);
 
@@ -37,6 +42,9 @@ export default function EmergencyBudgetScreen() {
   // initially see as available). Flagging this as an assumption; adjust
   // if "what attacker sees" should be a separate, independently-set value.
   const [displayBalance, setDisplayBalance] = useState(500);
+  const [mainAccount, setMainAccount] = useState<AccountResponse | null>(null);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(true);
+  const [useRecommendedAmount, setUseRecommendedAmount] = useState(true);
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +64,11 @@ export default function EmergencyBudgetScreen() {
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
+
+  // Keep the recommendation exact for now. A future product rule can cap it below R1,000.
+  const recommendedAmount = mainAccount
+    ? Math.round(mainAccount.availableBalance * 0.07 * 100) / 100
+    : 0;
 
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
@@ -78,17 +91,54 @@ export default function EmergencyBudgetScreen() {
         Animated.timing(rotateAnim, { toValue: -0.05, duration: 1500, useNativeDriver: true }),
       ])
     ).start();
+
+    loadMainAccount();
   }, []);
 
-  const handleSliderChange = (value: number, type: "low" | "tier1" | "tier2") => {
+  const loadMainAccount = async () => {
+    try {
+      const accounts = await getAccounts();
+      const account =
+        accounts.find(
+          (item) => item.status === "Active" && item.accountType === "Cheque",
+        ) ?? accounts.find((item) => item.status === "Active");
+
+      if (!account) {
+        showError("We could not find an active main account.");
+        return;
+      }
+
+      setMainAccount(account);
+    } catch (loadError) {
+      showError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Failed to load your available balance.",
+      );
+    } finally {
+      setIsLoadingBalance(false);
+    }
+  };
+
+  const handleSliderChange = (value: number, type: "tier1" | "tier2") => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     clearError();
-    if (type === "low") setLowAmount(value);
     if (type === "tier1") {
       setTier1(value);
       if (mode === "Custom") setDisplayBalance(value);
     }
     if (type === "tier2") setTier2(value);
+  };
+
+  const handleManualLowAmountChange = (value: string) => {
+    const numericValue = value.replace(/[^0-9.]/g, "");
+    setManualLowAmount(numericValue);
+    const parsedAmount = Number(numericValue);
+
+    if (Number.isFinite(parsedAmount)) {
+      setLowAmount(parsedAmount);
+    }
+    clearError();
   };
 
   // Main Continue: open T&C modal (no validation needed, sliders always valid)
@@ -107,8 +157,24 @@ export default function EmergencyBudgetScreen() {
       return "Please choose a Secure Escape mode before setting your protection amount.";
     }
 
+    if (isLoadingBalance) {
+      return "Please wait while we load your main account balance.";
+    }
+
+    if (useRecommendedAmount && recommendedAmount <= 0) {
+      return "We could not calculate a recommended amount from your main account.";
+    }
+
     const values =
       mode === "LowProfile" ? [lowAmount] : [displayBalance, tier1, tier2];
+
+    if (
+      mode === "LowProfile" &&
+      !useRecommendedAmount &&
+      (lowAmount < 200 || lowAmount > 1000)
+    ) {
+      return "Please enter an amount between R200 and R1,000.";
+    }
 
     if (values.some((value) => value < 0 || value > 1000000)) {
       return "Secure Escape amounts must be between R0 and R1,000,000.";
@@ -117,8 +183,7 @@ export default function EmergencyBudgetScreen() {
     return null;
   };
 
-  // Continue: validate sliders, then open T&C modal
-  const handleContinue = () => {
+  const openTermsAfterValidation = () => {
     const validationMessage = getValidationMessage();
 
     if (validationMessage) {
@@ -130,7 +195,125 @@ export default function EmergencyBudgetScreen() {
     openTermsModal();
   };
 
-  const formatCurrency = (value: number) => `R ${value.toLocaleString()}`;
+  const applyRecommendedAmount = () => {
+    if (!mainAccount || recommendedAmount <= 0) {
+      showError("Your recommended amount is not available yet.");
+      return;
+    }
+
+    setUseRecommendedAmount(true);
+    setLowAmount(recommendedAmount);
+    setManualLowAmount(recommendedAmount.toFixed(2));
+    setDisplayBalance(recommendedAmount);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    clearError();
+  };
+
+  const handleRecommendedAmount = () => {
+    applyRecommendedAmount();
+
+    if (mainAccount && recommendedAmount > 0) {
+      openTermsAfterValidation();
+    }
+  };
+
+  const chooseManualAmount = () => {
+    setUseRecommendedAmount(false);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    clearError();
+  };
+
+  const openProtectionModal = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setProtectionModalVisible(true);
+    Animated.parallel([
+      Animated.timing(protectionFadeAnim, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.spring(protectionScaleAnim, {
+        toValue: 1,
+        friction: 7,
+        tension: 50,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeProtectionModal = () => {
+    setProtectionModalVisible(false);
+    protectionFadeAnim.setValue(0);
+    protectionScaleAnim.setValue(0.9);
+  };
+
+  const openTermsModal = () => {
+    setTermsModalVisible(true);
+    Animated.parallel([
+      Animated.timing(termsFadeAnim, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.spring(termsScaleAnim, {
+        toValue: 1,
+        friction: 7,
+        tension: 50,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeTermsModal = () => {
+    setTermsModalVisible(false);
+    setModalAgreed(false);
+    termsFadeAnim.setValue(0);
+    termsScaleAnim.setValue(0.9);
+  };
+
+  const handleConfirm = async () => {
+    if (!modalAgreed || isSaving) return;
+
+    try {
+      setIsSaving(true);
+      const emergencyBudget = useRecommendedAmount
+        ? recommendedAmount
+        : mode === "LowProfile"
+          ? lowAmount
+          : tier1;
+
+        await upsertDecoyProfile({
+          profileType: mode as "LowProfile" | "Custom",
+          displayBalance: useRecommendedAmount ? emergencyBudget : displayBalance,
+          emergencyBudget,
+          tier1Limit: useRecommendedAmount ? emergencyBudget : tier1,
+          tier2Limit: useRecommendedAmount ? emergencyBudget : tier2,
+          tier2DelayHours: 24,
+          
+        });
+
+      closeTermsModal();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.push({
+        pathname: "/secure-escape/duress-pin",
+        params: { from: "onboarding" },
+      });
+    } catch (saveError) {
+      showError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Failed to save your protection amount.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const formatCurrency = (value: number) =>
+    `R ${value.toLocaleString("en-ZA", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
   const rotateInterpolate = rotateAnim.interpolate({
     inputRange: [-0.05, 0.05],
     outputRange: ["-5deg", "5deg"],
@@ -141,23 +324,18 @@ export default function EmergencyBudgetScreen() {
     content = (
       <Animated.View style={{ opacity: fadeAnim }}>
         <Text style={styles.label}>
-          Protection Amount <Text style={styles.range}>(R200 – R1,000)</Text>
+          Protection Amount <Text style={styles.range}>(R200 - R1,000)</Text>
         </Text>
-        <Slider
-          style={styles.slider}
-          minimumValue={200}
-          maximumValue={1000}
-          step={10}
-          value={lowAmount}
-          onValueChange={(v: number) => handleSliderChange(v, "low")}
-          minimumTrackTintColor={colors.primary}
-          maximumTrackTintColor={colors.greyLine}
-          thumbTintColor={colors.primary}
+        <TextInput
+          style={styles.amountInput}
+          value={manualLowAmount}
+          onChangeText={handleManualLowAmountChange}
+          keyboardType="decimal-pad"
+          placeholder="Enter an amount"
+          placeholderTextColor="#A0A4B8"
+          maxLength={8}
         />
-        <View style={styles.valueContainer}>
-          <Text style={styles.valueLabel}>Suggested: R200</Text>
-          <Text style={styles.value}>{formatCurrency(lowAmount)}</Text>
-        </View>
+        <Text style={styles.inputHint}>Enter any amount from R200 to R1,000.</Text>
       </Animated.View>
     );
   } else {
@@ -247,7 +425,55 @@ export default function EmergencyBudgetScreen() {
           </LinearGradient>
         </Animated.View>
 
-        {content}
+        <View style={styles.recommendationBox}>
+          <Text style={styles.recommendationTitle}>
+            Recommended protection amount
+          </Text>
+          {isLoadingBalance ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : mainAccount ? (
+            <>
+              <Text style={styles.recommendationAmount}>
+                {formatCurrency(recommendedAmount)}
+              </Text>
+              <Text style={styles.recommendationText}>
+                Based on 7% of the available balance in your main account. You
+                can change this amount later in Secure Escape settings.
+              </Text>
+              <TouchableOpacity
+                style={styles.recommendedButton}
+                onPress={handleRecommendedAmount}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={["#7C6EF7", "#4A6CF7"]}
+                  style={styles.gradientButton}
+                >
+                  <Text style={styles.buttonText}>Use recommended amount</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.manualButton}
+                onPress={chooseManualAmount}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.manualButtonText}>Set amount manually</Text>
+              </TouchableOpacity>
+            </>
+          ) : null}
+        </View>
+
+        {!useRecommendedAmount && content}
+
+        {useRecommendedAmount && mainAccount && (
+          <View style={styles.selectedAmountBox}>
+            <Text style={styles.selectedAmountLabel}>Selected amount</Text>
+            <Text style={styles.selectedAmount}>{formatCurrency(recommendedAmount)}</Text>
+            <Text style={styles.selectedAmountHint}>
+              You can change this amount later in Secure Escape settings.
+            </Text>
+          </View>
+        )}
 
         <View style={styles.noteBox}>
           <Ionicons name="information-circle" size={20} color={colors.primary} style={styles.noteIcon} />
@@ -258,19 +484,20 @@ export default function EmergencyBudgetScreen() {
 
         <ErrorBanner message={error} onPress={() => setShowErrorModal(true)} />
 
-        {/* Continue button – opens T&C modal */}
-        <TouchableOpacity
-          style={styles.continueButton}
-          onPress={handleContinue}
-          activeOpacity={0.8}
-        >
-          <LinearGradient
-            colors={["#7C6EF7", "#4A6CF7"]}
-            style={styles.gradientButton}
+        {!useRecommendedAmount && (
+          <TouchableOpacity
+            style={styles.manualConfirmButton}
+            onPress={openTermsAfterValidation}
+            activeOpacity={0.8}
           >
-            <Text style={styles.buttonText}>Continue</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+            <LinearGradient
+              colors={["#7C6EF7", "#4A6CF7"]}
+              style={styles.gradientButton}
+            >
+              <Text style={styles.buttonText}>Use this amount</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ErrorModal
@@ -619,11 +846,93 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   linkText: { color: colors.primary, textDecorationLine: "underline" },
-  continueButton: {
-    marginTop: 12,
+  amountInput: {
+    borderWidth: 1.5,
+    borderColor: colors.greyLine,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 20,
+    fontWeight: "700",
+    color: colors.navy,
+    backgroundColor: "#fff",
+  },
+  inputHint: {
+    fontSize: 12,
+    color: colors.textSub,
+    marginTop: 6,
+    marginBottom: 16,
+  },
+  manualConfirmButton: {
     borderRadius: 50,
     overflow: "hidden",
+    marginTop: 4,
     marginBottom: 20,
+  },
+  recommendationBox: {
+    backgroundColor: "#F5F3FF",
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#DDD6FE",
+  },
+  recommendationTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.navy,
+    marginBottom: 8,
+  },
+  recommendationAmount: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: colors.primary,
+    marginBottom: 4,
+  },
+  recommendationText: {
+    fontSize: 13,
+    color: colors.textSub,
+    lineHeight: 19,
+    marginBottom: 14,
+  },
+  recommendedButton: {
+    borderRadius: 50,
+    overflow: "hidden",
+  },
+  manualButton: {
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  manualButtonText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: "700",
+    textDecorationLine: "underline",
+  },
+  selectedAmountBox: {
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  selectedAmountLabel: {
+    fontSize: 13,
+    color: colors.textSub,
+    marginBottom: 4,
+  },
+  selectedAmount: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: colors.navy,
+  },
+  selectedAmountHint: {
+    fontSize: 12,
+    color: colors.textSub,
+    marginTop: 6,
+    textAlign: "center",
   },
   gradientButton: { paddingVertical: 16, alignItems: "center" },
   buttonText: {

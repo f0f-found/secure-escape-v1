@@ -8,7 +8,20 @@ namespace SecureEscape.Api.Data
     {
         public static async Task SeedAsync(AppDbContext context)
         {
-            if (await context.BankIntegrations.AnyAsync()) return;
+            if (string.Equals(
+                    Environment.GetEnvironmentVariable("SECURE_ESCAPE_RESET_TEST_USERS"),
+                    "true",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                await ResetAdditionalTestUserProfilesAsync(context);
+            }
+
+            if (await context.BankIntegrations.AnyAsync())
+            {
+                await SeedAdditionalTestUsersAsync(context);
+                await SeedBeneficiariesAsync(context);
+                return;
+            }
 
             // ── BANK INTEGRATIONS ──────────────────────────────────────────
             var zenithBank = new BankIntegration
@@ -301,6 +314,239 @@ namespace SecureEscape.Api.Data
                     CreatedAt = DateTime.UtcNow
                 }
             );
+
+            await context.SaveChangesAsync();
+            await SeedAdditionalTestUsersAsync(context);
+            await SeedBeneficiariesAsync(context);
+        }
+
+        private static async Task SeedBeneficiariesAsync(AppDbContext context)
+        {
+            const int beneficiariesPerUser = 5;
+            var beneficiaryPool = new[]
+            {
+                ("Nomsa Mthembu", "ABSA", "Grocery Money"),
+                ("Thandiwe Ndlovu", "FNB", "Family Support"),
+                ("Mandla Khumalo", "Nedbank", "Monthly Rent"),
+                ("Anele Jacobs", "Standard Bank", "School Fees"),
+                ("Bongani Dube", "Capitec Bank", "Household Expenses"),
+                ("Zanele Mokoena", "TymeBank", "Utilities"),
+                ("Kabelo Molefe", "Discovery Bank", "Medical Aid"),
+                ("Lindiwe Sithole", "African Bank", "Savings Transfer"),
+                ("Sibusiso Zulu", "Investec", "Vehicle Instalment"),
+                ("Nokuthula Maseko", "Sasfin", "Emergency Fund"),
+                ("Ayanda Cele", "Bidvest Bank", "Insurance"),
+                ("Mpho Radebe", "Grindrod Bank", "Internet"),
+                ("Lerato Mokoena", "ABSA", "Childcare"),
+                ("Sipho Nkosi", "FNB", "Building Materials"),
+                ("Karabo Modise", "Nedbank", "Tuition"),
+                ("Busisiwe Dlamini", "Standard Bank", "Water Account"),
+                ("Themba Mhlongo", "Capitec Bank", "Airtime"),
+                ("Palesa Molefe", "TymeBank", "Household Help"),
+                ("Vusi Ncube", "Discovery Bank", "Pharmacy"),
+                ("Nosipho Qwabe", "African Bank", "Travel"),
+                ("Mzwandile Hadebe", "Investec", "Business Supplies"),
+                ("Refilwe Motloung", "Sasfin", "Electricity"),
+                ("Siyabonga Mthethwa", "Bidvest Bank", "Rent"),
+                ("Puleng Sekwati", "Grindrod Bank", "Groceries"),
+                ("Lungile Buthelezi", "ABSA", "Family Support"),
+                ("Kagiso Sithole", "FNB", "Rent"),
+                ("Nandi Maseko", "Nedbank", "School Transport"),
+                ("Sanele Gumede", "Standard Bank", "Home Repairs"),
+                ("Nompumelelo Hlongwane", "Capitec Bank", "Monthly Support"),
+                ("Buhle Msimang", "TymeBank", "Community Contribution"),
+                ("Lwazi Dlamini", "Discovery Bank", "Doctor"),
+                ("Mbalenhle Zungu", "African Bank", "Funeral Cover"),
+                ("Sakhile Mthembu", "Investec", "Loan Repayment"),
+                ("Amanda van der Merwe", "Sasfin", "Rates and Taxes"),
+                ("Johan Botha", "Bidvest Bank", "Car Service"),
+                ("Naledi Khumalo", "Grindrod Bank", "Savings"),
+                ("Tebogo Mokoena", "ABSA", "Cellphone"),
+                ("Nkosinathi Cele", "FNB", "Security"),
+                ("Charmaine Adams", "Nedbank", "Domestic Services"),
+                ("Dumisani Ndlovu", "Standard Bank", "Furniture"),
+                ("Masechaba Radebe", "Capitec Bank", "School Uniform"),
+                ("Wandile Zulu", "TymeBank", "Fuel"),
+                ("Mokgadi Modise", "Discovery Bank", "Dentist"),
+                ("Luyanda Jacobs", "African Bank", "Donation"),
+                ("Musa Dube", "Investec", "Consulting"),
+                ("Nonhle Mkhize", "Sasfin", "Clothing"),
+                ("Tshepo Mokoena", "Bidvest Bank", "Subscriptions"),
+                ("Nosimilo Zulu", "Grindrod Bank", "Garden Services"),
+                ("Keitumetse Phiri", "ABSA", "Legal Fees"),
+                ("Wendy Naidoo", "FNB", "Optometrist")
+            };
+
+            var users = await context.Users
+                .Select(user => user.Id)
+                .ToListAsync();
+
+            foreach (var userId in users)
+            {
+                var existingBeneficiaries = await context.Beneficiaries
+                    .Where(beneficiary => beneficiary.UserId == userId)
+                    .ToListAsync();
+
+                var existingNames = existingBeneficiaries
+                    .Select(beneficiary => beneficiary.Name)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var activeCount = existingBeneficiaries.Count(
+                    beneficiary => beneficiary.Status == BeneficiaryStatus.Active);
+                var missingCount = beneficiariesPerUser - activeCount;
+                if (missingCount <= 0)
+                {
+                    continue;
+                }
+
+                var selectedPool = beneficiaryPool
+                    .Where(candidate => !existingNames.Contains(candidate.Item1))
+                    .OrderBy(_ => Random.Shared.Next())
+                    .Take(missingCount)
+                    .ToList();
+
+                foreach (var (name, bankName, reference) in selectedPool)
+                {
+                    await context.Beneficiaries.AddAsync(new Beneficiary
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = userId,
+                        Name = name,
+                        BankName = bankName,
+                        AccountNumber = CreateSeedAccountNumber(userId, name),
+                        Reference = reference,
+                        Status = BeneficiaryStatus.Active,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+            }
+
+            await context.SaveChangesAsync();
+        }
+
+        private static string CreateSeedAccountNumber(Guid userId, string beneficiaryName)
+        {
+            var hash = (uint)HashCode.Combine(userId, beneficiaryName);
+            return $"6{hash:000000000000000}"[..16];
+        }
+
+        private static async Task ResetAdditionalTestUserProfilesAsync(AppDbContext context)
+        {
+            var testEmails = new[]
+            {
+                "test.user.one@email.co.za",
+                "test.user.two@email.co.za",
+                "test.user.three@email.co.za"
+            };
+
+            var testUserIds = await context.Users
+                .Where(user => testEmails.Contains(user.Email))
+                .Select(user => user.Id)
+                .ToListAsync();
+
+            var profiles = await context.DecoyProfiles
+                .Where(profile => testUserIds.Contains(profile.UserId))
+                .ToListAsync();
+
+            if (profiles.Count == 0)
+            {
+                return;
+            }
+
+            context.DecoyProfiles.RemoveRange(profiles);
+            await context.SaveChangesAsync();
+        }
+
+        private static async Task SeedAdditionalTestUsersAsync(AppDbContext context)
+        {
+            var zenithBank = await context.BankIntegrations
+                .FirstAsync(x => x.BankCode == "ZBA001");
+
+            var testUsers = new[]
+            {
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000001"),
+                    CustomerId = "ZBA-TEST-0001",
+                    Name = "Test User One",
+                    Email = "test.user.one@email.co.za",
+                    Phone = "0827001001",
+                    AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000001"),
+                    AccountNumber = "4901001001",
+                    Balance = 15000.00m,
+                    NormalPin = "1357",
+                    DuressPin = "9753"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000002"),
+                    CustomerId = "ZBA-TEST-0002",
+                    Name = "Test User Two",
+                    Email = "test.user.two@email.co.za",
+                    Phone = "0827001002",
+                    AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000002"),
+                    AccountNumber = "4901001002",
+                    Balance = 27500.00m,
+                    NormalPin = "2468",
+                    DuressPin = "8642"
+                },
+                new
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000003"),
+                    CustomerId = "ZBA-TEST-0003",
+                    Name = "Test User Three",
+                    Email = "test.user.three@email.co.za",
+                    Phone = "0827001003",
+                    AccountId = Guid.Parse("e2000000-0000-0000-0000-000000000003"),
+                    AccountNumber = "4901001003",
+                    Balance = 42000.00m,
+                    NormalPin = "4826",
+                    DuressPin = "6284"
+                }
+            };
+
+            foreach (var testUser in testUsers)
+            {
+                if (await context.Users.AnyAsync(x => x.Email == testUser.Email))
+                {
+                    continue;
+                }
+
+                var user = new User
+                {
+                    Id = testUser.Id,
+                    BankIntegrationId = zenithBank.Id,
+                    BankCustomerId = testUser.CustomerId,
+                    FullName = testUser.Name,
+                    Email = testUser.Email,
+                    PhoneNumber = testUser.Phone,
+                    Status = UserStatus.Active,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await context.Users.AddAsync(user);
+                await context.AuthCredentials.AddAsync(new AuthCredential
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user.Id,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password@123"),
+                    NormalPinHash = BCrypt.Net.BCrypt.HashPassword(testUser.NormalPin),
+                    DuressPinHash = BCrypt.Net.BCrypt.HashPassword(testUser.DuressPin),
+                    CreatedAt = DateTime.UtcNow
+                });
+                await context.BankAccounts.AddAsync(new BankAccount
+                {
+                    Id = testUser.AccountId,
+                    UserId = user.Id,
+                    AccountNumber = testUser.AccountNumber,
+                    AccountName = $"{testUser.Name} Main Account",
+                    AccountType = AccountType.Cheque,
+                    AvailableBalance = testUser.Balance,
+                    CurrentBalance = testUser.Balance,
+                    Currency = "ZAR",
+                    Status = AccountStatus.Active,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
 
             await context.SaveChangesAsync();
         }

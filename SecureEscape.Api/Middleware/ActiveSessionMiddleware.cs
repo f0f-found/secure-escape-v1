@@ -8,7 +8,7 @@ namespace SecureEscape.Api.Middleware;
 public class ActiveSessionMiddleware
 {
     private readonly RequestDelegate _next;
-    private static readonly TimeSpan InactivityTimeout = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan InactivityTimeout = TimeSpan.FromMinutes(10);
 
     public ActiveSessionMiddleware(RequestDelegate next)
     {
