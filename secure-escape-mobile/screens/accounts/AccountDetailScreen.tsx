@@ -12,7 +12,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/utils/theme";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router";
 import { getAccountById } from "@/services/accountService";
 import { getTransactions } from "@/services/transactionServices";
 import { AccountResponse } from "@/types/account";
@@ -383,3 +383,4 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 10, fontWeight: "700" },
   emptyText: { textAlign: "center", marginTop: 30, color: "#aaa" },
 });
+
