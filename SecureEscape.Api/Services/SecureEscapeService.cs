@@ -46,7 +46,7 @@ public class SecureEscapeService : ISecureEscapeService
     {
         var currentUser = _currentUserService.GetCurrentUser();
 
-        var decoyProfile = await _decoyProfileRepository.GetActiveByUserIdAsync(currentUser.UserId);
+        var decoyProfile = await _decoyProfileRepository.GetLatestByUserIdAsync(currentUser.UserId);
 
         if (decoyProfile == null)
         {
@@ -60,7 +60,7 @@ public class SecureEscapeService : ISecureEscapeService
                 Tier1Limit = request.Tier1Limit,
                 Tier2Limit = request.Tier2Limit,
                 Tier2DelayHours = request.Tier2DelayHours,
-                IsActive = true,
+                IsActive = request.IsComplete,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -74,7 +74,7 @@ public class SecureEscapeService : ISecureEscapeService
             decoyProfile.Tier1Limit = request.Tier1Limit;
             decoyProfile.Tier2Limit = request.Tier2Limit;
             decoyProfile.Tier2DelayHours = request.Tier2DelayHours;
-            decoyProfile.IsActive = true;
+            decoyProfile.IsActive = request.IsComplete;
             decoyProfile.UpdatedAt = DateTime.UtcNow;
 
             await _decoyProfileRepository.UpdateAsync(decoyProfile);
@@ -90,6 +90,24 @@ public class SecureEscapeService : ISecureEscapeService
             userSessionId: currentUser.UserSessionId);
 
         return MapToResponse(decoyProfile);
+    }
+
+    public async Task<bool> CompleteSetupAsync()
+    {
+        var currentUser = _currentUserService.GetCurrentUser();
+        var decoyProfile = await _decoyProfileRepository.GetLatestByUserIdAsync(currentUser.UserId);
+
+        if (decoyProfile == null)
+        {
+            return false;
+        }
+
+        decoyProfile.IsActive = true;
+        decoyProfile.UpdatedAt = DateTime.UtcNow;
+        await _decoyProfileRepository.UpdateAsync(decoyProfile);
+        await _unitOfWork.SaveChangesAsync();
+
+        return true;
     }
 
     public async Task<bool> SetDuressPinAsync(SetDuressPinRequestDto request)

@@ -27,10 +27,20 @@ namespace SecureEscape.Api.Data
         public DbSet<RiskEvaluation> RiskEvaluations { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<UserSession> UserSessions { get; set; }
+        public DbSet<DuressBudget> DuressBudgets { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<DuressBudget>()
+                .HasOne<UserSession>().WithOne()
+                .HasForeignKey<DuressBudget>(x => x.UserSessionId);
+            modelBuilder.Entity<DuressBudget>()
+                .HasOne<BankAccount>().WithMany()
+                .HasForeignKey(x => x.BankAccountId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<BankAccount>().Property(x => x.AvailableBalance).IsConcurrencyToken();
+            modelBuilder.Entity<BankAccount>().Property(x => x.Status).IsConcurrencyToken();
+            modelBuilder.Entity<BankTransaction>().Property(x => x.Status).IsConcurrencyToken();
 
             ConfigureEnums(modelBuilder);
             ConfigureIndexes(modelBuilder);

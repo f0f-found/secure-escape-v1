@@ -1,4 +1,6 @@
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+using SecureEscape.Api.Data;
 using Moq;
 using SecureEscape.Api.DTOs;
 using SecureEscape.Api.DTOs.Request;
@@ -79,7 +81,9 @@ public class TransactionServiceNormalPathTests
             _riskService.Object,
             _fraudReportingService.Object,
             _locationEventRepo.Object,
-            _unitOfWork.Object);
+            _unitOfWork.Object,
+            new DuressBudgetService(new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options)));
     }
 
     private BankAccount BuildAccount(decimal availableBalance) => new()

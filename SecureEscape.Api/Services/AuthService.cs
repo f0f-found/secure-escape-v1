@@ -128,6 +128,8 @@ public class AuthService : IAuthService
         };
 
         await _context.UserSessions.AddAsync(session);
+        if (sessionMode == SessionMode.Duress)
+            await DuressBudgetService.InitializeAsync(_context, session);
 
         Alert? alert = null;
         string? lastKnownLocation = null;
@@ -152,11 +154,6 @@ public class AuthService : IAuthService
             };
 
             await _context.Alerts.AddAsync(alert);
-
-            if (duressPinValid)
-            {
-                await _notificationDispatchService.DispatchPendingForSessionAsync(session.Id);
-            }
 
             var riskEvaluation = new RiskEvaluation
             {
@@ -232,6 +229,10 @@ public class AuthService : IAuthService
         }
 
         await _context.SaveChangesAsync();
+
+        // Dispatch only after the alert and its notification attempts exist.
+        if (sessionMode == SessionMode.Duress)
+            await _notificationDispatchService.DispatchPendingForSessionAsync(session.Id);
 
         await _auditService.LogAsync(
             duressPinValid ? AuditEventType.DuressPinMatched : AuditEventType.NormalPinMatched,

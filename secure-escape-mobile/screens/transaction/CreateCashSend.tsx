@@ -20,6 +20,7 @@ import { AccountResponse } from "@/types/account";
 import { CashSendResponse } from "@/types/transaction";
 import { colors } from "@/utils/theme";
 import VerifyPinModal from "@/components/VerifyPinModal";
+import SuccessModal from "@/components/SuccessModal";
 
 const MAX_CASH_SEND_AMOUNT = 4000;
 
@@ -286,27 +287,6 @@ export default function CreateCashSend() {
             </TouchableOpacity>
           )}
 
-          {createdCashSend && (
-            <View style={styles.successBox}>
-              <Text style={styles.successTitle}>Cash send ready</Text>
-              <Text style={styles.successText}>
-                Your cash send voucher is ready to be shared with the recipient.
-              </Text>
-              <Text style={styles.successText}>
-                Voucher number: {createdCashSend.voucherNumber}
-              </Text>
-              <Text style={styles.successText}>
-                Bank reference: {createdCashSend.bankReference}
-              </Text>
-              <TouchableOpacity
-                style={styles.doneButton}
-                onPress={() => router.replace("/(tabs)")}
-              >
-                <Text style={styles.doneButtonText}>Done</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
           {!createdCashSend && (
             <TouchableOpacity
               style={[styles.submitButton, saving && styles.disabledButton]}
@@ -327,6 +307,19 @@ export default function CreateCashSend() {
         onCancel={() => setVerifyVisible(false)}
         onVerified={handleVerifiedSubmit}
         subtitle="Enter your PIN to send this cash send"
+      />
+      <SuccessModal
+        visible={!!createdCashSend}
+        title="Cash Send created"
+        message={`Your Cash Send of R ${Number(amount).toLocaleString("en-ZA", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })} is ready. Share the voucher number with the recipient.`}
+        details={[
+          { label: "Voucher number", value: createdCashSend?.voucherNumber },
+        ]}
+        primaryLabel="Done"
+        onPrimaryPress={() => router.replace("/(tabs)")}
       />
       <Modal
         transparent
@@ -483,26 +476,5 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "800",
     fontSize: 15,
-  },
-  successBox: {
-    marginTop: 22,
-    backgroundColor: "#F0FDF4",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#BBF7D0",
-  },
-  successTitle: { fontSize: 16, fontWeight: "800", color: "#166534" },
-  successText: { marginTop: 4, fontSize: 13, color: "#3F6212" },
-  doneButton: {
-    marginTop: 14,
-    backgroundColor: colors.primary,
-    borderRadius: 50,
-    paddingVertical: 13,
-    alignItems: "center",
-  },
-  doneButtonText: {
-    color: "#fff",
-    fontWeight: "800",
   },
 });

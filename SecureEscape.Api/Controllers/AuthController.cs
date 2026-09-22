@@ -41,6 +41,11 @@ public class AuthController : ControllerBase
         return Ok(new VerifyPinResponseDto { Verified = verified });
     }
 
+    // ActiveSessionMiddleware validates the session and records this activity.
+    [HttpPost("activity")]
+    [Authorize]
+    public IActionResult RecordActivity() => NoContent();
+
     [HttpPost("logout")]
     [Authorize]
     public async Task<IActionResult> Logout()

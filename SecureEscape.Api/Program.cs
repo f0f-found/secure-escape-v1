@@ -53,7 +53,9 @@ var connString = builder.Configuration.GetConnectionString("default");
 builder.Services.AddDbContext<AppDbContext>((serviceProvider, options) =>
     options.UseMySql(
         builder.Configuration.GetConnectionString("default"),
-        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("default")),
+        EF.IsDesignTime
+            ? new MySqlServerVersion(new Version(8, 0, 21))
+            : ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("default")),
         //new MySqlServerVersion(new Version(8, 0, 21)),
         mysqlOptions =>
         {
@@ -105,6 +107,8 @@ builder.Services.AddScoped<IAdminAlertService, AdminAlertService>();
 builder.Services.AddScoped<IHashingService, BCryptHashingService>();
 
 builder.Services.AddScoped<ITransactionService, TransactionService>();
+builder.Services.AddScoped<DuressBudgetService>();
+builder.Services.AddScoped<DuressReviewService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IBeneficiaryService, BeneficiaryService>();
 

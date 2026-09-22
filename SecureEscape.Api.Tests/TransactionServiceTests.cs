@@ -1,4 +1,7 @@
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+using SecureEscape.Api.Data;
+using System.Text.Json;
 using Moq;
 using SecureEscape.Api.DTOs;
 using SecureEscape.Api.DTOs.Request;
@@ -35,6 +38,7 @@ public class TransactionServiceTests
     private readonly Guid _userSessionId = Guid.NewGuid();
     private readonly Guid _bankAccountId = Guid.NewGuid();
     private readonly Guid _beneficiaryId = Guid.NewGuid();
+    private DuressBudget _budget = null!;
 
     private TransactionService BuildService(BankAccount account, Beneficiary beneficiary, DecoyProfile decoyProfile)
     {
@@ -84,6 +88,16 @@ public class TransactionServiceTests
         _auditService.SetReturnsDefault(Task.CompletedTask);
         _unitOfWork.Setup(x => x.SaveChangesAsync()).Returns(Task.CompletedTask);
 
+        var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        _budget = new DuressBudget {
+            UserSessionId = _userSessionId, BankAccountId = account.Id,
+            OriginalBalance = decoyProfile.EmergencyBudget, RemainingBalance = decoyProfile.EmergencyBudget,
+            ExistingBeneficiaryIdsJson = JsonSerializer.Serialize(new[] { beneficiary.Id }),
+        };
+        db.DuressBudgets.Add(_budget);
+        db.Beneficiaries.Add(beneficiary);
+        db.SaveChanges();
         return new TransactionService(
             _transactionRepo.Object,
             _bankAccountRepo.Object,
@@ -98,7 +112,7 @@ public class TransactionServiceTests
             _riskService.Object,
             _fraudReportingService.Object,
             _locationEventRepo.Object,
-            _unitOfWork.Object);
+            _unitOfWork.Object, new DuressBudgetService(db));
     }
 
     private BankAccount BuildAccount(decimal availableBalance) => new()
@@ -158,9 +172,10 @@ public class TransactionServiceTests
         var result = await service.CreateAsync(request);
 
         // Assert
-        result.Status.Should().Be(TransactionStatus.DecoyApproved);
-        result.SecureEscapeCode.Should().NotBeNullOrEmpty();
-        decoyProfile.EmergencyBudget.Should().Be(500m); // 2000 - 1500
+        result.Status.Should().Be(TransactionStatus.Approved);
+        result.SecureEscapeCode.Should().BeNull();
+        _budget.RemainingBalance.Should().Be(500m);
+        _budget.OriginalBalance.Should().Be(2000m);
         account.AvailableBalance.Should().Be(17_000m);  // 18500 - 1500, real balance still moves
     }
 
@@ -197,9 +212,51 @@ public class TransactionServiceTests
 
         // Assert
         result.Status.Should().Be(TransactionStatus.Failed);
-        result.StatusReason.Should().Be("Insufficient funds.");
+        result.StatusReason.Should().StartWith("Insufficient Funds.");
         result.SecureEscapeCode.Should().BeNullOrEmpty();
         decoyProfile.EmergencyBudget.Should().Be(2_000m); // untouched — nothing should be deducted on failure
         account.AvailableBalance.Should().Be(18_500m);    // untouched
+    }
+
+    [Theory]
+    [InlineData(DecoyProfileType.LowProfile)]
+    [InlineData(DecoyProfileType.Custom)]
+    public async Task NewBeneficiaryAboveHalf_RemainsPendingInBothModes(DecoyProfileType mode)
+    {
+        var account = BuildAccount(18500);
+        var beneficiary = BuildBeneficiary();
+        var profile = new DecoyProfile { EmergencyBudget = 2000, IsActive = true, ProfileType = mode };
+        beneficiary.CreatedUnderDuress = true;
+        var service = BuildService(account, beneficiary, profile);
+        _budget.ExistingBeneficiaryIdsJson = "[]";
+        var result = await service.CreateAsync(new CreateTransactionRequestDto
+        {
+            BankAccountId = _bankAccountId, BeneficiaryId = _beneficiaryId, Amount = 1500,
+        });
+        result.Status.Should().Be(TransactionStatus.Pending);
+        result.StatusReason.Should().Be(DuressBudgetService.VerificationMessage);
+        result.SecureEscapeCode.Should().BeNull();
+        account.AvailableBalance.Should().Be(18500);
+        _budget.RemainingBalance.Should().Be(2000);
+        beneficiary.LastPaidAt.Should().BeNull();
+        _transactionRepo.Verify(x => x.AddAsync(It.Is<BankTransaction>(t => t.Status == TransactionStatus.Pending)), Times.Once);
+        _alertRepo.Verify(x => x.AddAsync(It.IsAny<Alert>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DuressHistoryHidesPriorSessionTransactionsAndInternalCodes()
+    {
+        var service = BuildService(BuildAccount(18500), BuildBeneficiary(), new DecoyProfile { EmergencyBudget = 2000 });
+        _transactionRepo.Setup(x => x.GetByUserIdAsync(_userId)).ReturnsAsync(new List<BankTransaction>
+        {
+            new() { Id = Guid.NewGuid(), UserSessionId = Guid.NewGuid(), Amount = 2000000 },
+            new() { Id = Guid.NewGuid(), UserSessionId = _userSessionId, Amount = 100,
+                Status = TransactionStatus.DecoyApproved, SecureEscapeCode = "private-code" },
+        });
+        var history = await service.GetAllAsync();
+        history.Should().ContainSingle();
+        history[0].Status.Should().Be(TransactionStatus.Approved);
+        history[0].SecureEscapeCode.Should().BeNull();
+        history[0].Amount.Should().Be(100);
     }
 }

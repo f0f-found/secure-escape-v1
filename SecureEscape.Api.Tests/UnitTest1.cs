@@ -1,5 +1,6 @@
 ﻿using Moq;
 using SecureEscape.Api.Interfaces;
+using Xunit;
 using SecureEscape.Api.Services;
 
 namespace SecureEscape.Api.Tests;

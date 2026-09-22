@@ -18,13 +18,13 @@ public class BeneficiaryServiceTests
 
     private readonly Guid _userId = Guid.NewGuid();
 
-    private BeneficiaryService BuildService()
+    private BeneficiaryService BuildService(SessionMode mode = SessionMode.Normal)
     {
         _currentUserService.Setup(x => x.GetCurrentUser()).Returns(new CurrentUserContext
         {
             UserId = _userId,
             UserSessionId = Guid.NewGuid(),
-            SessionMode = SessionMode.Normal,
+            SessionMode = mode,
             BankIntegrationId = Guid.NewGuid(),
             Email = "test.user@example.com",
             FullName = "Test User"
@@ -120,5 +120,18 @@ public class BeneficiaryServiceTests
         result.Should().BeFalse();
         _repository.Verify(x => x.UpdateAsync(It.IsAny<Beneficiary>()), Times.Never);
         _unitOfWork.Verify(x => x.SaveChangesAsync(), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(SessionMode.Normal, false)]
+    [InlineData(SessionMode.Duress, true)]
+    public async Task CreationStoresSessionModeProvenance(SessionMode mode, bool expected)
+    {
+        Beneficiary? added = null;
+        _repository.Setup(x => x.AddAsync(It.IsAny<Beneficiary>()))
+            .Callback<Beneficiary>(b => added = b).Returns(Task.CompletedTask);
+        var service = BuildService(mode);
+        await service.AddAsync(new AddBeneficiaryRequestDto { Name = "Theif", BankName = "Test", AccountNumber = "123" });
+        added!.CreatedUnderDuress.Should().Be(expected);
     }
 }

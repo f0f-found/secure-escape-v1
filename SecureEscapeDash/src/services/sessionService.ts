@@ -32,6 +32,16 @@ function getHeaders() {
   };
 }
 
+export async function reviewPendingTransfer(sessionId: string, transactionId: string, approve: boolean): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/admin/duress-sessions/${sessionId}/transactions/${transactionId}/review`, {
+    method: "POST", headers: getHeaders(), body: JSON.stringify({ approve }),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.message || "Could not review this transfer.");
+  }
+}
+
 export async function getDuressSessions(): Promise<DuressSessionSummary[]> {
   const response = await fetch(`${API_BASE_URL}/api/v1/admin/duress-sessions`, {
     headers: getHeaders(),

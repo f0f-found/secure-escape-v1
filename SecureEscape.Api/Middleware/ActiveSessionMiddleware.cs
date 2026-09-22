@@ -2,17 +2,19 @@ using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using SecureEscape.Api.Data;
 using SecureEscape.Api.Enums;
+using SecureEscape.Api.Services;
 
 namespace SecureEscape.Api.Middleware;
 
 public class ActiveSessionMiddleware
 {
     private readonly RequestDelegate _next;
-    private static readonly TimeSpan InactivityTimeout = TimeSpan.FromMinutes(10);
+    private readonly ILogger<ActiveSessionMiddleware> _logger;
 
-    public ActiveSessionMiddleware(RequestDelegate next)
+    public ActiveSessionMiddleware(RequestDelegate next, ILogger<ActiveSessionMiddleware> logger)
     {
         _next = next;
+        _logger = logger;
     }
 
     public async Task InvokeAsync(
@@ -40,6 +42,7 @@ public class ActiveSessionMiddleware
         if (!Guid.TryParse(sessionClaim, out var sessionId) ||
             !Guid.TryParse(userClaim, out var userId))
         {
+            _logger.LogWarning("Session rejected: invalid session or user claims.");
             await RejectRequestAsync(httpContext);
             return;
         }
@@ -48,20 +51,23 @@ public class ActiveSessionMiddleware
             .FirstOrDefaultAsync(
             session =>
             session.Id == sessionId &&
-            session.UserId == userId &&
-            session.Status == SessionStatus.Active,
+            session.UserId == userId,
             httpContext.RequestAborted);
 
-        if (session == null)
+        if (session == null || session.Status != SessionStatus.Active)
         {
+            _logger.LogInformation("Session {SessionId} rejected: status {Status}, last activity {LastActivityAt}, ended {EndedAt}.",
+                sessionId, session?.Status, session?.LastActivityAt, session?.EndedAt);
             await RejectRequestAsync(httpContext);
             return;
         }
 
         var now = DateTime.UtcNow;
 
-        if (now - session.LastActivityAt > InactivityTimeout)
+        if (now - session.LastActivityAt >= SessionPolicy.InactivityTimeout)
         {
+            _logger.LogInformation("Session {SessionId} expired after {IdleSeconds} seconds without activity.",
+                sessionId, (now - session.LastActivityAt).TotalSeconds);
             session.Status = SessionStatus.Expired;
             session.EndedAt = now;
             session.UpdatedAt = now;

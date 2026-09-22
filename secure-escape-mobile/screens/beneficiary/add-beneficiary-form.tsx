@@ -20,6 +20,7 @@ import { useRouter } from "expo-router";
 import { addBeneficiary } from "@/services/beneficiaryService";
 import { BeneficiaryResponse } from "@/types/beneficiary";
 import VerifyPinModal from "@/components/VerifyPinModal";
+import SuccessModal from "@/components/SuccessModal";
 
 // Validation helpers (pure functions, no state)
 const validateName = (name: string): string => {
@@ -256,39 +257,7 @@ export default function AddBeneficiaryForm() {
             </TouchableOpacity>
           )}
 
-          {createdBeneficiary ? (
-            <View style={styles.successBox}>
-              <Text style={styles.successTitle}>Beneficiary saved</Text>
-              <Text style={styles.successText}>
-                {createdBeneficiary.name} is ready for payments.
-              </Text>
-              <View style={styles.successActions}>
-                <TouchableOpacity
-                  style={styles.secondaryButton}
-                  onPress={() =>
-                    router.replace("/beneficiaries/beneficiary-list")
-                  }
-                >
-                  <Text style={styles.secondaryButtonText}>View list</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.payButton}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/transactions/create-transfer",
-                      params: {
-                        beneficiaryId: createdBeneficiary.id,
-                        beneficiaryName: createdBeneficiary.name,
-                        reference: createdBeneficiary.reference,
-                      },
-                    })
-                  }
-                >
-                  <Text style={styles.payButtonText}>Pay now</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : (
+          {!createdBeneficiary && (
             <TouchableOpacity
               style={[
                 styles.submitButton,
@@ -312,6 +281,26 @@ export default function AddBeneficiaryForm() {
         onCancel={() => setVerifyVisible(false)}
         onVerified={handleVerifiedSubmit}
         subtitle="Enter your PIN to add this beneficiary"
+      />
+
+      <SuccessModal
+        visible={!!createdBeneficiary}
+        title="Beneficiary added"
+        message={`${createdBeneficiary?.name ?? "Your beneficiary"} has been added to your beneficiaries. You can now make payments to them.`}
+        secondaryLabel="View list"
+        onSecondaryPress={() => router.replace("/beneficiaries/beneficiary-list")}
+        primaryLabel="Pay now"
+        onPrimaryPress={() => {
+          if (!createdBeneficiary) return;
+          router.push({
+            pathname: "/transactions/create-transfer",
+            params: {
+              beneficiaryId: createdBeneficiary.id,
+              beneficiaryName: createdBeneficiary.name,
+              reference: createdBeneficiary.reference,
+            },
+          });
+        }}
       />
 
       {/* Error Modal */}
@@ -500,51 +489,5 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "800",
     fontSize: 15,
-  },
-  successBox: {
-    marginTop: 22,
-    backgroundColor: "#F0FDF4",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#BBF7D0",
-  },
-  successTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#166534",
-  },
-  successText: {
-    marginTop: 4,
-    fontSize: 13,
-    color: "#3F6212",
-  },
-  successActions: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 14,
-  },
-  secondaryButton: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: 50,
-    paddingVertical: 13,
-    alignItems: "center",
-  },
-  secondaryButtonText: {
-    color: colors.primary,
-    fontWeight: "800",
-  },
-  payButton: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    borderRadius: 50,
-    paddingVertical: 13,
-    alignItems: "center",
-  },
-  payButtonText: {
-    color: "#fff",
-    fontWeight: "800",
   },
 });

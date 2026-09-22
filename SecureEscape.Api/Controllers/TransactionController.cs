@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SecureEscape.Api.DTOs.Request;
 using SecureEscape.Api.DTOs.Response;
 using SecureEscape.Api.Interfaces;
@@ -34,6 +35,10 @@ public class TransactionController : ControllerBase
             var transaction = await _service.CreateAsync(request);
             return Ok(transaction);
         }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { message = "Your available balance has changed. Please refresh and try again." });
+        }
         catch (InvalidOperationException ex)
         {
             return BadRequest(new { message = ex.Message });
@@ -48,6 +53,10 @@ public class TransactionController : ControllerBase
         {
             var result = await _service.CreateCashSendAsync(request);
             return Ok(result);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { message = "Your available balance has changed. Please refresh and try again." });
         }
         catch (InvalidOperationException ex)
         {

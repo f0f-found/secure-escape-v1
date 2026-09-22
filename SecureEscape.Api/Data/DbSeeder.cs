@@ -595,13 +595,8 @@ namespace SecureEscape.Api.Data
 
                 if (existingUser != null)
                 {
-                    if (existingUser.AuthCredential != null)
-                    {
-                        existingUser.AuthCredential.PasswordHash = BCrypt.Net.BCrypt.HashPassword(testUser.Password);
-                        existingUser.AuthCredential.NormalPinHash = BCrypt.Net.BCrypt.HashPassword(testUser.NormalPin);
-                        existingUser.AuthCredential.DuressPinHash = BCrypt.Net.BCrypt.HashPassword(testUser.DuressPin);
-                    }
-
+                    // Preserve completed setup and deliberate test-account resets.
+                    // Startup seeding must not replace an existing user's PINs.
                     continue;
                 }
 
