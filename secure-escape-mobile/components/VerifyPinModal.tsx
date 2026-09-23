@@ -116,7 +116,7 @@ export default function VerifyPinModal({
               disabled={submitting}
             >
               <LinearGradient
-                colors={["#6C63FF", "#5B8DEF"]}
+                colors={[colors.primary, colors.primary]}
                 style={styles.confirmGradient}
               >
                 <Text style={styles.confirmText}>
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   content: {
     width: "100%",
     backgroundColor: "#fff",
-    borderRadius: 24,
+    borderRadius: 12,
     padding: 24,
     alignItems: "center",
   },
@@ -164,17 +164,17 @@ const styles = StyleSheet.create({
     width: "70%",
     color: colors.navy,
   },
-  error: { color: "#DC2626", fontSize: 13, fontWeight: "600", marginTop: 12 },
+  error: { color: colors.dangerStrong, fontSize: 13, fontWeight: "600", marginTop: 12 },
   buttonRow: { flexDirection: "row", width: "100%", gap: 12, marginTop: 24 },
   cancelButton: {
     flex: 1,
-    borderRadius: 30,
+    borderRadius: 12,
     backgroundColor: "#f0f0f5",
     paddingVertical: 14,
     alignItems: "center",
   },
   cancelText: { fontSize: 15, fontWeight: "700", color: "#888" },
-  confirmButton: { flex: 1, borderRadius: 30, overflow: "hidden" },
+  confirmButton: { flex: 1, borderRadius: 12, overflow: "hidden" },
   confirmGradient: { paddingVertical: 14, alignItems: "center" },
   confirmText: { fontSize: 15, fontWeight: "700", color: "#fff" },
 });

@@ -11,15 +11,14 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, shadows } from "@/utils/theme";
-import { useRouter } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useRouter } from "expo-router";
 import { getCards } from "@/services/cardService";
 import { CardResponse } from "@/types/card";
 
 // Each card still needs a gradient — the API response won't carry UI-only
 // values like this, so we assign one based on index/type once fetched.
 const CARD_GRADIENTS: readonly [string, string][] = [
-  ["#6C63FF", "#4A3DB7"],
+  ["#25145F", "#25145F"],
   ["#FF6B6B", "#C0392B"],
 ];
 
@@ -71,7 +70,7 @@ export default function Screen_Cards() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={["#5B8DEF", "#6C63FF"]} style={styles.header}>
+      <LinearGradient colors={[colors.primary, colors.primary]} style={styles.header}>
         <Text style={styles.headerTitle}>Cards</Text>
         <Text style={styles.headerTab}>Virtual</Text>
       </LinearGradient>
@@ -193,7 +192,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.2)",
     paddingHorizontal: 14,
     paddingVertical: 4,
-    borderRadius: 20,
+    borderRadius: 12,
   },
   statusText: { fontSize: 12, fontWeight: "600", color: colors.white },
   cardNumber: {
@@ -229,7 +228,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   accountType: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "500",
     color: colors.white,
     opacity: 0.7,
@@ -261,7 +260,7 @@ const styles = StyleSheet.create({
   errorText: {
     marginTop: 20,
     marginBottom: 12,
-    color: "#DC2626",
+    color: colors.dangerStrong,
     fontSize: 13,
     fontWeight: "600",
     textAlign: "center",

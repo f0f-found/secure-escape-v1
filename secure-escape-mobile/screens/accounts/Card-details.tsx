@@ -143,7 +143,7 @@ export default function CardDetail() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={["#5B8DEF", "#6C63FF"]} style={styles.header}>
+      <LinearGradient colors={[colors.primary, colors.primary]} style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
@@ -322,7 +322,7 @@ export default function CardDetail() {
               Don&apos;t respond to anyone requesting your card details.\n\nWe will never ask for your PIN or CVV.
             </Text>
             <TouchableOpacity style={styles.warningButton} onPress={handleWarningConfirm}>
-              <LinearGradient colors={["#6C63FF", "#5B8DEF"]} style={styles.warningGradient}>
+              <LinearGradient colors={[colors.primary, colors.primary]} style={styles.warningGradient}>
                 <Text style={styles.warningButtonText}>Continue</Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -363,7 +363,7 @@ export default function CardDetail() {
                 <Text style={styles.pinCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.pinButton} onPress={handlePinConfirm}>
-                <LinearGradient colors={["#6C63FF", "#5B8DEF"]} style={styles.pinGradient}>
+                <LinearGradient colors={[colors.primary, colors.primary]} style={styles.pinGradient}>
                   <Text style={styles.pinConfirmText}>Confirm</Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.2)",
     paddingHorizontal: 14,
     paddingVertical: 4,
-    borderRadius: 20,
+    borderRadius: 12,
   },
   statusText: { fontSize: 12, fontWeight: "600", color: "#fff" },
   cardNumber: { fontSize: 18, fontWeight: "600", color: "#fff", letterSpacing: 2, marginBottom: 16 },
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
   cardHolder: { fontSize: 12, fontWeight: "500", color: "#fff", opacity: 0.8, marginTop: 2 },
   accountInfo: { alignItems: "flex-end" },
   accountNumber: { fontSize: 13, fontWeight: "600", color: "#fff", opacity: 0.9 },
-  accountType: { fontSize: 11, fontWeight: "500", color: "#fff", opacity: 0.7, marginTop: 2 },
+  accountType: { fontSize: 12, fontWeight: "500", color: "#fff", opacity: 0.7, marginTop: 2 },
   detailsButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.2)",
     paddingVertical: 6,
     paddingHorizontal: 14,
-    borderRadius: 20,
+    borderRadius: 12,
     marginTop: 12,
   },
   detailsButtonText: { fontSize: 12, fontWeight: "600", color: "#fff", marginRight: 4 },
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(255,255,255,0.15)",
   },
   detailLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "500",
     color: "rgba(255,255,255,0.7)",
   },
@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingVertical: 6,
     backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 20,
+    borderRadius: 12,
   },
   flipBackText: { fontSize: 13, fontWeight: "600", color: "#fff", marginLeft: 6 },
   toggleSection: {
@@ -570,7 +570,7 @@ const styles = StyleSheet.create({
   actionLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
   actionText: { fontSize: 14, fontWeight: "500", color: colors.navy, marginLeft: 12, flex: 1 },
   newBadge: { backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 },
-  newBadgeText: { fontSize: 10, fontWeight: "700", color: "#fff" },
+  newBadgeText: { fontSize: 12, fontWeight: "700", color: "#fff" },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -580,20 +580,20 @@ const styles = StyleSheet.create({
   warningModalContent: {
     backgroundColor: "#fff",
     marginHorizontal: 30,
-    borderRadius: 28,
+    borderRadius: 12,
     padding: 24,
     alignItems: "center",
     width: "85%",
   },
   warningTitle: { fontSize: 18, fontWeight: "800", color: "#FF6B6B", marginTop: 12, textAlign: "center" },
   warningDescription: { fontSize: 14, color: "#666", textAlign: "center", marginTop: 8, lineHeight: 20 },
-  warningButton: { borderRadius: 30, overflow: "hidden", marginTop: 20, width: "100%" },
+  warningButton: { borderRadius: 12, overflow: "hidden", marginTop: 20, width: "100%" },
   warningGradient: { paddingVertical: 14, alignItems: "center" },
   warningButtonText: { fontSize: 16, fontWeight: "700", color: "#fff" },
   pinModalContent: {
     backgroundColor: "#fff",
     marginHorizontal: 30,
-    borderRadius: 28,
+    borderRadius: 12,
     padding: 24,
     alignItems: "center",
     shadowColor: "#000",
@@ -617,7 +617,7 @@ const styles = StyleSheet.create({
     color: colors.navy,
   },
   pinButtonRow: { flexDirection: "row", justifyContent: "space-between", width: "100%", marginTop: 28, gap: 12 },
-  pinButton: { flex: 1, borderRadius: 30, overflow: "hidden" },
+  pinButton: { flex: 1, borderRadius: 12, overflow: "hidden" },
   pinCancel: { backgroundColor: "#f0f0f5", justifyContent: "center", alignItems: "center", paddingVertical: 14 },
   pinCancelText: { fontSize: 16, fontWeight: "600", color: "#888" },
   pinGradient: { paddingVertical: 14, alignItems: "center" },
@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
   confirmModalContent: {
     backgroundColor: "#fff",
     marginHorizontal: 30,
-    borderRadius: 28,
+    borderRadius: 12,
     padding: 24,
     alignItems: "center",
     width: "85%",
@@ -633,7 +633,7 @@ const styles = StyleSheet.create({
   confirmTitle: { fontSize: 20, fontWeight: "700", color: colors.navy, marginTop: 12 },
   confirmDescription: { fontSize: 14, color: "#666", textAlign: "center", marginTop: 8, lineHeight: 20 },
   confirmButtonRow: { flexDirection: "row", marginTop: 24, gap: 12, width: "100%" },
-  confirmButton: { flex: 1, borderRadius: 30, paddingVertical: 14, alignItems: "center" },
+  confirmButton: { flex: 1, borderRadius: 12, paddingVertical: 14, alignItems: "center" },
   confirmCancel: { backgroundColor: "#f0f0f5" },
   confirmCancelText: { fontSize: 16, fontWeight: "600", color: "#888" },
   confirmFreeze: { backgroundColor: "#FF6B6B" },
