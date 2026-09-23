@@ -26,6 +26,17 @@ public class TransactionController : ControllerBase
         return Ok(transactions);
     }
 
+    [HttpPost("preflight")]
+    public async Task<ActionResult<object>> Preflight(
+        [FromBody] TransactionPreflightRequestDto request)
+    {
+        return Ok(new
+        {
+            requiresAdditionalVerification =
+                await _service.RequiresAdditionalVerificationAsync(request)
+        });
+    }
+
     [HttpPost]
     public async Task<ActionResult<TransactionResponseDto>> Create(
         [FromBody] CreateTransactionRequestDto request)

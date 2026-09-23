@@ -41,12 +41,108 @@ public class DuressTierTests
         Amount = amount, TransactionType = TransactionType.Transfer,
     };
 
+    private static BankTransaction CashSend(UserSession session, BankAccount account, decimal amount) => new()
+    {
+        Id = Guid.NewGuid(), UserId = session.UserId, UserSessionId = session.Id,
+        BankAccountId = account.Id, Amount = amount, TransactionType = TransactionType.CashVoucher,
+    };
+
     [Theory]
     [InlineData(0, 200)]
     [InlineData(1000, 200)]
     [InlineData(5000, 350)]
     [InlineData(2000000, 50000)]
     public void CalculatesBoundedDecoy(decimal real, decimal expected) => DuressBudgetService.Calculate(real).Should().Be(expected);
+
+    [Fact]
+    public async Task RealisticDecoyUsesTwentyPercentAndCapsSpendingAtThirtyPercent()
+    {
+        await using var db = Context();
+        var (session, account, oldBudget) = await Seed(db);
+        db.DuressBudgets.Remove(oldBudget);
+        db.DecoyProfiles.Add(new DecoyProfile
+        {
+            Id = Guid.NewGuid(),
+            UserId = session.UserId,
+            ProfileType = DecoyProfileType.Custom,
+            IsActive = true,
+        });
+        await db.SaveChangesAsync();
+
+        await DuressBudgetService.InitializeAsync(db, session);
+        await db.SaveChangesAsync();
+        var budget = await db.DuressBudgets.FindAsync(session.Id);
+        budget!.OriginalBalance.Should().Be(400000);
+        budget.BankAccountId.Should().Be(account.Id);
+        budget.RemainingSpendingLimit.Should().Be(120000);
+        budget.PendingThresholdRate.Should().Be(0.30m);
+
+        var first = Transfer(session, account, 30000);
+        await new DuressBudgetService(db).ApplyAsync(first, account);
+        first.Status.Should().Be(TransactionStatus.DecoyApproved);
+
+        var second = Transfer(session, account, 20000);
+        await new DuressBudgetService(db).ApplyAsync(second, account);
+        second.Status.Should().Be(TransactionStatus.DecoyApproved);
+        budget.RemainingSpendingLimit.Should().Be(70000);
+
+        var overCap = Transfer(session, account, 120001);
+        await new DuressBudgetService(db).ApplyAsync(overCap, account);
+        overCap.Status.Should().Be(TransactionStatus.Pending);
+        budget.RemainingSpendingLimit.Should().Be(70000);
+    }
+
+    [Fact]
+    public async Task CashSendAboveModeThresholdIsHeldForSecurityReview()
+    {
+        await using var db = Context();
+        var (session, account, oldBudget) = await Seed(db);
+        db.DuressBudgets.Remove(oldBudget);
+        db.DecoyProfiles.Add(new DecoyProfile
+        {
+            Id = Guid.NewGuid(),
+            UserId = session.UserId,
+            ProfileType = DecoyProfileType.Custom,
+            DisplayBalance = 400000,
+            EmergencyBudget = 400000,
+            IsActive = true,
+        });
+        await db.SaveChangesAsync();
+        await DuressBudgetService.InitializeAsync(db, session);
+        await db.SaveChangesAsync();
+
+        var cashSend = CashSend(session, account, 120001);
+        await new DuressBudgetService(db).ApplyAsync(cashSend, account);
+
+        cashSend.Status.Should().Be(TransactionStatus.Pending);
+        cashSend.StatusReason.Should().Be(DuressBudgetService.VerificationMessage);
+        account.AvailableBalance.Should().Be(2000000);
+    }
+
+    [Fact]
+    public async Task DuressSessionPreservesConfiguredDisplayAmount()
+    {
+        await using var db = Context();
+        var (session, account, oldBudget) = await Seed(db);
+        db.DuressBudgets.Remove(oldBudget);
+        db.DecoyProfiles.Add(new DecoyProfile
+        {
+            Id = Guid.NewGuid(),
+            UserId = session.UserId,
+            ProfileType = DecoyProfileType.LowProfile,
+            DisplayBalance = 7504,
+            EmergencyBudget = 7504,
+            IsActive = true,
+        });
+        await db.SaveChangesAsync();
+
+        await DuressBudgetService.InitializeAsync(db, session);
+        await db.SaveChangesAsync();
+        var budget = await db.DuressBudgets.FindAsync(session.Id);
+
+        budget!.OriginalBalance.Should().Be(7504);
+        budget.RemainingBalance.Should().Be(7504);
+    }
 
     [Fact]
     public async Task UserExample_PendingThenImmediateThenInsufficient()
@@ -71,7 +167,7 @@ public class DuressTierTests
         var failed = Transfer(session, account, 50000, beneficiary);
         await service.ApplyAsync(failed, account);
         failed.Status.Should().Be(TransactionStatus.Failed);
-        failed.StatusReason.Should().StartWith("Insufficient Funds.").And.NotContain("1975000");
+        failed.StatusReason.Should().StartWith("Insufficient protected spending balance.").And.NotContain("1975000");
         budget.RemainingBalance.Should().Be(25000);
     }
 
@@ -106,7 +202,7 @@ public class DuressTierTests
     }
 
     [Fact]
-    public async Task ExistingBeneficiaryCanSpendAboveHalf_ButCannotExceedRemaining()
+    public async Task ExistingBeneficiaryAlsoRequiresReviewAboveThreshold()
     {
         await using var db = Context();
         var (session, account, budget) = await Seed(db);
@@ -117,10 +213,10 @@ public class DuressTierTests
         var service = new DuressBudgetService(db);
         var first = Transfer(session, account, 40000, beneficiary);
         await service.ApplyAsync(first, account);
-        first.Status.Should().Be(TransactionStatus.DecoyApproved);
+        first.Status.Should().Be(TransactionStatus.Pending);
         var second = Transfer(session, account, 10001, beneficiary);
         await service.ApplyAsync(second, account);
-        second.Status.Should().Be(TransactionStatus.Failed);
+        second.Status.Should().Be(TransactionStatus.DecoyApproved);
     }
 
     [Fact]

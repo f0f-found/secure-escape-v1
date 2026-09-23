@@ -68,6 +68,22 @@ public class TransactionService : ITransactionService
         return transactions.Select(MapToResponse).ToList();
     }
 
+    public async Task<bool> RequiresAdditionalVerificationAsync(TransactionPreflightRequestDto request)
+    {
+        var currentUser = _currentUserService.GetCurrentUser();
+        if (currentUser.SessionMode != SessionMode.Duress || request.Amount <= 0)
+            return false;
+
+        var budget = await _duressBudgetService.GetAsync(currentUser.UserSessionId);
+        if (budget == null || budget.BankAccountId != request.BankAccountId)
+            return false;
+
+        var remaining = budget.RemainingSpendingLimit > 0
+            ? budget.RemainingSpendingLimit
+            : budget.RemainingBalance;
+        return request.Amount > remaining;
+    }
+
     public async Task<TransactionResponseDto> CreateAsync(CreateTransactionRequestDto request)
     {
         var currentUser = _currentUserService.GetCurrentUser();
@@ -203,6 +219,7 @@ public class TransactionService : ITransactionService
             Amount = bankTransaction.Amount,
             Currency = bankTransaction.Currency,
             Status = bankTransaction.Status == TransactionStatus.DecoyApproved ? TransactionStatus.Approved : bankTransaction.Status,
+            StatusReason = bankTransaction.StatusReason,
             VoucherExpiresAt = bankTransaction.VoucherExpiresAt ?? now,
             VoucherRedeemed = bankTransaction.VoucherRedeemed,
             CreatedAt = bankTransaction.CreatedAt
