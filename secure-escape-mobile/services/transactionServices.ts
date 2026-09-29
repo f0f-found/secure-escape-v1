@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "@/constants/api";
 import { getAuthToken } from "@/services/tokenStore";
+import * as FileSystem from "expo-file-system/legacy";
 import {
   CashSendResponse,
   CreateCashSendRequest,
@@ -21,7 +22,10 @@ export async function getAuthorizedHeaders() {
   };
 }
 
-async function getErrorMessage(response: Response, fallback: string) {
+async function getErrorMessage(
+  response: Response,
+  fallback: string,
+) {
   const text = await response.text();
 
   if (!text) {
@@ -36,7 +40,9 @@ async function getErrorMessage(response: Response, fallback: string) {
     }
 
     if (errorBody.errors) {
-      return Object.values(errorBody.errors).flat().join("\n");
+      return Object.values(errorBody.errors)
+        .flat()
+        .join("\n");
     }
 
     if (typeof errorBody.title === "string") {
@@ -52,19 +58,85 @@ async function getErrorMessage(response: Response, fallback: string) {
 export async function createTransfer(
   request: CreateTransferRequest,
 ): Promise<TransactionResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/transactions`, {
-    method: "POST",
-    headers: await getAuthorizedHeaders(),
-    body: JSON.stringify(request),
-  });
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/transactions`,
+    {
+      method: "POST",
+      headers: await getAuthorizedHeaders(),
+      body: JSON.stringify(request),
+    },
+  );
 
   if (!response.ok) {
     throw new Error(
-      await getErrorMessage(response, "Failed to create transfer."),
+      await getErrorMessage(
+        response,
+        "Failed to create transfer.",
+      ),
     );
   }
 
   return response.json();
+}
+
+export async function uploadCurrentPhotoEvidence(
+  photoUri: string,
+  bankTransactionId: string,
+): Promise<void> {
+  const token = await getAuthToken();
+
+  if (!token) {
+    throw new Error(
+      "No auth token found. Please log in again.",
+    );
+  }
+
+  const uploadResult = await FileSystem.uploadAsync(
+    `${API_BASE_URL}/api/v1/session-evidence/current-photo`,
+    photoUri,
+    {
+      httpMethod: "POST",
+      uploadType:
+        FileSystem.FileSystemUploadType.MULTIPART,
+      fieldName: "photo",
+      mimeType: "image/jpeg",
+      parameters: {
+        bankTransactionId,
+      },
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  if (
+    uploadResult.status < 200 ||
+    uploadResult.status >= 300
+  ) {
+    let message =
+      "The security photo could not be saved.";
+
+    if (uploadResult.body) {
+      try {
+        const errorBody = JSON.parse(uploadResult.body);
+
+        if (typeof errorBody.message === "string") {
+          message = errorBody.message;
+        } else if (
+          typeof errorBody.title === "string"
+        ) {
+          message = errorBody.title;
+        }
+      } catch {
+        if (uploadResult.body.trim()) {
+          message = uploadResult.body;
+        }
+      }
+    }
+
+    throw new Error(message);
+  }
 }
 
 export async function createCashSend(
@@ -81,22 +153,33 @@ export async function createCashSend(
 
   if (!response.ok) {
     throw new Error(
-      await getErrorMessage(response, "Failed to create cash send."),
+      await getErrorMessage(
+        response,
+        "Failed to create cash send.",
+      ),
     );
   }
 
   return response.json();
 }
 
-export async function getTransactions(): Promise<TransactionResponse[]> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/transactions`, {
-    method: "GET",
-    headers: await getAuthorizedHeaders(),
-  });
+export async function getTransactions(): Promise<
+  TransactionResponse[]
+> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/transactions`,
+    {
+      method: "GET",
+      headers: await getAuthorizedHeaders(),
+    },
+  );
 
   if (!response.ok) {
     throw new Error(
-      await getErrorMessage(response, "Failed to load transactions."),
+      await getErrorMessage(
+        response,
+        "Failed to load transactions.",
+      ),
     );
   }
 

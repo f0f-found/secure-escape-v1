@@ -38,19 +38,31 @@ namespace SecureEscape.Api.Models
 
         public AuthCredential? AuthCredential { get; set; }
 
+        public SecureEscapeEnrollment? SecureEscapeEnrollment { get; set; }
+
         public ICollection<BankAccount> BankAccounts { get; set; } = new List<BankAccount>();
-        public ICollection<EmergencyContact> EmergencyContacts { get; set; } = new List<EmergencyContact>();
+
+        public ICollection<EmergencyContact> EmergencyContacts { get; set; } =
+            new List<EmergencyContact>();
 
         public ICollection<Card> Cards { get; set; } = new List<Card>();
 
-        public ICollection<Beneficiary> Beneficiaries { get; set; } = new List<Beneficiary>();
+        public ICollection<Beneficiary> Beneficiaries { get; set; } =
+            new List<Beneficiary>();
 
-        public ICollection<UserSession> Sessions { get; set; } = new List<UserSession>();
+        public ICollection<UserSession> Sessions { get; set; } =
+            new List<UserSession>();
 
-        public ICollection<DecoyProfile> DecoyProfiles { get; set; } = new List<DecoyProfile>();
+        public ICollection<DecoyProfile> DecoyProfiles { get; set; } =
+            new List<DecoyProfile>();
 
-        public ICollection<Alert> Alerts { get; set; } = new List<Alert>();
+        public ICollection<Alert> Alerts { get; set; } =
+            new List<Alert>();
 
-        public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
+        public ICollection<AuditLog> AuditLogs { get; set; } =
+            new List<AuditLog>();
+
+        public ICollection<UserMessage> UserMessages { get; set; } =
+            new List<UserMessage>();
     }
 }

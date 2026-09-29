@@ -17,7 +17,26 @@ namespace SecureEscape.Api.Models
         [Required]
         public Guid BankAccountId { get; set; }
 
+        // Present when the customer pays a saved beneficiary.
+        // Null for a once-off bank transfer.
         public Guid? BeneficiaryId { get; set; }
+
+        // Stored directly on the transaction for once-off bank transfers.
+        // Saved-beneficiary transfers continue to use BeneficiaryId.
+        [MaxLength(150)]
+        public string? RecipientName { get; set; }
+
+        [MaxLength(100)]
+        public string? RecipientBank { get; set; }
+
+        [MaxLength(50)]
+        public string? RecipientAccountNumber { get; set; }
+
+        [MaxLength(50)]
+        public string? RecipientAccountType { get; set; }
+
+        [MaxLength(20)]
+        public string? RecipientBranchCode { get; set; }
 
         [Required]
         [MaxLength(100)]
@@ -33,6 +52,7 @@ namespace SecureEscape.Api.Models
         public string Currency { get; set; } = "ZAR";
 
         public TransactionStatus Status { get; set; } = TransactionStatus.Pending;
+
         public string? StatusReason { get; set; }
 
         public bool Flagged { get; set; } = false;
@@ -56,7 +76,7 @@ namespace SecureEscape.Api.Models
         public DateTime? VoucherExpiresAt { get; set; }
 
         public bool VoucherRedeemed { get; set; } = false;
-       
+
         public bool FraudReported { get; set; } = false;
 
         public DateTime? FraudReportedAt { get; set; }
@@ -75,8 +95,10 @@ namespace SecureEscape.Api.Models
 
         public Beneficiary? Beneficiary { get; set; }
 
-        public ICollection<RiskEvaluation> RiskEvaluations { get; set; } = new List<RiskEvaluation>();
+        public ICollection<RiskEvaluation> RiskEvaluations { get; set; } =
+            new List<RiskEvaluation>();
 
-        public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
+        public ICollection<AuditLog> AuditLogs { get; set; } =
+            new List<AuditLog>();
     }
 }

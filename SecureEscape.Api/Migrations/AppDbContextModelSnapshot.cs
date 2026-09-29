@@ -423,6 +423,26 @@ namespace SecureEscape.Api.Migrations
                     b.Property<DateTime?>("FraudReportedAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("RecipientAccountNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("RecipientAccountType")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("RecipientBank")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("RecipientBranchCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("RecipientName")
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
+
                     b.Property<string>("RiskLevel")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -801,6 +821,141 @@ namespace SecureEscape.Api.Migrations
                     b.ToTable("RiskEvaluations");
                 });
 
+            modelBuilder.Entity("SecureEscape.Api.Models.RiskZone", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<int>("DuressEventCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IncidentCount")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<decimal>("Latitude")
+                        .HasColumnType("decimal(10,7)");
+
+                    b.Property<decimal>("Longitude")
+                        .HasColumnType("decimal(10,7)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<int>("RadiusMeters")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RiskLevel")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<decimal>("RiskScore")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("RiskLevel");
+
+                    b.ToTable("RiskZones");
+                });
+
+            modelBuilder.Entity("SecureEscape.Api.Models.SecureEscapeEnrollment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("ActivatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("SecureEscapeEnrollments");
+                });
+
+            modelBuilder.Entity("SecureEscape.Api.Models.SessionEvidence", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("BankTransactionId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CapturedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("EvidenceType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<Guid>("UserSessionId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BankTransactionId");
+
+                    b.HasIndex("UserSessionId");
+
+                    b.ToTable("SessionEvidence");
+                });
+
             modelBuilder.Entity("SecureEscape.Api.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -850,6 +1005,59 @@ namespace SecureEscape.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("SecureEscape.Api.Models.UserMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("DeduplicationKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ReferenceId")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("ReferenceType")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "DeduplicationKey")
+                        .IsUnique();
+
+                    b.ToTable("UserMessages");
                 });
 
             modelBuilder.Entity("SecureEscape.Api.Models.UserSession", b =>
@@ -1196,6 +1404,35 @@ namespace SecureEscape.Api.Migrations
                     b.Navigation("UserSession");
                 });
 
+            modelBuilder.Entity("SecureEscape.Api.Models.SecureEscapeEnrollment", b =>
+                {
+                    b.HasOne("SecureEscape.Api.Models.User", "User")
+                        .WithOne("SecureEscapeEnrollment")
+                        .HasForeignKey("SecureEscape.Api.Models.SecureEscapeEnrollment", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SecureEscape.Api.Models.SessionEvidence", b =>
+                {
+                    b.HasOne("SecureEscape.Api.Models.BankTransaction", "BankTransaction")
+                        .WithMany()
+                        .HasForeignKey("BankTransactionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SecureEscape.Api.Models.UserSession", "UserSession")
+                        .WithMany("Evidence")
+                        .HasForeignKey("UserSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("BankTransaction");
+
+                    b.Navigation("UserSession");
+                });
+
             modelBuilder.Entity("SecureEscape.Api.Models.User", b =>
                 {
                     b.HasOne("SecureEscape.Api.Models.BankIntegration", "BankIntegration")
@@ -1205,6 +1442,17 @@ namespace SecureEscape.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("BankIntegration");
+                });
+
+            modelBuilder.Entity("SecureEscape.Api.Models.UserMessage", b =>
+                {
+                    b.HasOne("SecureEscape.Api.Models.User", "User")
+                        .WithMany("UserMessages")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SecureEscape.Api.Models.UserSession", b =>
@@ -1281,7 +1529,11 @@ namespace SecureEscape.Api.Migrations
 
                     b.Navigation("EmergencyContacts");
 
+                    b.Navigation("SecureEscapeEnrollment");
+
                     b.Navigation("Sessions");
+
+                    b.Navigation("UserMessages");
                 });
 
             modelBuilder.Entity("SecureEscape.Api.Models.UserSession", b =>
@@ -1291,6 +1543,8 @@ namespace SecureEscape.Api.Migrations
                     b.Navigation("Alerts");
 
                     b.Navigation("AuditLogs");
+
+                    b.Navigation("Evidence");
 
                     b.Navigation("LocationEvents");
 

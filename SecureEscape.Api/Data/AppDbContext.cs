@@ -25,7 +25,11 @@ namespace SecureEscape.Api.Data
         public DbSet<LocationEvent> LocationEvents { get; set; }
         public DbSet<NotificationAttempt> NotificationAttempts { get; set; }
         public DbSet<RiskEvaluation> RiskEvaluations { get; set; }
+        public DbSet<RiskZone> RiskZones { get; set; }
+        public DbSet<SecureEscapeEnrollment> SecureEscapeEnrollments { get; set; }
+        public DbSet<SessionEvidence> SessionEvidence { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<UserMessage> UserMessages { get; set; }
         public DbSet<UserSession> UserSessions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -111,8 +115,6 @@ namespace SecureEscape.Api.Data
                 .Property(x => x.ProfileType)
                 .HasConversion<string>();
 
-
-
             modelBuilder.Entity<LocationEvent>()
                 .Property(x => x.LocationSource)
                 .HasConversion<string>();
@@ -129,6 +131,14 @@ namespace SecureEscape.Api.Data
                 .Property(x => x.RiskLevel)
                 .HasConversion<string>();
 
+            modelBuilder.Entity<RiskZone>()
+                .Property(x => x.RiskLevel)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<SecureEscapeEnrollment>()
+                .Property(x => x.Status)
+                .HasConversion<string>();
+
             modelBuilder.Entity<User>()
                 .Property(x => x.Status)
                 .HasConversion<string>();
@@ -140,6 +150,7 @@ namespace SecureEscape.Api.Data
             modelBuilder.Entity<UserSession>()
                 .Property(x => x.Status)
                 .HasConversion<string>();
+
             modelBuilder.Entity<UserSession>()
                 .Property(x => x.CaseStatus)
                 .HasConversion<string>();
@@ -171,6 +182,10 @@ namespace SecureEscape.Api.Data
                 .HasIndex(x => x.UserId)
                 .IsUnique();
 
+            modelBuilder.Entity<SecureEscapeEnrollment>()
+                .HasIndex(x => x.UserId)
+                .IsUnique();
+
             modelBuilder.Entity<BankAccount>()
                 .HasIndex(x => x.AccountNumber)
                 .IsUnique();
@@ -187,6 +202,22 @@ namespace SecureEscape.Api.Data
 
             modelBuilder.Entity<AuditLog>()
                 .HasIndex(x => x.CreatedAt);
+
+            modelBuilder.Entity<RiskZone>()
+                .HasIndex(x => x.IsActive);
+
+            modelBuilder.Entity<RiskZone>()
+                .HasIndex(x => x.RiskLevel);
+
+            modelBuilder.Entity<UserMessage>()
+                .HasIndex(x => new { x.UserId, x.DeduplicationKey })
+                .IsUnique();
+
+            modelBuilder.Entity<SessionEvidence>()
+                .HasIndex(x => x.UserSessionId);
+
+            modelBuilder.Entity<SessionEvidence>()
+                .HasIndex(x => x.BankTransactionId);
         }
 
         private static void ConfigureRelationships(ModelBuilder modelBuilder)
@@ -213,6 +244,12 @@ namespace SecureEscape.Api.Data
                 .HasOne(x => x.AuthCredential)
                 .WithOne(x => x.User)
                 .HasForeignKey<AuthCredential>(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<User>()
+                .HasOne(x => x.SecureEscapeEnrollment)
+                .WithOne(x => x.User)
+                .HasForeignKey<SecureEscapeEnrollment>(x => x.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<User>()
@@ -328,6 +365,18 @@ namespace SecureEscape.Api.Data
                 .WithOne(x => x.UserSession)
                 .HasForeignKey(x => x.UserSessionId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<UserSession>()
+                .HasMany(x => x.Evidence)
+                .WithOne(x => x.UserSession)
+                .HasForeignKey(x => x.UserSessionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<SessionEvidence>()
+                .HasOne(x => x.BankTransaction)
+                .WithMany()
+                .HasForeignKey(x => x.BankTransactionId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<Alert>()
                 .HasMany(x => x.LocationEvents)

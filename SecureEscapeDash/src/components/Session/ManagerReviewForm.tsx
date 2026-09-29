@@ -27,6 +27,16 @@ export default function ManagerReviewForm({
   const handleReview = async (
     status: "Approved" | "Rejected",
   ) => {
+    const trimmedNotes = notes.trim();
+
+    // A manager must explain why a report is being returned.
+    if (status === "Rejected" && !trimmedNotes) {
+      setError(
+        "Please explain what the analyst needs to change before returning the report.",
+      );
+      return;
+    }
+
     try {
       setSubmitting(status);
       setError("");
@@ -34,7 +44,7 @@ export default function ManagerReviewForm({
       const updated = await managerReviewCase(
         session.id,
         status,
-        notes.trim(),
+        trimmedNotes,
       );
 
       onReviewed(updated);
@@ -70,7 +80,7 @@ export default function ManagerReviewForm({
             </h2>
 
             <p className="panel-description">
-              Review the analyst's findings and decide
+              Review the analyst&apos;s findings and decide
               whether the case is ready to close.
             </p>
           </div>
@@ -107,7 +117,10 @@ export default function ManagerReviewForm({
 
         <div>
           <div className="flex items-center justify-between gap-4">
-            <label className="text-sm font-semibold text-[#102A43]">
+            <label
+              htmlFor="manager-review-notes"
+              className="text-sm font-semibold text-[#102A43]"
+            >
               Review notes
             </label>
 
@@ -117,11 +130,12 @@ export default function ManagerReviewForm({
           </div>
 
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            Add approval notes or explain what the analyst
-            needs to change if the report is rejected.
+            Approval notes are optional. A reason is required
+            when returning the report for changes.
           </p>
 
           <textarea
+            id="manager-review-notes"
             rows={4}
             maxLength={2000}
             value={notes}
@@ -132,13 +146,20 @@ export default function ManagerReviewForm({
                 setError("");
               }
             }}
-            placeholder="Add review notes..."
-            className="mt-3 w-full resize-none border border-[#CBD9E3] bg-white px-4 py-3 text-sm leading-6 text-[#102A43] outline-none transition placeholder:text-slate-400 focus:border-[#1769AA] focus:ring-2 focus:ring-[#1769AA]/10"
+            placeholder="Add review notes or explain what the analyst needs to change..."
+            className={`mt-3 w-full resize-none border bg-white px-4 py-3 text-sm leading-6 text-[#102A43] outline-none transition placeholder:text-slate-400 focus:ring-2 ${
+              error
+                ? "border-red-300 focus:border-red-500 focus:ring-red-500/10"
+                : "border-[#CBD9E3] focus:border-[#1769AA] focus:ring-[#1769AA]/10"
+            }`}
           />
         </div>
 
         {error && (
-          <div className="flex items-start gap-2 border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700">
+          <div
+            role="alert"
+            className="flex items-start gap-2 border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700"
+          >
             <AlertCircle
               size={16}
               className="mt-0.5 shrink-0"
@@ -150,6 +171,7 @@ export default function ManagerReviewForm({
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <button
+            type="button"
             onClick={() =>
               handleReview("Approved")
             }
@@ -164,6 +186,7 @@ export default function ManagerReviewForm({
           </button>
 
           <button
+            type="button"
             onClick={() =>
               handleReview("Rejected")
             }

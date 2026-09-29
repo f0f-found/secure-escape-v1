@@ -7,18 +7,24 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/utils/theme";
 import { useRouter } from "expo-router";
-import { getActiveDecoyProfile } from "@/services/secureEscapeService";
+import { getEnrollmentStatus } from "@/services/secureEscapeService";
 import { logout } from "@/services/authService";
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const [profile, setProfile] = useState<ProfileMeResponse | null>(null);
 
+  const [profile, setProfile] = useState<ProfileMeResponse | null>(null);
   const [error, setError] = useState<string>("");
+  const [openingSecureEscape, setOpeningSecureEscape] = useState(false);
+
+  useEffect(() => {
+    getProfileMe().then(setProfile).catch(console.error);
+  }, []);
 
   const logoutButton = async () => {
     try {
@@ -28,42 +34,75 @@ export default function SettingsScreen() {
         router.replace("/(auth)");
       }, 100);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to Logout");
+      setError(err instanceof Error ? err.message : "Failed to logout");
     }
   };
-  useEffect(() => {
-    getProfileMe().then(setProfile).catch(console.error);
-  }, []);
+
+  const openSecureEscape = async () => {
+    if (openingSecureEscape) {
+      return;
+    }
+
+    setOpeningSecureEscape(true);
+
+    try {
+      const enrollment = await getEnrollmentStatus();
+
+      if (enrollment.status === "Active") {
+        router.push("/secure-escape/manage-secure-escape");
+        return;
+      }
+
+      if (enrollment.status === "NotConfigured") {
+        router.push("/secure-escape/intro");
+        return;
+      }
+
+      if (!enrollment.hasDecoyProfile) {
+        router.push("/secure-escape/intro");
+        return;
+      }
+
+      if (!enrollment.hasDuressPin) {
+        router.push("/secure-escape/duress-pin");
+        return;
+      }
+
+      if (!enrollment.hasEmergencyContact) {
+        router.push("/secure-escape/emergency-contact?from=onboarding");
+        return;
+      }
+
+      router.push("/secure-escape/intro");
+    } catch (err) {
+      console.error("Failed to load Secure Escape enrollment:", err);
+
+      Alert.alert(
+        "Secure Escape",
+        err instanceof Error
+          ? err.message
+          : "Unable to check your Secure Escape setup. Please try again.",
+      );
+    } finally {
+      setOpeningSecureEscape(false);
+    }
+  };
+
   const isDuress = profile?.sessionMode === "Duress";
+
   const menuItems = [
     {
       title: "My information",
-      subtitle: "view and update information",
+      subtitle: "View and update information",
       isProfile: true,
     },
 
-    // {
-    //   title: "My app settings",
-    //   subtitle: "update personal and security settings",
-    // },
-
-    // {
-    //   title: "Personalise my app",
-    //   subtitle: "Display what matters most to you",
-    // },
-
-    // {
-    //   title: "My Security center",
-    //   subtitle: "view and update information",
-    // },
-
-    // ONLY show if NOT in duress mode
     ...(isDuress
       ? []
       : [
           {
             title: "Secure Escape",
-            subtitle: "Setup your Duress Pin",
+            subtitle: "Manage your Secure Escape protection",
             isSecureEscape: true,
           },
         ]),
@@ -87,36 +126,51 @@ export default function SettingsScreen() {
 
       <View style={styles.profile}>
         <View style={styles.avatar}>
-          <Ionicons name="person-circle" size={70} color={colors.primary} />
+          <Ionicons
+            name="person-circle"
+            size={70}
+            color={colors.primary}
+          />
         </View>
-        <Text style={styles.name}>Hello {profile?.fullName ?? "..."} !</Text>
+
+        <Text style={styles.name}>
+          Hello {profile?.fullName ?? "..."}!
+        </Text>
       </View>
+
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       <View style={styles.menu}>
         {menuItems.map((item, idx) => (
           <TouchableOpacity
             key={idx}
             style={styles.menuRow}
+            disabled={item.isSecureEscape && openingSecureEscape}
             onPress={async () => {
               if (item.isProfile) {
                 router.push("/settings/profile-details");
               } else if (item.isSecureEscape) {
-                const profile = await getActiveDecoyProfile();
-                if (profile) {
-                  router.push("/secure-escape/manage-secure-escape");
-                } else {
-                  router.push("/secure-escape/intro");
-                }
+                await openSecureEscape();
               } else if (item.isLogout) {
                 await logoutButton();
               }
             }}
           >
-            <View>
+            <View style={styles.menuText}>
               <Text style={styles.rowTitle}>{item.title}</Text>
-              <Text style={styles.rowSubtitle}>{item.subtitle}</Text>
+
+              <Text style={styles.rowSubtitle}>
+                {item.isSecureEscape && openingSecureEscape
+                  ? "Checking Secure Escape status..."
+                  : item.subtitle}
+              </Text>
             </View>
-            <Text style={styles.chevron}>›</Text>
+
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color="#BBBBBB"
+            />
           </TouchableOpacity>
         ))}
       </View>
@@ -125,44 +179,65 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.white },
+  container: {
+    flex: 1,
+    backgroundColor: colors.white,
+  },
+
   scrollContent: {
     paddingTop: 40,
-    paddingBottom: 40, // space at bottom
+    paddingBottom: 40,
   },
+
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 10, // increased from 52 → 48 (more natural)
+    paddingTop: 10,
     paddingHorizontal: 24,
     gap: 12,
   },
-  backArrow: { fontSize: 18, color: "#888" },
-  headerTitle: { fontSize: 22, fontWeight: "800", color: colors.navy },
+
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: colors.navy,
+  },
+
   profile: {
     alignItems: "center",
     paddingVertical: 24,
-    marginTop: 8, // slight separation from header
+    marginTop: 8,
   },
+
   avatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F0EFFF", // soft purple background for the icon
+    backgroundColor: "#F0EFFF",
   },
+
   name: {
-    marginTop: 12, // increased from 10
-    fontSize: 16, // increased from 15
+    marginTop: 12,
+    fontSize: 16,
     fontWeight: "700",
     color: colors.primary,
   },
+
+  errorText: {
+    paddingHorizontal: 20,
+    marginBottom: 8,
+    fontSize: 12,
+    color: colors.danger ?? "#EF4444",
+  },
+
   menu: {
     flex: 1,
     paddingHorizontal: 20,
     marginTop: 8,
   },
+
   menuRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -171,7 +246,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.greyLine,
   },
-  rowTitle: { fontSize: 15, fontWeight: "700", color: colors.navy },
-  rowSubtitle: { fontSize: 12, color: colors.textSub },
-  chevron: { fontSize: 16, color: "#bbb" },
+
+  menuText: {
+    flex: 1,
+    paddingRight: 16,
+  },
+
+  rowTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.navy,
+  },
+
+  rowSubtitle: {
+    fontSize: 12,
+    color: colors.textSub,
+  },
 });

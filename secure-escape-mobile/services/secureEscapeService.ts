@@ -6,6 +6,31 @@ import {
   UpsertDecoyProfileRequest,
 } from "@/types/secureEscape";
 
+export type DuressPinStatus = {
+  duressPinConfigured: boolean;
+  duressPinUpdatedAt: string | null;
+};
+
+export type SecureEscapeEnrollmentStatus =
+  | "NotConfigured"
+  | "SetupInProgress"
+  | "Active";
+
+export type SecureEscapeEnrollment = {
+  status: SecureEscapeEnrollmentStatus;
+  isActive: boolean;
+  hasDecoyProfile: boolean;
+  hasDuressPin: boolean;
+  hasEmergencyContact: boolean;
+  startedAt: string | null;
+  activatedAt: string | null;
+};
+
+export type CompleteEnrollmentResponse = {
+  message: string;
+  status: "Active";
+};
+
 async function getAuthorizedHeaders() {
   const token = await getAuthToken();
 
@@ -106,6 +131,69 @@ export async function setDuressPin(
   if (!response.ok) {
     throw new Error(
       await getErrorMessage(response, "Failed to update duress PIN."),
+    );
+  }
+
+  return response.json();
+}
+
+export async function getDuressPinStatus(): Promise<DuressPinStatus> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/secure-escape/duress-pin/status`,
+    {
+      method: "GET",
+      headers: await getAuthorizedHeaders(),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        "Failed to check Secure Escape PIN status.",
+      ),
+    );
+  }
+
+  return response.json();
+}
+
+export async function getEnrollmentStatus(): Promise<SecureEscapeEnrollment> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/secure-escape/enrollment/status`,
+    {
+      method: "GET",
+      headers: await getAuthorizedHeaders(),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        "Failed to check Secure Escape setup status.",
+      ),
+    );
+  }
+
+  return response.json();
+}
+
+export async function completeEnrollment(): Promise<CompleteEnrollmentResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/secure-escape/enrollment/complete`,
+    {
+      method: "POST",
+      headers: await getAuthorizedHeaders(),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        "Secure Escape setup could not be completed.",
+      ),
     );
   }
 

@@ -1,4 +1,3 @@
-// app/(tabs)/index.tsx
 import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
@@ -8,6 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { getAccounts } from "@/services/accountService";
@@ -17,15 +17,32 @@ import { colors, shadows } from "@/utils/theme";
 import { getProfileMe } from "@/services/profileService";
 import { ProfileMeResponse } from "@/types/profile";
 import { useRouter, useFocusEffect } from "expo-router";
+import {
+  AreaSafetyResult,
+  checkAreaSafety,
+} from "@/services/areaSafetyService";
+import { notifyForAreaSafety } from "@/services/areaSafetyNotificationService";
+import { createMessage } from "@/services/messageService";
 
 const { width } = Dimensions.get("window");
 
 export default function HomeScreen() {
   const router = useRouter();
+
   const [accounts, setAccounts] = useState<AccountResponse[]>([]);
   const [profile, setProfile] = useState<ProfileMeResponse>();
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [areaSafety, setAreaSafety] =
+    useState<AreaSafetyResult | null>(null);
+  const [isAreaSafetyLoading, setIsAreaSafetyLoading] = useState(true);
+  const [areaSafetyError, setAreaSafetyError] = useState<string | null>(
+    null,
+  );
+
+  const isDuress = profile?.sessionMode === "Duress";
 
   useEffect(() => {
     loadAccounts();
@@ -34,8 +51,46 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadAccounts();
-    }, [])
+      let isActive = true;
+
+      const refreshHome = async () => {
+        loadAccounts();
+
+        try {
+          const currentProfile = await getProfileMe();
+
+          if (!isActive) {
+            return;
+          }
+
+          setProfile(currentProfile);
+
+          if (currentProfile.sessionMode === "Duress") {
+            setAreaSafety(null);
+            setAreaSafetyError(null);
+            setIsAreaSafetyLoading(false);
+            return;
+          }
+
+          await loadAreaSafety();
+        } catch (profileError) {
+          console.error(
+            "Failed to refresh Home session mode:",
+            profileError,
+          );
+
+          if (isActive) {
+            setIsAreaSafetyLoading(false);
+          }
+        }
+      };
+
+      void refreshHome();
+
+      return () => {
+        isActive = false;
+      };
+    }, []),
   );
 
   const loadProfile = async () => {
@@ -47,7 +102,9 @@ export default function HomeScreen() {
       setProfile(user);
     } catch (error) {
       setError(
-        error instanceof Error ? error.message : "Failed to load profile."
+        error instanceof Error
+          ? error.message
+          : "Failed to load profile.",
       );
     } finally {
       setIsLoading(false);
@@ -63,16 +120,101 @@ export default function HomeScreen() {
       setAccounts(data);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to load accounts."
+        err instanceof Error
+          ? err.message
+          : "Failed to load accounts.",
       );
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Build account cards from API data.
-  // The customer-facing UI intentionally does not reveal whether
-  // the backend is serving a normal or protected/decoy account view.
+  const loadAreaSafety = async () => {
+    try {
+      setIsAreaSafetyLoading(true);
+      setAreaSafetyError(null);
+
+      const result = await checkAreaSafety();
+      setAreaSafety(result);
+
+      const alertableStatuses: AreaSafetyResult["status"][] = [
+        "inside-high",
+        "inside-medium",
+        "nearby-high",
+        "nearby-medium",
+      ];
+
+      if (
+        result.nearestZone &&
+        alertableStatuses.includes(result.status)
+      ) {
+        const zone = result.nearestZone;
+        const today = new Date().toISOString().slice(0, 10);
+
+        let title = "Area Safety Alert";
+        let body =
+          "A safety awareness zone is near your current area. Stay aware of your surroundings.";
+
+        switch (result.status) {
+          case "inside-high":
+            title = "Higher-risk area";
+            body = `You are currently within the ${zone.name} safety awareness zone. Stay aware of your surroundings.`;
+            break;
+
+          case "inside-medium":
+            title = "Elevated-risk area";
+            body = `You are currently within the ${zone.name} safety awareness zone. Stay aware of your surroundings.`;
+            break;
+
+          case "nearby-high":
+            title = "Higher-risk area nearby";
+            body = `${zone.name} is near your current area. Stay aware of your surroundings.`;
+            break;
+
+          case "nearby-medium":
+            title = "Elevated-risk area nearby";
+            body = `${zone.name} is near your current area. Stay aware of your surroundings.`;
+            break;
+        }
+
+        try {
+          await createMessage({
+            title,
+            body,
+            category: "AreaSafety",
+            referenceType: "RiskZone",
+            referenceId: zone.id,
+            deduplicationKey: `area-safety:${zone.id}:${result.status}:${today}`,
+          });
+        } catch (messageError) {
+          console.warn(
+            "Area Safety message could not be saved:",
+            messageError,
+          );
+        }
+      }
+
+      try {
+        await notifyForAreaSafety(result);
+      } catch (notificationError) {
+        console.warn(
+          "Area Safety notification could not be delivered:",
+          notificationError,
+        );
+      }
+    } catch (err) {
+      setAreaSafety(null);
+
+      setAreaSafetyError(
+        err instanceof Error
+          ? err.message
+          : "Area Safety is temporarily unavailable.",
+      );
+    } finally {
+      setIsAreaSafetyLoading(false);
+    }
+  };
+
   const accountCards = accounts.map((account, index) => ({
     id: account.id,
     name: account.accountName,
@@ -124,7 +266,7 @@ export default function HomeScreen() {
     },
     {
       label: "Security Tips",
-      icon: "card",
+      icon: "shield-checkmark",
       bg: "#FFF5F5",
       link: "/advice/security-tips",
     },
@@ -133,14 +275,112 @@ export default function HomeScreen() {
   const handleFavPress = (item: (typeof favourites)[0]) => {
     if (item.link) {
       router.push(item.link as never);
-    } else {
-      Alert.alert(
-        "Coming Soon",
-        `The "${item.label}" feature will be available in the next sprint.`,
-        [{ text: "OK", style: "default" }]
-      );
+      return;
+    }
+
+    Alert.alert(
+      "Coming Soon",
+      `The "${item.label}" feature will be available in the next sprint.`,
+      [{ text: "OK", style: "default" }],
+    );
+  };
+
+  const openAreaSafety = () => {
+    if (isDuress) {
+      return;
+    }
+
+    router.push("/area-safety" as never);
+  };
+
+  const formatDistance = (meters: number | null) => {
+    if (meters === null) {
+      return null;
+    }
+
+    const safeMeters = Math.max(0, meters);
+
+    if (safeMeters < 1000) {
+      return `${Math.round(safeMeters)} m`;
+    }
+
+    return `${(safeMeters / 1000).toFixed(1)} km`;
+  };
+
+  const getAreaSafetyContent = () => {
+    if (!areaSafety) {
+      return {
+        title: "Area Safety",
+        message: "No elevated-risk areas detected nearby.",
+        icon: "shield-checkmark" as const,
+        tone: "clear" as const,
+      };
+    }
+
+    const zone = areaSafety.nearestZone;
+
+    switch (areaSafety.status) {
+      case "inside-high":
+        return {
+          title: "Higher-risk area",
+          message: zone
+            ? `You are currently within the ${zone.name} safety awareness zone. Stay aware of your surroundings.`
+            : "You are currently within a higher-risk safety awareness zone.",
+          icon: "warning" as const,
+          tone: "high" as const,
+        };
+
+      case "inside-medium":
+        return {
+          title: "Elevated-risk area",
+          message: zone
+            ? `You are currently within the ${zone.name} safety awareness zone. Stay aware of your surroundings.`
+            : "You are currently within an elevated-risk safety awareness zone.",
+          icon: "alert-circle" as const,
+          tone: "medium" as const,
+        };
+
+      case "nearby-high": {
+        const distance = formatDistance(
+          areaSafety.distanceToNearestZoneBoundaryMeters,
+        );
+
+        return {
+          title: "Higher-risk area nearby",
+          message: zone
+            ? `${zone.name} is${distance ? ` about ${distance}` : ""} from your current area.`
+            : "A higher-risk safety awareness zone is nearby.",
+          icon: "warning" as const,
+          tone: "high" as const,
+        };
+      }
+
+      case "nearby-medium": {
+        const distance = formatDistance(
+          areaSafety.distanceToNearestZoneBoundaryMeters,
+        );
+
+        return {
+          title: "Elevated-risk area nearby",
+          message: zone
+            ? `${zone.name} is${distance ? ` about ${distance}` : ""} from your current area.`
+            : "An elevated-risk safety awareness zone is nearby.",
+          icon: "alert-circle" as const,
+          tone: "medium" as const,
+        };
+      }
+
+      default:
+        return {
+          title: "Area Safety",
+          message: "No elevated-risk areas detected nearby.",
+          icon: "shield-checkmark" as const,
+          tone: "clear" as const,
+        };
     }
   };
+
+  const areaSafetyContent = getAreaSafetyContent();
 
   return (
     <View style={styles.pageContainer}>
@@ -152,6 +392,7 @@ export default function HomeScreen() {
         <View style={styles.headerComponent}>
           <View style={styles.header}>
             <Text style={styles.title}>My Dashboard</Text>
+
             <Text style={styles.greeting}>
               Good afternoon, {profile?.fullName || "User"}
             </Text>
@@ -198,7 +439,9 @@ export default function HomeScreen() {
                   ]}
                 >
                   <Ionicons
-                    name={card.icon as keyof typeof Ionicons.glyphMap}
+                    name={
+                      card.icon as keyof typeof Ionicons.glyphMap
+                    }
                     size={24}
                     color={colors.primary}
                   />
@@ -213,6 +456,159 @@ export default function HomeScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+        {!isDuress && (
+          <View style={styles.areaSafetySection}>
+            <View style={styles.areaSafetyHeadingRow}>
+              <View>
+                <Text style={styles.areaSafetySectionTitle}>
+                  Area Safety
+                </Text>
+
+                <Text style={styles.areaSafetySectionSubtitle}>
+                  Awareness based on your current location
+                </Text>
+              </View>
+
+              {!isAreaSafetyLoading && (
+                <TouchableOpacity
+                  style={styles.refreshButton}
+                  onPress={loadAreaSafety}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Refresh Area Safety"
+                >
+                  <Ionicons
+                    name="refresh"
+                    size={18}
+                    color={colors.primary}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {isAreaSafetyLoading ? (
+              <View style={styles.areaSafetyCard}>
+                <View style={styles.areaSafetyLoadingRow}>
+                  <ActivityIndicator
+                    size="small"
+                    color={colors.primary}
+                  />
+
+                  <View style={styles.areaSafetyTextContainer}>
+                    <Text style={styles.areaSafetyCardTitle}>
+                      Checking your area
+                    </Text>
+
+                    <Text style={styles.areaSafetyMessage}>
+                      Getting current Area Safety information...
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            ) : areaSafetyError ? (
+              <TouchableOpacity
+                style={[
+                  styles.areaSafetyCard,
+                  styles.areaSafetyUnavailableCard,
+                ]}
+                onPress={loadAreaSafety}
+                activeOpacity={0.8}
+              >
+                <View style={styles.areaSafetyLoadingRow}>
+                  <View
+                    style={[
+                      styles.areaSafetyIcon,
+                      styles.areaSafetyUnavailableIcon,
+                    ]}
+                  >
+                    <Ionicons
+                      name="location-outline"
+                      size={22}
+                      color={colors.textSub}
+                    />
+                  </View>
+
+                  <View style={styles.areaSafetyTextContainer}>
+                    <Text style={styles.areaSafetyCardTitle}>
+                      Area Safety unavailable
+                    </Text>
+
+                    <Text style={styles.areaSafetyMessage}>
+                      {areaSafetyError}
+                    </Text>
+
+                    <Text style={styles.areaSafetyRetry}>
+                      Tap to try again
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.areaSafetyCard,
+                  areaSafetyContent.tone === "high" &&
+                    styles.areaSafetyHighCard,
+                  areaSafetyContent.tone === "medium" &&
+                    styles.areaSafetyMediumCard,
+                ]}
+                onPress={openAreaSafety}
+                activeOpacity={0.82}
+                accessibilityRole="button"
+                accessibilityLabel="Open Area Safety map"
+              >
+                <View style={styles.areaSafetyLoadingRow}>
+                  <View
+                    style={[
+                      styles.areaSafetyIcon,
+                      areaSafetyContent.tone === "clear" &&
+                        styles.areaSafetyClearIcon,
+                      areaSafetyContent.tone === "high" &&
+                        styles.areaSafetyHighIcon,
+                      areaSafetyContent.tone === "medium" &&
+                        styles.areaSafetyMediumIcon,
+                    ]}
+                  >
+                    <Ionicons
+                      name={areaSafetyContent.icon}
+                      size={22}
+                      color={
+                        areaSafetyContent.tone === "high"
+                          ? "#B42318"
+                          : areaSafetyContent.tone === "medium"
+                            ? "#B54708"
+                            : colors.primary
+                      }
+                    />
+                  </View>
+
+                  <View style={styles.areaSafetyTextContainer}>
+                    <Text style={styles.areaSafetyCardTitle}>
+                      {areaSafetyContent.title}
+                    </Text>
+
+                    <Text style={styles.areaSafetyMessage}>
+                      {areaSafetyContent.message}
+                    </Text>
+
+                    <View style={styles.areaSafetyMapLink}>
+                      <Text style={styles.areaSafetyMapLinkText}>
+                        View safety map
+                      </Text>
+
+                      <Ionicons
+                        name="chevron-forward"
+                        size={15}
+                        color={colors.primary}
+                      />
+                    </View>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         <View style={styles.favouritesSection}>
           <View style={styles.favouritesHeader}>
@@ -238,13 +634,17 @@ export default function HomeScreen() {
                   ]}
                 >
                   <Ionicons
-                    name={item.icon as keyof typeof Ionicons.glyphMap}
+                    name={
+                      item.icon as keyof typeof Ionicons.glyphMap
+                    }
                     size={24}
                     color={colors.primary}
                   />
                 </View>
 
-                <Text style={styles.favLabel}>{item.label}</Text>
+                <Text style={styles.favLabel}>
+                  {item.label}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -313,7 +713,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 16,
     marginTop: 8,
-    marginBottom: 28,
+    marginBottom: 24,
   },
 
   cardWrapper: {
@@ -347,6 +747,131 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: colors.white,
     marginTop: 6,
+  },
+
+  areaSafetySection: {
+    paddingHorizontal: 16,
+    marginBottom: 26,
+  },
+
+  areaSafetyHeadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+
+  areaSafetySectionTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: colors.navy,
+  },
+
+  areaSafetySectionSubtitle: {
+    marginTop: 3,
+    fontSize: 12,
+    color: colors.textSub,
+  },
+
+  refreshButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.white,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.greyLine,
+  },
+
+  areaSafetyCard: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.greyLine,
+    ...shadows.medium,
+  },
+
+  areaSafetyHighCard: {
+    backgroundColor: "#FFF7F6",
+    borderColor: "#FECDCA",
+  },
+
+  areaSafetyMediumCard: {
+    backgroundColor: "#FFFAEB",
+    borderColor: "#FEDF89",
+  },
+
+  areaSafetyUnavailableCard: {
+    backgroundColor: "#F8FAFC",
+  },
+
+  areaSafetyLoadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  areaSafetyIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+
+  areaSafetyClearIcon: {
+    backgroundColor: "#EFF6FF",
+  },
+
+  areaSafetyHighIcon: {
+    backgroundColor: "#FEE4E2",
+  },
+
+  areaSafetyMediumIcon: {
+    backgroundColor: "#FEF0C7",
+  },
+
+  areaSafetyUnavailableIcon: {
+    backgroundColor: "#F1F5F9",
+  },
+
+  areaSafetyTextContainer: {
+    flex: 1,
+  },
+
+  areaSafetyCardTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: colors.navy,
+  },
+
+  areaSafetyMessage: {
+    marginTop: 4,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSub,
+  },
+
+  areaSafetyRetry: {
+    marginTop: 7,
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.primary,
+  },
+
+  areaSafetyMapLink: {
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  areaSafetyMapLinkText: {
+    marginRight: 3,
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.primary,
   },
 
   favouritesSection: {

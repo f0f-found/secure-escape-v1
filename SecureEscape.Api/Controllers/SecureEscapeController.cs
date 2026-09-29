@@ -13,15 +13,18 @@ public class SecureEscapeController : ControllerBase
 {
     private readonly ISecureEscapeService _secureEscapeService;
 
-    public SecureEscapeController(ISecureEscapeService secureEscapeService)
+    public SecureEscapeController(
+        ISecureEscapeService secureEscapeService)
     {
         _secureEscapeService = secureEscapeService;
     }
 
     [HttpGet("decoy-profile")]
-    public async Task<ActionResult<DecoyProfileResponseDto>> GetActiveDecoyProfile()
+    public async Task<ActionResult<DecoyProfileResponseDto>>
+        GetActiveDecoyProfile()
     {
-        var decoyProfile = await _secureEscapeService.GetActiveDecoyProfileAsync();
+        var decoyProfile =
+            await _secureEscapeService.GetActiveDecoyProfileAsync();
 
         if (decoyProfile == null)
         {
@@ -35,30 +38,74 @@ public class SecureEscapeController : ControllerBase
     }
 
     [HttpPut("decoy-profile")]
-    public async Task<ActionResult<DecoyProfileResponseDto>> UpsertDecoyProfile(
-    [FromBody] UpsertDecoyProfileRequestDto request)
+    public async Task<ActionResult<DecoyProfileResponseDto>>
+        UpsertDecoyProfile(
+            [FromBody] UpsertDecoyProfileRequestDto request)
     {
-        var decoyProfile = await _secureEscapeService.UpsertDecoyProfileAsync(request);
+        var decoyProfile =
+            await _secureEscapeService.UpsertDecoyProfileAsync(request);
 
         return Ok(decoyProfile);
     }
 
     [HttpPost("duress-pin")]
-    public async Task<IActionResult> SetDuressPin([FromBody] SetDuressPinRequestDto request)
+    public async Task<IActionResult> SetDuressPin(
+        [FromBody] SetDuressPinRequestDto request)
     {
-        var updated = await _secureEscapeService.SetDuressPinAsync(request);
+        var updated =
+            await _secureEscapeService.SetDuressPinAsync(request);
 
         if (!updated)
         {
             return Unauthorized(new
             {
-                message = "Password verification failed."
+                message = "PIN verification failed."
             });
         }
 
         return Ok(new
         {
             message = "Duress PIN updated successfully."
+        });
+    }
+
+    [HttpGet("duress-pin/status")]
+    public async Task<IActionResult> GetDuressPinStatus()
+    {
+        var status =
+            await _secureEscapeService.GetDuressPinStatusAsync();
+
+        return Ok(status);
+    }
+
+    [HttpGet("enrollment/status")]
+    public async Task<IActionResult> GetEnrollmentStatus()
+    {
+        var status =
+            await _secureEscapeService.GetEnrollmentStatusAsync();
+
+        return Ok(status);
+    }
+
+    [HttpPost("enrollment/complete")]
+    public async Task<IActionResult> CompleteEnrollment()
+    {
+        var completed =
+            await _secureEscapeService.CompleteEnrollmentAsync();
+
+        if (!completed)
+        {
+            return BadRequest(new
+            {
+                message =
+                    "Secure Escape setup is incomplete. Complete all required setup steps before activation."
+            });
+        }
+
+        return Ok(new
+        {
+            message = "Secure Escape activated successfully.",
+            status = "Active"
         });
     }
 }

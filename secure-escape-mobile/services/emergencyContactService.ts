@@ -7,7 +7,11 @@ import {
 
 async function getAuthorizedHeaders() {
   const token = await getAuthToken();
-  if (!token) throw new Error("No auth token found. Please log in again.");
+
+  if (!token) {
+    throw new Error("No auth token found. Please log in again.");
+  }
+
   return {
     Accept: "application/json",
     "Content-Type": "application/json",
@@ -46,14 +50,20 @@ async function getErrorMessage(response: Response, fallback: string) {
 export async function getEmergencyContacts(): Promise<
   EmergencyContactResponse[]
 > {
-  const response = await fetch(`${API_BASE_URL}/api/v1/emergency-contacts`, {
-    method: "GET",
-    headers: await getAuthorizedHeaders(),
-  });
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/emergency-contacts`,
+    {
+      method: "GET",
+      headers: await getAuthorizedHeaders(),
+    },
+  );
 
   if (!response.ok) {
     throw new Error(
-      await getErrorMessage(response, "Failed to load emergency contacts."),
+      await getErrorMessage(
+        response,
+        "Failed to load emergency contacts.",
+      ),
     );
   }
 
@@ -63,22 +73,55 @@ export async function getEmergencyContacts(): Promise<
 export async function addEmergencyContact(
   request: AddEmergencyContactRequest,
 ): Promise<EmergencyContactResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/emergency-contacts`, {
-    method: "POST",
-    headers: await getAuthorizedHeaders(),
-    body: JSON.stringify(request),
-  });
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/emergency-contacts`,
+    {
+      method: "POST",
+      headers: await getAuthorizedHeaders(),
+      body: JSON.stringify(request),
+    },
+  );
 
   if (!response.ok) {
     throw new Error(
-      await getErrorMessage(response, "Failed to add emergency contact."),
+      await getErrorMessage(
+        response,
+        "Failed to add emergency contact.",
+      ),
     );
   }
 
   return response.json();
 }
 
-export async function deleteEmergencyContact(id: string): Promise<void> {
+export async function updateEmergencyContact(
+  id: string,
+  request: AddEmergencyContactRequest,
+): Promise<EmergencyContactResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/emergency-contacts/${id}`,
+    {
+      method: "PUT",
+      headers: await getAuthorizedHeaders(),
+      body: JSON.stringify(request),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(
+        response,
+        "Failed to update emergency contact.",
+      ),
+    );
+  }
+
+  return response.json();
+}
+
+export async function deleteEmergencyContact(
+  id: string,
+): Promise<void> {
   const response = await fetch(
     `${API_BASE_URL}/api/v1/emergency-contacts/${id}`,
     {
@@ -89,7 +132,10 @@ export async function deleteEmergencyContact(id: string): Promise<void> {
 
   if (!response.ok) {
     throw new Error(
-      await getErrorMessage(response, "Failed to delete emergency contact."),
+      await getErrorMessage(
+        response,
+        "Failed to delete emergency contact.",
+      ),
     );
   }
 }

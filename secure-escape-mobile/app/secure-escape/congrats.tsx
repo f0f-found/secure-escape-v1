@@ -361,6 +361,3 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
 });
-import Congrats from "@/screens/secure-escape/Congrats";
-
-export default Congrats;

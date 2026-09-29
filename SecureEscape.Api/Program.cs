@@ -1,16 +1,15 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SecureEscape.Api.Data;
+using SecureEscape.Api.Interceptors;
 using SecureEscape.Api.Interfaces;
+using SecureEscape.Api.Middleware;
 using SecureEscape.Api.Repositories;
 using SecureEscape.Api.Services;
-using System.Text.Json.Serialization;
-using SecureEscape.Api.Interceptors;
-using SecureEscape.Api.Middleware;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +18,9 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
+
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -48,13 +49,12 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+builder.Services.AddScoped<AuditInterceptor>();
 
-var connString = builder.Configuration.GetConnectionString("default");
 builder.Services.AddDbContext<AppDbContext>((serviceProvider, options) =>
     options.UseMySql(
         builder.Configuration.GetConnectionString("default"),
         ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("default")),
-        //new MySqlServerVersion(new Version(8, 0, 21)),
         mysqlOptions =>
         {
             mysqlOptions.EnableRetryOnFailure(
@@ -66,33 +66,29 @@ builder.Services.AddDbContext<AppDbContext>((serviceProvider, options) =>
     .AddInterceptors(serviceProvider.GetRequiredService<AuditInterceptor>())
 );
 
-
-builder.Services.AddScoped<AuditInterceptor>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-//Repos
+// Repositories
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAlertRepository, AlertRepository>();
 builder.Services.AddScoped<IBankAccountRepository, BankAccountRepository>();
 builder.Services.AddScoped<IBeneficiaryRepository, BeneficiaryRepository>();
-
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<IUserSessionRepository, UserSessionRepository>();
 builder.Services.AddScoped<IDecoyProfileRepository, DecoyProfileRepository>();
+builder.Services.AddScoped<ISecureEscapeEnrollmentRepository, SecureEscapeEnrollmentRepository>();
 builder.Services.AddScoped<ILocationEventRepository, LocationEventRepository>();
-
 builder.Services.AddScoped<IRiskEvaluationRepository, RiskEvaluationRepository>();
+builder.Services.AddScoped<IRiskZoneRepository, RiskZoneRepository>();
 builder.Services.AddScoped<IEmergencyContactRepository, EmergencyContactRepository>();
 builder.Services.AddScoped<INotificationAttemptRepository, NotificationAttemptRepository>();
+builder.Services.AddScoped<IUserMessageRepository, UserMessageRepository>();
 
-
-
-
-
-//Services
+// Services
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IRiskService, RiskService>();
+builder.Services.AddScoped<IRiskZoneService, RiskZoneService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IAdminUserService, AdminUserService>();
@@ -100,24 +96,18 @@ builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<IAdminAuthService, AdminAuthService>();
-
 builder.Services.AddScoped<IAdminAlertService, AdminAlertService>();
 builder.Services.AddScoped<IHashingService, BCryptHashingService>();
-
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IBeneficiaryService, BeneficiaryService>();
-
-
 builder.Services.AddScoped<IAdminSessionService, AdminSessionService>();
 builder.Services.AddScoped<ICurrentAdminService, CurrentAdminService>();
 builder.Services.AddScoped<ISecureEscapeService, SecureEscapeService>();
-
 builder.Services.AddScoped<IFraudReportingService, FraudReportingService>();
 builder.Services.AddScoped<IEmergencyContactService, EmergencyContactService>();
 builder.Services.AddScoped<INotificationDispatchService, NotificationDispatchService>();
-
-
+builder.Services.AddScoped<IUserMessageService, UserMessageService>();
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSettings["SigningKey"];
@@ -137,10 +127,11 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!))
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(jwtKey!)
+        )
     };
 });
-
 
 builder.Services.AddCors(options =>
 {
@@ -155,12 +146,6 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// if (app.Environment.IsDevelopment())
-// {
-//     app.UseSwagger();
-//     app.UseSwaggerUI();
-// }
-
 app.UseSwagger();
 app.UseSwaggerUI();
 
@@ -174,12 +159,11 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// ── SEED DATA ──────────────────────────────────────────────────
+// Seed data
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await DbSeeder.SeedAsync(context);
 }
-
 
 app.Run();

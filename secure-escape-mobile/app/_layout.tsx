@@ -12,6 +12,16 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useEffect, useState } from "react";
 import { getAuthToken, isSessionExpired } from "@/services/tokenStore";
 import { ActivityIndicator, View } from "react-native";
+import * as Notifications from "expo-notifications";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 export const unstable_settings = {
   anchor: "(auth)",

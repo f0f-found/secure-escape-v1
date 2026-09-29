@@ -42,8 +42,11 @@ namespace SecureEscape.Api.Models
         public DateTime? UpdatedAt { get; set; }
 
         public CaseStatus CaseStatus { get; set; } = CaseStatus.Open;
+
         public bool HadStepUpDuressEvent { get; set; } = false;
+
         public DateTime? CaseResolvedAt { get; set; }
+
         public Guid? AssignedAdminUserId { get; set; }
 
         public DateTime? AssignedAt { get; set; }
@@ -58,7 +61,8 @@ namespace SecureEscape.Api.Models
 
         public DateTime? ResolutionSubmittedAt { get; set; }
 
-        public ManagerReviewStatus ManagerReviewStatus { get; set; } = ManagerReviewStatus.NotSubmitted;
+        public ManagerReviewStatus ManagerReviewStatus { get; set; } =
+            ManagerReviewStatus.NotSubmitted;
 
         public Guid? ManagerReviewedByAdminUserId { get; set; }
 
@@ -68,18 +72,28 @@ namespace SecureEscape.Api.Models
         public string ManagerReviewNotes { get; set; } = string.Empty;
 
         public AdminUser? AssignedAdminUser { get; set; }
+
         public User? User { get; set; }
 
-        public ICollection<AlertAction> AlertActions { get; set; } = new List<AlertAction>();
+        public ICollection<AlertAction> AlertActions { get; set; } =
+            new List<AlertAction>();
 
-        public ICollection<BankTransaction> Transactions { get; set; } = new List<BankTransaction>();
+        public ICollection<BankTransaction> Transactions { get; set; } =
+            new List<BankTransaction>();
 
-        public ICollection<Alert> Alerts { get; set; } = new List<Alert>();
+        public ICollection<Alert> Alerts { get; set; } =
+            new List<Alert>();
 
-        public ICollection<LocationEvent> LocationEvents { get; set; } = new List<LocationEvent>();
+        public ICollection<LocationEvent> LocationEvents { get; set; } =
+            new List<LocationEvent>();
 
-        public ICollection<RiskEvaluation> RiskEvaluations { get; set; } = new List<RiskEvaluation>();
+        public ICollection<RiskEvaluation> RiskEvaluations { get; set; } =
+            new List<RiskEvaluation>();
 
-        public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
+        public ICollection<AuditLog> AuditLogs { get; set; } =
+            new List<AuditLog>();
+
+        public ICollection<SessionEvidence> Evidence { get; set; } =
+            new List<SessionEvidence>();
     }
 }

@@ -13,7 +13,8 @@ public class EmergencyContactController : ControllerBase
 {
     private readonly IEmergencyContactService _service;
 
-    public EmergencyContactController(IEmergencyContactService service)
+    public EmergencyContactController(
+        IEmergencyContactService service)
     {
         _service = service;
     }
@@ -30,13 +31,53 @@ public class EmergencyContactController : ControllerBase
         [FromBody] AddEmergencyContactRequestDto request)
     {
         var contact = await _service.AddAsync(request);
-        return CreatedAtAction(nameof(GetAll), contact);
+
+        return CreatedAtAction(
+            nameof(GetAll),
+            contact);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<ActionResult<EmergencyContactResponseDto>> Update(
+        Guid id,
+        [FromBody] UpdateEmergencyContactRequestDto request)
+    {
+        var contact = await _service.UpdateAsync(id, request);
+
+        if (contact == null)
+        {
+            return NotFound(new
+            {
+                message = "Emergency contact not found."
+            });
+        }
+
+        return Ok(contact);
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid id)
     {
-        await _service.DeleteAsync(id);
-        return NoContent();
+        try
+        {
+            var deleted = await _service.DeleteAsync(id);
+
+            if (!deleted)
+            {
+                return NotFound(new
+                {
+                    message = "Emergency contact not found."
+                });
+            }
+
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
     }
 }

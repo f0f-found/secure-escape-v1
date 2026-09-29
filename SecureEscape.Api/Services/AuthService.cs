@@ -71,7 +71,7 @@ public class AuthService : IAuthService
 
         /*
             User must belong to an active bank integration 
-            before password/PIN login can complete
+            before app PIN login can complete
         */
         if (user.BankIntegration == null ||
             user.BankIntegration.Status != BankIntegrationStatus.Active)
@@ -153,11 +153,6 @@ public class AuthService : IAuthService
 
             await _context.Alerts.AddAsync(alert);
 
-            if (duressPinValid)
-            {
-                await _notificationDispatchService.DispatchPendingForSessionAsync(session.Id);
-            }
-
             var riskEvaluation = new RiskEvaluation
             {
                 Id = Guid.NewGuid(),
@@ -233,7 +228,13 @@ public class AuthService : IAuthService
 
         await _context.SaveChangesAsync();
 
-        await _auditService.LogAsync(
+if (duressPinValid)
+{
+    await _notificationDispatchService.DispatchPendingForSessionAsync(
+        session.Id);
+}
+
+await _auditService.LogAsync(
             duressPinValid ? AuditEventType.DuressPinMatched : AuditEventType.NormalPinMatched,
             entityType: "UserSession",
             entityId: session.Id,
@@ -457,3 +458,4 @@ public class AuthService : IAuthService
             metadataJson: "{\"action\":\"logout\"}");
     }
 }
+

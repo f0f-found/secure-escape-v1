@@ -10,7 +10,17 @@ export type TransactionType = "Transfer" | "CashSend";
 
 export type CreateTransferRequest = {
   bankAccountId: string;
-  beneficiaryId: string;
+
+  // Existing saved beneficiary payment
+  beneficiaryId?: string | null;
+
+  // Once-off bank transfer
+  recipientName?: string | null;
+  recipientBank?: string | null;
+  recipientAccountNumber?: string | null;
+  recipientAccountType?: string | null;
+  recipientBranchCode?: string | null;
+
   amount: number;
   description: string;
 };

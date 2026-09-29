@@ -1,6 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using SecureEscape.Api.Enums;
 using SecureEscape.Api.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace SecureEscape.Api.Data
 {
@@ -8,9 +8,14 @@ namespace SecureEscape.Api.Data
     {
         public static async Task SeedAsync(AppDbContext context)
         {
-            if (await context.BankIntegrations.AnyAsync()) return;
+            await SeedRiskZonesAsync(context);
 
-            // ── BANK INTEGRATIONS ──────────────────────────────────────────
+            if (await context.BankIntegrations.AnyAsync())
+            {
+                return;
+            }
+
+            // BANK INTEGRATIONS
             var zenithBank = new BankIntegration
             {
                 Id = Guid.Parse("a1000000-0000-0000-0000-000000000001"),
@@ -33,7 +38,7 @@ namespace SecureEscape.Api.Data
 
             await context.BankIntegrations.AddRangeAsync(zenithBank, savannaBank);
 
-            // ── API CLIENTS ────────────────────────────────────────────────
+            // API CLIENTS
             var zenithApiClient = new ApiClient
             {
                 Id = Guid.Parse("b1000000-0000-0000-0000-000000000001"),
@@ -56,9 +61,12 @@ namespace SecureEscape.Api.Data
                 CreatedAt = DateTime.UtcNow
             };
 
-            await context.ApiClients.AddRangeAsync(zenithApiClient, savannaApiClient);
+            await context.ApiClients.AddRangeAsync(
+                zenithApiClient,
+                savannaApiClient
+            );
 
-            // ── USERS ──────────────────────────────────────────────────────
+            // USERS
             var user1 = new User
             {
                 Id = Guid.Parse("c1000000-0000-0000-0000-000000000001"),
@@ -119,58 +127,67 @@ namespace SecureEscape.Api.Data
                 CreatedAt = DateTime.UtcNow
             };
 
-            await context.Users.AddRangeAsync(user1, user2, user3, user4, user5);
-            static string Hash(string value) => BCrypt.Net.BCrypt.HashPassword(value);
-            // ── AUTH CREDENTIALS ───────────────────────────────────────────
-            await context.AuthCredentials.AddRangeAsync(
-            new AuthCredential
-            {
-                Id = Guid.NewGuid(),
-                UserId = user1.Id,
-                PasswordHash = Hash("Password@123"),
-                NormalPinHash = Hash("1234"),
-                DuressPinHash = Hash("9999"),
-                CreatedAt = DateTime.UtcNow
-            },
-            new AuthCredential
-            {
-                Id = Guid.NewGuid(),
-                UserId = user2.Id,
-                PasswordHash = Hash("Password@123"),
-                NormalPinHash = Hash("2222"),
-                DuressPinHash = Hash("8888"),
-                CreatedAt = DateTime.UtcNow
-            },
-            new AuthCredential
-            {
-                Id = Guid.NewGuid(),
-                UserId = user3.Id,
-                PasswordHash = Hash("Password@123"),
-                NormalPinHash = Hash("3333"),
-                DuressPinHash = Hash("7777"),
-                CreatedAt = DateTime.UtcNow
-            },
-            new AuthCredential
-            {
-                Id = Guid.NewGuid(),
-                UserId = user4.Id,
-                PasswordHash = Hash("Password@123"),
-                NormalPinHash = Hash("4444"),
-                DuressPinHash = Hash("6666"),
-                CreatedAt = DateTime.UtcNow
-            },
-            new AuthCredential
-            {
-                Id = Guid.NewGuid(),
-                UserId = user5.Id,
-                PasswordHash = Hash("Password@123"),
-                NormalPinHash = Hash("5555"),
-                DuressPinHash = Hash("0000"),
-                CreatedAt = DateTime.UtcNow
-            }
-        );
+            await context.Users.AddRangeAsync(
+                user1,
+                user2,
+                user3,
+                user4,
+                user5
+            );
 
-            // ── BANK ACCOUNTS ──────────────────────────────────────────────
+            static string Hash(string value) =>
+                BCrypt.Net.BCrypt.HashPassword(value);
+
+            // AUTH CREDENTIALS
+            await context.AuthCredentials.AddRangeAsync(
+                new AuthCredential
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user1.Id,
+                    PasswordHash = Hash("Password@123"),
+                    NormalPinHash = Hash("1234"),
+                    DuressPinHash = Hash("9999"),
+                    CreatedAt = DateTime.UtcNow
+                },
+                new AuthCredential
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user2.Id,
+                    PasswordHash = Hash("Password@123"),
+                    NormalPinHash = Hash("2222"),
+                    DuressPinHash = Hash("8888"),
+                    CreatedAt = DateTime.UtcNow
+                },
+                new AuthCredential
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user3.Id,
+                    PasswordHash = Hash("Password@123"),
+                    NormalPinHash = Hash("3333"),
+                    DuressPinHash = Hash("7777"),
+                    CreatedAt = DateTime.UtcNow
+                },
+                new AuthCredential
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user4.Id,
+                    PasswordHash = Hash("Password@123"),
+                    NormalPinHash = Hash("4444"),
+                    DuressPinHash = Hash("6666"),
+                    CreatedAt = DateTime.UtcNow
+                },
+                new AuthCredential
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user5.Id,
+                    PasswordHash = Hash("Password@123"),
+                    NormalPinHash = Hash("5555"),
+                    DuressPinHash = Hash("0000"),
+                    CreatedAt = DateTime.UtcNow
+                }
+            );
+
+            // BANK ACCOUNTS
             await context.BankAccounts.AddRangeAsync(
                 new BankAccount
                 {
@@ -239,7 +256,7 @@ namespace SecureEscape.Api.Data
                 }
             );
 
-            // ── BENEFICIARIES ──────────────────────────────────────────────
+            // BENEFICIARIES
             await context.Beneficiaries.AddRangeAsync(
                 new Beneficiary
                 {
@@ -276,7 +293,7 @@ namespace SecureEscape.Api.Data
                 }
             );
 
-            // ── ADMIN USERS ────────────────────────────────────────────────
+            // ADMIN USERS
             await context.AdminUsers.AddRangeAsync(
                 new AdminUser
                 {
@@ -302,6 +319,203 @@ namespace SecureEscape.Api.Data
                 }
             );
 
+            await context.SaveChangesAsync();
+        }
+
+        private static async Task SeedRiskZonesAsync(AppDbContext context)
+        {
+            if (await context.RiskZones.AnyAsync())
+            {
+                return;
+            }
+
+            var createdAt = DateTime.UtcNow;
+
+            var zones = new List<RiskZone>
+            {
+                new()
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000001"),
+                    Name = "Alexandra",
+                    RiskLevel = RiskLevel.High,
+                    Latitude = -26.1025m,
+                    Longitude = 28.1005m,
+                    RadiusMeters = 2600,
+                    RiskScore = 88m,
+                    IncidentCount = 14,
+                    DuressEventCount = 9,
+                    Description = "Area currently configured as a higher-risk zone for Secure Escape safety awareness.",
+                    IsActive = true,
+                    CreatedAt = createdAt
+                },
+                new()
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000002"),
+                    Name = "Hillbrow",
+                    RiskLevel = RiskLevel.High,
+                    Latitude = -26.1906m,
+                    Longitude = 28.0467m,
+                    RadiusMeters = 2200,
+                    RiskScore = 82m,
+                    IncidentCount = 11,
+                    DuressEventCount = 7,
+                    Description = "Area currently configured as a higher-risk zone for Secure Escape safety awareness.",
+                    IsActive = true,
+                    CreatedAt = createdAt
+                },
+                new()
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000003"),
+                    Name = "Rosettenville",
+                    RiskLevel = RiskLevel.High,
+                    Latitude = -26.2607m,
+                    Longitude = 28.0357m,
+                    RadiusMeters = 2400,
+                    RiskScore = 78m,
+                    IncidentCount = 10,
+                    DuressEventCount = 6,
+                    Description = "Area currently configured as a higher-risk zone for Secure Escape safety awareness.",
+                    IsActive = true,
+                    CreatedAt = createdAt
+                },
+                new()
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000004"),
+                    Name = "Jeppestown",
+                    RiskLevel = RiskLevel.High,
+                    Latitude = -26.1952m,
+                    Longitude = 28.0648m,
+                    RadiusMeters = 1900,
+                    RiskScore = 74m,
+                    IncidentCount = 8,
+                    DuressEventCount = 5,
+                    Description = "Area currently configured as a higher-risk zone for Secure Escape safety awareness.",
+                    IsActive = true,
+                    CreatedAt = createdAt
+                },
+                new()
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000005"),
+                    Name = "Soweto",
+                    RiskLevel = RiskLevel.High,
+                    Latitude = -26.2485m,
+                    Longitude = 27.8546m,
+                    RadiusMeters = 3000,
+                    RiskScore = 76m,
+                    IncidentCount = 12,
+                    DuressEventCount = 7,
+                    Description = "Area currently configured as a higher-risk zone for Secure Escape safety awareness.",
+                    IsActive = true,
+                    CreatedAt = createdAt
+                },
+                new()
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000006"),
+                    Name = "Braamfontein",
+                    RiskLevel = RiskLevel.Medium,
+                    Latitude = -26.1929m,
+                    Longitude = 28.0311m,
+                    RadiusMeters = 1800,
+                    RiskScore = 58m,
+                    IncidentCount = 7,
+                    DuressEventCount = 3,
+                    Description = "Area currently configured for elevated-risk awareness.",
+                    IsActive = true,
+                    CreatedAt = createdAt
+                },
+                new()
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000007"),
+                    Name = "Berea",
+                    RiskLevel = RiskLevel.Medium,
+                    Latitude = -26.1851m,
+                    Longitude = 28.0507m,
+                    RadiusMeters = 1700,
+                    RiskScore = 54m,
+                    IncidentCount = 6,
+                    DuressEventCount = 3,
+                    Description = "Area currently configured for elevated-risk awareness.",
+                    IsActive = true,
+                    CreatedAt = createdAt
+                },
+                new()
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000008"),
+                    Name = "Johannesburg CBD",
+                    RiskLevel = RiskLevel.Medium,
+                    Latitude = -26.2041m,
+                    Longitude = 28.0473m,
+                    RadiusMeters = 2000,
+                    RiskScore = 49m,
+                    IncidentCount = 5,
+                    DuressEventCount = 2,
+                    Description = "Area currently configured for elevated-risk awareness.",
+                    IsActive = true,
+                    CreatedAt = createdAt
+                },
+                new()
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000009"),
+                    Name = "Sandton",
+                    RiskLevel = RiskLevel.Low,
+                    Latitude = -26.1076m,
+                    Longitude = 28.0567m,
+                    RadiusMeters = 2300,
+                    RiskScore = 22m,
+                    IncidentCount = 2,
+                    DuressEventCount = 1,
+                    Description = "Area currently configured as a lower-risk zone in Secure Escape.",
+                    IsActive = true,
+                    CreatedAt = createdAt
+                },
+                new()
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000010"),
+                    Name = "Rosebank",
+                    RiskLevel = RiskLevel.Low,
+                    Latitude = -26.1466m,
+                    Longitude = 28.0368m,
+                    RadiusMeters = 1800,
+                    RiskScore = 19m,
+                    IncidentCount = 2,
+                    DuressEventCount = 1,
+                    Description = "Area currently configured as a lower-risk zone in Secure Escape.",
+                    IsActive = true,
+                    CreatedAt = createdAt
+                },
+                new()
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000011"),
+                    Name = "Fourways",
+                    RiskLevel = RiskLevel.Low,
+                    Latitude = -26.0196m,
+                    Longitude = 28.0126m,
+                    RadiusMeters = 2400,
+                    RiskScore = 14m,
+                    IncidentCount = 1,
+                    DuressEventCount = 0,
+                    Description = "Area currently configured as a lower-risk zone in Secure Escape.",
+                    IsActive = true,
+                    CreatedAt = createdAt
+                },
+                new()
+                {
+                    Id = Guid.Parse("e1000000-0000-0000-0000-000000000012"),
+                    Name = "Melrose",
+                    RiskLevel = RiskLevel.Low,
+                    Latitude = -26.1299m,
+                    Longitude = 28.0829m,
+                    RadiusMeters = 1600,
+                    RiskScore = 12m,
+                    IncidentCount = 1,
+                    DuressEventCount = 0,
+                    Description = "Area currently configured as a lower-risk zone in Secure Escape.",
+                    IsActive = true,
+                    CreatedAt = createdAt
+                }
+            };
+
+            await context.RiskZones.AddRangeAsync(zones);
             await context.SaveChangesAsync();
         }
     }

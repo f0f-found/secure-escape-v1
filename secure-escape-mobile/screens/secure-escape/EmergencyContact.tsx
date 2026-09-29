@@ -1,23 +1,26 @@
-import React, { useState, useRef } from "react";
+import React, { useRef, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Animated,
+  Modal,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
-  StyleSheet,
   TouchableOpacity,
-  Animated,
-  ScrollView,
-  Modal,
   TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "@/utils/theme";
+import * as Contacts from "expo-contacts/legacy";
 import { useLocalSearchParams, useRouter } from "expo-router";
+
+import { colors } from "@/utils/theme";
 import { addEmergencyContact } from "@/services/emergencyContactService";
+import { completeEnrollment } from "@/services/secureEscapeService";
 import { ErrorBanner, ErrorModal } from "@/components/FormErrorMessage";
-import * as Contacts from "expo-contacts";
 
 type LocalContact = {
   id: string;
@@ -31,6 +34,8 @@ type LocalContact = {
 export default function EmergencyContact() {
   const router = useRouter();
   const { from } = useLocalSearchParams<{ from?: string }>();
+  const isOnboarding = from === "onboarding";
+
   const [contacts, setContacts] = useState<LocalContact[]>([
     {
       id: Date.now().toString(),
@@ -41,13 +46,15 @@ export default function EmergencyContact() {
       isPrimary: false,
     },
   ]);
+
   const [validContactAdded, setValidContactAdded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showErrorModal, setShowErrorModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
   const buttonScale = useRef(new Animated.Value(1)).current;
   const skipScale = useRef(new Animated.Value(1)).current;
 
-  // "Why add a safety contact?" modal
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const infoFadeAnim = useRef(new Animated.Value(0)).current;
   const infoScaleAnim = useRef(new Animated.Value(0.9)).current;
@@ -63,8 +70,9 @@ export default function EmergencyContact() {
   };
 
   const openInfoModal = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setInfoModalVisible(true);
+
     Animated.parallel([
       Animated.timing(infoFadeAnim, {
         toValue: 1,
@@ -103,6 +111,7 @@ export default function EmergencyContact() {
         contact.surname.trim() !== "" &&
         contact.phone.trim() !== "",
     );
+
     setValidContactAdded(hasValid);
     return hasValid;
   };
@@ -112,9 +121,11 @@ export default function EmergencyContact() {
       showError("You need at least one emergency contact slot.");
       return;
     }
-    const newContacts = contacts.filter((c) => c.id !== id);
+
+    const newContacts = contacts.filter((contact) => contact.id !== id);
     setContacts(newContacts);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     checkValidContacts(newContacts);
   };
 
@@ -126,6 +137,7 @@ export default function EmergencyContact() {
     const newContacts = contacts.map((contact) =>
       contact.id === id ? { ...contact, [field]: value } : contact,
     );
+
     setContacts(newContacts);
     clearError();
     checkValidContacts(newContacts);
@@ -133,7 +145,10 @@ export default function EmergencyContact() {
 
   const getValidationMessage = () => {
     const completeContacts = contacts.filter(
-      (c) => c.name.trim() && c.surname.trim() && c.phone.trim(),
+      (contact) =>
+        contact.name.trim() &&
+        contact.surname.trim() &&
+        contact.phone.trim(),
     );
 
     if (completeContacts.length === 0) {
@@ -159,26 +174,41 @@ export default function EmergencyContact() {
     return null;
   };
 
-  const goToNextScreen = () => {
-    if (from === "onboarding") {
-      router.push("/secure-escape/congrats");
-    } else {
-      router.push("/secure-escape/manage-secure-escape");
+  const finishAfterSaving = async () => {
+    if (isOnboarding) {
+      await completeEnrollment();
+      router.replace("/secure-escape/congrats");
+      return;
     }
+
+    router.replace("/secure-escape/manage-secure-escape");
   };
 
   const handleAddContact = async () => {
+    if (isSaving) {
+      return;
+    }
+
     const validationMessage = getValidationMessage();
 
     if (validationMessage) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      void Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Error,
+      );
+
       showError(validationMessage);
       return;
     }
 
     try {
+      setIsSaving(true);
+      clearError();
+
       const validContacts = contacts.filter(
-        (c) => c.name.trim() && c.surname.trim() && c.phone.trim(),
+        (contact) =>
+          contact.name.trim() &&
+          contact.surname.trim() &&
+          contact.phone.trim(),
       );
 
       for (const contact of validContacts) {
@@ -191,19 +221,33 @@ export default function EmergencyContact() {
         });
       }
 
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      goToNextScreen();
-    } catch (err) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showError(
-        err instanceof Error ? err.message : "Failed to save contacts.",
+      await finishAfterSaving();
+
+      void Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Success,
       );
+    } catch (err) {
+      void Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Error,
+      );
+
+      showError(
+        err instanceof Error
+          ? err.message
+          : "Failed to save your emergency contact.",
+      );
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleSkip = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    goToNextScreen();
+    if (isOnboarding || isSaving) {
+      return;
+    }
+
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.replace("/secure-escape/manage-secure-escape");
   };
 
   const animateButton = (anim: Animated.Value) => {
@@ -223,10 +267,15 @@ export default function EmergencyContact() {
   };
 
   const addContact = () => {
+    if (isSaving) {
+      return;
+    }
+
     if (contacts.length >= 5) {
       showError("You can add up to 5 emergency contacts.");
       return;
     }
+
     const newContact: LocalContact = {
       id: Date.now().toString(),
       name: "",
@@ -235,13 +284,19 @@ export default function EmergencyContact() {
       relationship: "",
       isPrimary: false,
     };
+
     const newContacts = [...contacts, newContact];
     setContacts(newContacts);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     checkValidContacts(newContacts);
   };
 
   const importFromContacts = async () => {
+    if (isSaving) {
+      return;
+    }
+
     try {
       const { status } = await Contacts.requestPermissionsAsync();
 
@@ -252,23 +307,41 @@ export default function EmergencyContact() {
 
       const picked = await Contacts.presentContactPickerAsync();
 
-      if (!picked) return; // user cancelled the picker
+      if (!picked) {
+        return;
+      }
 
-      const phoneNumber = picked.phoneNumbers?.[0]?.number?.trim() ?? "";
       const firstName = picked.firstName?.trim() ?? "";
       const lastName = picked.lastName?.trim() ?? "";
+      const phoneNumber =
+        picked.phoneNumbers?.[0]?.number?.trim() ?? "";
+
+      if (!phoneNumber) {
+        showError(
+          "This contact does not have a phone number. Please choose another contact or enter the number manually.",
+        );
+        return;
+      }
 
       const firstEmptyIndex = contacts.findIndex(
-        (c) => !c.name.trim() && !c.surname.trim() && !c.phone.trim(),
+        (contact) =>
+          !contact.name.trim() &&
+          !contact.surname.trim() &&
+          !contact.phone.trim(),
       );
 
       let newContacts: LocalContact[];
 
       if (firstEmptyIndex !== -1) {
-        newContacts = contacts.map((c, i) =>
-          i === firstEmptyIndex
-            ? { ...c, name: firstName, surname: lastName, phone: phoneNumber }
-            : c,
+        newContacts = contacts.map((contact, index) =>
+          index === firstEmptyIndex
+            ? {
+                ...contact,
+                name: firstName,
+                surname: lastName,
+                phone: phoneNumber,
+              }
+            : contact,
         );
       } else {
         if (contacts.length >= 5) {
@@ -290,11 +363,19 @@ export default function EmergencyContact() {
       }
 
       setContacts(newContacts);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      void Haptics.impactAsync(
+        Haptics.ImpactFeedbackStyle.Light,
+      );
+
       checkValidContacts(newContacts);
       clearError();
     } catch (err) {
-      showError("Failed to import contact. Please try adding it manually.");
+      console.error("Failed to import contact:", err);
+
+      showError(
+        "Failed to import contact. Please try again or add it manually.",
+      );
     }
   };
 
@@ -303,25 +384,40 @@ export default function EmergencyContact() {
       style={{ flex: 1, backgroundColor: "#fff" }}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
     >
       <LinearGradient
         colors={["#5B8DEF", "#6C63FF"]}
         style={styles.gradientHeader}
       >
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          disabled={isSaving}
+        >
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
+
         <Text style={styles.headerTitle}>Emergency Contact</Text>
       </LinearGradient>
 
       <View style={styles.whiteCard}>
-        <Text style={styles.mainTitle}>Add a Safety Contact (Optional)</Text>
-        <Text style={styles.sub}>
-          If you ever use your duress PIN, we can silently notify someone you
-          trust — without alerting the attacker.
+        <Text style={styles.mainTitle}>
+          Add a Safety Contact
         </Text>
-        <TouchableOpacity onPress={openInfoModal}>
-          <Text style={styles.link}>Why add a safety contact? </Text>
+
+        <Text style={styles.sub}>
+          {isOnboarding
+            ? "Add at least one trusted contact to complete your Secure Escape setup."
+            : "Add someone you trust who can be notified when your duress PIN is used."}
+        </Text>
+
+        <TouchableOpacity
+          onPress={openInfoModal}
+          disabled={isSaving}
+        >
+          <Text style={styles.link}>
+            Why add a safety contact?
+          </Text>
         </TouchableOpacity>
 
         <View style={styles.noteBox}>
@@ -331,22 +427,29 @@ export default function EmergencyContact() {
             color={colors.primary}
             style={styles.noteIcon}
           />
+
           <Text style={styles.noteText}>
             <Text style={styles.boldText}>
               Only add someone you trust completely
-            </Text>{" "}
-            — they will be notified in an emergency.
+            </Text>
+            {" — "}
+            this contact may receive a notification when a duress
+            incident is triggered.
           </Text>
         </View>
 
         {contacts.map((contact, index) => (
           <View key={contact.id} style={styles.contactCard}>
             <View style={styles.contactHeader}>
-              <Text style={styles.contactTitle}>Contact {index + 1}</Text>
+              <Text style={styles.contactTitle}>
+                Contact {index + 1}
+              </Text>
+
               {contacts.length > 1 && (
                 <TouchableOpacity
                   onPress={() => removeContact(contact.id)}
                   style={styles.deleteButton}
+                  disabled={isSaving}
                 >
                   <Ionicons
                     name="trash-outline"
@@ -362,12 +465,16 @@ export default function EmergencyContact() {
               <TextInput
                 style={styles.input}
                 value={contact.name}
-                onChangeText={(text) => updateContact(contact.id, "name", text)}
+                onChangeText={(text) =>
+                  updateContact(contact.id, "name", text)
+                }
                 maxLength={50}
                 placeholder="First name"
                 placeholderTextColor="#aaa"
+                editable={!isSaving}
               />
             </View>
+
             <View style={styles.field}>
               <Text style={styles.label}>Surname</Text>
               <TextInput
@@ -379,8 +486,10 @@ export default function EmergencyContact() {
                 maxLength={50}
                 placeholder="Last name"
                 placeholderTextColor="#aaa"
+                editable={!isSaving}
               />
             </View>
+
             <View style={styles.field}>
               <Text style={styles.label}>Phone Number</Text>
               <TextInput
@@ -393,32 +502,58 @@ export default function EmergencyContact() {
                 keyboardType="phone-pad"
                 placeholder="+27 XX XXX XXXX"
                 placeholderTextColor="#aaa"
+                editable={!isSaving}
               />
             </View>
+
             <View style={styles.field}>
               <Text style={styles.label}>Relationship</Text>
               <TextInput
                 style={styles.input}
                 value={contact.relationship}
                 onChangeText={(text) =>
-                  updateContact(contact.id, "relationship", text)
+                  updateContact(
+                    contact.id,
+                    "relationship",
+                    text,
+                  )
                 }
                 maxLength={50}
                 placeholder="e.g. Mother, Friend"
                 placeholderTextColor="#aaa"
+                editable={!isSaving}
               />
             </View>
 
             <TouchableOpacity
               style={styles.primaryRow}
               onPress={() =>
-                updateContact(contact.id, "isPrimary", !contact.isPrimary)
+                updateContact(
+                  contact.id,
+                  "isPrimary",
+                  !contact.isPrimary,
+                )
               }
+              disabled={isSaving}
             >
               <View
-                style={[styles.checkbox, contact.isPrimary && styles.checked]}
-              />
-              <Text style={styles.checkLabel}>Set as primary contact</Text>
+                style={[
+                  styles.checkbox,
+                  contact.isPrimary && styles.checked,
+                ]}
+              >
+                {contact.isPrimary && (
+                  <Ionicons
+                    name="checkmark"
+                    size={14}
+                    color="#fff"
+                  />
+                )}
+              </View>
+
+              <Text style={styles.checkLabel}>
+                Set as primary contact
+              </Text>
             </TouchableOpacity>
           </View>
         ))}
@@ -426,78 +561,121 @@ export default function EmergencyContact() {
         <TouchableOpacity
           style={styles.importButton}
           onPress={importFromContacts}
+          disabled={isSaving}
         >
           <Ionicons
             name="phone-portrait-outline"
             size={22}
             color={colors.primary}
           />
-          <Text style={styles.importButtonText}>Import from Contacts</Text>
+
+          <Text style={styles.importButtonText}>
+            Import from Contacts
+          </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.addButton} onPress={addContact}>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={addContact}
+          disabled={isSaving}
+        >
           <Ionicons
             name="add-circle-outline"
             size={22}
             color={colors.primary}
           />
-          <Text style={styles.addButtonText}>Add Another Contact</Text>
+
+          <Text style={styles.addButtonText}>
+            Add Another Contact
+          </Text>
         </TouchableOpacity>
 
-        <ErrorBanner message={error} onPress={() => setShowErrorModal(true)} />
+        <ErrorBanner
+          message={error}
+          onPress={() => setShowErrorModal(true)}
+        />
 
-        {/* Premium button row */}
         <View style={styles.buttonsRow}>
           <TouchableOpacity
             style={[
               styles.actionButtonWrapper,
-              !validContactAdded && styles.disabledWrapper,
+              (!validContactAdded || isSaving) &&
+                styles.disabledWrapper,
             ]}
             onPress={() => {
-              if (validContactAdded) {
+              if (validContactAdded && !isSaving) {
                 animateButton(buttonScale);
-                handleAddContact();
-              } else {
-                Haptics.notificationAsync(
+                void handleAddContact();
+              } else if (!isSaving) {
+                void Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Error,
                 );
               }
             }}
-            disabled={!validContactAdded}
+            disabled={!validContactAdded || isSaving}
             activeOpacity={0.8}
           >
             <Animated.View
-              style={{ transform: [{ scale: buttonScale }], width: "100%" }}
+              style={{
+                transform: [{ scale: buttonScale }],
+                width: "100%",
+              }}
             >
               <LinearGradient
                 colors={
-                  validContactAdded ? ["#7C6EF7", "#4A6CF7"] : ["#ccc", "#ccc"]
+                  validContactAdded && !isSaving
+                    ? ["#7C6EF7", "#4A6CF7"]
+                    : ["#ccc", "#ccc"]
                 }
                 style={styles.gradientButton}
               >
-                <Text style={styles.buttonText}>Add Contact</Text>
+                {isSaving ? (
+                  <View style={styles.savingRow}>
+                    <ActivityIndicator
+                      size="small"
+                      color="#fff"
+                    />
+
+                    <Text style={styles.buttonText}>
+                      {isOnboarding
+                        ? "Activating..."
+                        : "Saving..."}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={styles.buttonText}>
+                    {isOnboarding
+                      ? "Complete Setup"
+                      : "Add Contact"}
+                  </Text>
+                )}
               </LinearGradient>
             </Animated.View>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.skipButton}
-            onPress={() => {
-              animateButton(skipScale);
-              handleSkip();
-            }}
-            activeOpacity={0.7}
-          >
-            <Animated.View
-              style={{
-                transform: [{ scale: skipScale }],
-                width: "100%",
-                alignItems: "center",
+          {!isOnboarding && (
+            <TouchableOpacity
+              style={styles.skipButton}
+              onPress={() => {
+                animateButton(skipScale);
+                handleSkip();
               }}
+              disabled={isSaving}
+              activeOpacity={0.7}
             >
-              <Text style={styles.skipButtonText}>Skip</Text>
-            </Animated.View>
-          </TouchableOpacity>
+              <Animated.View
+                style={{
+                  transform: [{ scale: skipScale }],
+                  width: "100%",
+                  alignItems: "center",
+                }}
+              >
+                <Text style={styles.skipButtonText}>
+                  Cancel
+                </Text>
+              </Animated.View>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -508,7 +686,6 @@ export default function EmergencyContact() {
         onClose={() => setShowErrorModal(false)}
       />
 
-      {/* Modal: "Why add a safety contact?" */}
       <Modal
         transparent
         visible={infoModalVisible}
@@ -517,62 +694,45 @@ export default function EmergencyContact() {
       >
         <TouchableWithoutFeedback onPress={closeInfoModal}>
           <Animated.View
-            style={[styles.modalOverlay, { opacity: infoFadeAnim }]}
+            style={[
+              styles.modalOverlay,
+              { opacity: infoFadeAnim },
+            ]}
           >
-            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+            <TouchableWithoutFeedback>
               <Animated.View
                 style={[
                   styles.modalCard,
-                  { transform: [{ scale: infoScaleAnim }] },
+                  {
+                    transform: [
+                      { scale: infoScaleAnim },
+                    ],
+                  },
                 ]}
               >
                 <TouchableOpacity
                   style={styles.closeButton}
                   onPress={closeInfoModal}
                 >
-                  <Ionicons name="close" size={24} color={colors.navy} />
+                  <Ionicons
+                    name="close"
+                    size={24}
+                    color={colors.navy}
+                  />
                 </TouchableOpacity>
 
-                <Text style={styles.modalTitle}>Why add a safety contact?</Text>
+                <Text style={styles.modalTitle}>
+                  Why add a safety contact?
+                </Text>
 
                 <View style={styles.bulletList}>
-                  <View style={styles.bulletItem}>
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={20}
-                      color={colors.primary}
-                    />
-                    <Text style={styles.bulletText}>
-                      Your safety contact will receive a silent SMS if your
-                      duress PIN is ever used. It will include your last known
-                      location so they can alert authorities if needed.
-                    </Text>
-                  </View>
-                  <View style={styles.bulletItem}>
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={20}
-                      color={colors.primary}
-                    />
-                    <Text style={styles.bulletText}>
-                      Attackers will see{" "}
-                      <Text style={styles.boldText}>
-                        NO indication on your phone
-                      </Text>
-                      . The SMS is sent silently in the background.
-                    </Text>
-                  </View>
-                  <View style={styles.bulletItem}>
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={20}
-                      color={colors.primary}
-                    />
-                    <Text style={styles.bulletText}>
-                      You are in control. You can add, change, or remove this
-                      contact at any time through the app.
-                    </Text>
-                  </View>
+                  <InfoItem text="A trusted contact can be notified when your duress PIN triggers a Secure Escape incident." />
+
+                  <InfoItem text="When location information is available for the incident, it can help the Secure Escape response workflow." />
+
+                  <InfoItem text="The banking experience remains discreet while the duress response runs in the background." />
+
+                  <InfoItem text="You can manage your emergency contacts later through Secure Escape settings." />
                 </View>
               </Animated.View>
             </TouchableWithoutFeedback>
@@ -583,10 +743,25 @@ export default function EmergencyContact() {
   );
 }
 
+function InfoItem({ text }: { text: string }) {
+  return (
+    <View style={styles.bulletItem}>
+      <Ionicons
+        name="checkmark-circle"
+        size={20}
+        color={colors.primary}
+      />
+
+      <Text style={styles.bulletText}>{text}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
   },
+
   gradientHeader: {
     paddingTop: 65,
     paddingHorizontal: 20,
@@ -595,7 +770,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  headerTitle: { fontSize: 20, fontWeight: "800", color: "#fff" },
+
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#fff",
+  },
+
   whiteCard: {
     flex: 1,
     backgroundColor: "#fff",
@@ -604,24 +785,28 @@ const styles = StyleSheet.create({
     padding: 24,
     marginTop: -16,
   },
+
   mainTitle: {
     fontSize: 24,
     fontWeight: "800",
     color: colors.primary,
     marginBottom: 6,
   },
+
   sub: {
     fontSize: 14,
     color: colors.textSub,
     marginBottom: 4,
     lineHeight: 20,
   },
+
   link: {
     fontSize: 13,
     color: colors.primary,
     textDecorationLine: "underline",
     marginVertical: 8,
   },
+
   noteBox: {
     flexDirection: "row",
     backgroundColor: "#F5F3FF",
@@ -631,20 +816,30 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: colors.primary,
   },
-  noteIcon: { marginRight: 10, marginTop: 1 },
+
+  noteIcon: {
+    marginRight: 10,
+    marginTop: 1,
+  },
+
   noteText: {
     fontSize: 13,
     color: "#444",
     lineHeight: 20,
     flex: 1,
   },
-  boldText: { fontWeight: "700" },
+
+  boldText: {
+    fontWeight: "700",
+  },
+
   primaryRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
     marginTop: 4,
   },
+
   checkbox: {
     width: 20,
     height: 20,
@@ -652,15 +847,20 @@ const styles = StyleSheet.create({
     borderColor: colors.greyLine,
     borderRadius: 5,
     backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
   },
+
   checked: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
+
   checkLabel: {
     fontSize: 13,
     color: colors.textSub,
   },
+
   contactCard: {
     backgroundColor: colors.white,
     borderRadius: 20,
@@ -669,32 +869,43 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.03,
     shadowRadius: 6,
     elevation: 2,
   },
+
   contactHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
   },
+
   contactTitle: {
     fontSize: 15,
     fontWeight: "700",
     color: colors.navy,
   },
+
   deleteButton: {
     padding: 4,
   },
-  field: { marginBottom: 16 },
+
+  field: {
+    marginBottom: 16,
+  },
+
   label: {
     fontSize: 14,
     fontWeight: "600",
     color: colors.navy,
     marginBottom: 6,
   },
+
   input: {
     borderWidth: 1.5,
     borderColor: colors.greyLine,
@@ -703,6 +914,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     backgroundColor: "#FAFAFA",
   },
+
   importButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -713,11 +925,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#F0EFFF",
     borderRadius: 40,
   },
+
   importButtonText: {
     fontSize: 14,
     fontWeight: "600",
     color: colors.primary,
   },
+
   addButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -730,16 +944,19 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     borderStyle: "dashed",
   },
+
   addButtonText: {
     fontSize: 14,
     fontWeight: "600",
     color: colors.primary,
   },
+
   buttonsRow: {
     flexDirection: "row",
     gap: 12,
     marginTop: 8,
   },
+
   skipButton: {
     flex: 1,
     backgroundColor: "#fff",
@@ -750,36 +967,52 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.primary,
     shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.1,
     shadowRadius: 6,
     elevation: 3,
   },
+
   skipButtonText: {
     color: colors.primary,
     fontSize: 16,
     fontWeight: "600",
     letterSpacing: 0.3,
   },
+
   actionButtonWrapper: {
     flex: 2,
     borderRadius: 50,
     overflow: "hidden",
   },
+
   disabledWrapper: {
     opacity: 0.6,
   },
+
   gradientButton: {
     paddingVertical: 16,
     alignItems: "center",
     width: "100%",
   },
+
   buttonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.5,
   },
+
+  savingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -787,6 +1020,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
   },
+
   modalCard: {
     backgroundColor: "#fff",
     borderRadius: 20,
@@ -794,11 +1028,15 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 360,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 15,
   },
+
   closeButton: {
     position: "absolute",
     top: 12,
@@ -806,21 +1044,25 @@ const styles = StyleSheet.create({
     padding: 4,
     zIndex: 1,
   },
+
   modalTitle: {
     fontSize: 22,
     fontWeight: "700",
     color: colors.navy,
-    marginBottom: 6,
+    marginBottom: 14,
     letterSpacing: 0.5,
   },
+
   bulletList: {
     marginBottom: 8,
   },
+
   bulletItem: {
     flexDirection: "row",
     alignItems: "flex-start",
     marginBottom: 14,
   },
+
   bulletText: {
     fontSize: 14,
     color: "#444",

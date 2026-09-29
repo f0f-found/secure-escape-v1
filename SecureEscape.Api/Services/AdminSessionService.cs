@@ -28,11 +28,14 @@ public class AdminSessionService : IAdminSessionService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<List<DuressSessionSummaryResponseDto>> GetDuressSessionsAsync(Guid? bankIntegrationId)
+    public async Task<List<DuressSessionSummaryResponseDto>> GetDuressSessionsAsync(
+        Guid? bankIntegrationId)
     {
         await ExpireStaleActiveSessionsAsync();
 
-        var sessions = await _userSessionRepository.GetDuressSessionsAsync(bankIntegrationId);
+        var sessions =
+            await _userSessionRepository.GetDuressSessionsAsync(
+                bankIntegrationId);
 
         return sessions.Select(MapToSummary).ToList();
     }
@@ -84,14 +87,14 @@ public class AdminSessionService : IAdminSessionService
         return MapToDetail(session);
     }
 
-    // Assign Analyst to Session
     public async Task<DuressSessionDetailResponseDto?> AssignSessionAsync(
         Guid sessionId,
         AssignSessionRequestDto request,
         Guid? bankIntegrationId,
         Guid assignedByAdminUserId)
     {
-        var session = await _userSessionRepository.GetByIdAsync(sessionId);
+        var session =
+            await _userSessionRepository.GetByIdAsync(sessionId);
 
         if (session == null)
         {
@@ -127,7 +130,6 @@ public class AdminSessionService : IAdminSessionService
         };
 
         await _userSessionRepository.AddActionAsync(action);
-
         await _unitOfWork.SaveChangesAsync();
 
         await _auditService.LogAsync(
@@ -150,7 +152,8 @@ public class AdminSessionService : IAdminSessionService
         Guid? bankIntegrationId,
         Guid adminUserId)
     {
-        var session = await _userSessionRepository.GetByIdAsync(sessionId);
+        var session =
+            await _userSessionRepository.GetByIdAsync(sessionId);
 
         if (session == null)
         {
@@ -189,7 +192,6 @@ public class AdminSessionService : IAdminSessionService
         };
 
         await _userSessionRepository.AddActionAsync(action);
-
         await _unitOfWork.SaveChangesAsync();
 
         await _auditService.LogAsync(
@@ -239,7 +241,8 @@ public class AdminSessionService : IAdminSessionService
         Guid? bankIntegrationId,
         Guid adminUserId)
     {
-        var session = await _userSessionRepository.GetByIdAsync(sessionId);
+        var session =
+            await _userSessionRepository.GetByIdAsync(sessionId);
 
         if (session == null)
         {
@@ -255,18 +258,25 @@ public class AdminSessionService : IAdminSessionService
             return null;
         }
 
-        if (session.AssignedAdminUserId == null)
-        {
-            session.AssignedAdminUserId = adminUserId;
-        }
-
-        session.CaseStatus = request.CaseStatus;
-
+        // Resolved and FalseAlarm are final case outcomes.
+        // They must not be set through this generic status endpoint.
+        // Resolved is reached through manager approval.
         if (request.CaseStatus == CaseStatus.Resolved ||
             request.CaseStatus == CaseStatus.FalseAlarm)
         {
-            session.CaseResolvedAt = DateTime.UtcNow;
+            return null;
         }
+
+        if (session.AssignedAdminUserId == null)
+        {
+            session.AssignedAdminUserId = adminUserId;
+            session.AssignedAt ??= DateTime.UtcNow;
+        }
+
+        session.CaseStatus = request.CaseStatus;
+        session.CaseResolvedAt = null;
+        session.ResolvedByAdminUserId = null;
+        session.UpdatedAt = DateTime.UtcNow;
 
         await _userSessionRepository.UpdateAsync(session);
 
@@ -275,11 +285,7 @@ public class AdminSessionService : IAdminSessionService
             Id = Guid.NewGuid(),
             UserSessionId = session.Id,
             AdminUserId = adminUserId,
-            ActionType = request.CaseStatus == CaseStatus.Resolved
-                ? AlertActionType.Resolved
-                : request.CaseStatus == CaseStatus.FalseAlarm
-                    ? AlertActionType.MarkedFalseAlarm
-                    : AlertActionType.Assigned,
+            ActionType = AlertActionType.Assigned,
             Notes = string.IsNullOrWhiteSpace(request.Notes)
                 ? $"Case status updated to {request.CaseStatus}."
                 : request.Notes,
@@ -287,7 +293,6 @@ public class AdminSessionService : IAdminSessionService
         };
 
         await _userSessionRepository.AddActionAsync(action);
-
         await _unitOfWork.SaveChangesAsync();
 
         await _auditService.LogAsync(
@@ -311,7 +316,8 @@ public class AdminSessionService : IAdminSessionService
         Guid? bankIntegrationId,
         Guid adminUserId)
     {
-        var session = await _userSessionRepository.GetByIdAsync(sessionId);
+        var session =
+            await _userSessionRepository.GetByIdAsync(sessionId);
 
         if (session == null)
         {
@@ -338,7 +344,6 @@ public class AdminSessionService : IAdminSessionService
         };
 
         await _userSessionRepository.AddActionAsync(action);
-
         await _unitOfWork.SaveChangesAsync();
 
         await _auditService.LogAsync(
@@ -398,7 +403,6 @@ public class AdminSessionService : IAdminSessionService
         };
 
         await _userSessionRepository.AddActionAsync(action);
-
         await _unitOfWork.SaveChangesAsync();
 
         await _auditService.LogAsync(
@@ -421,7 +425,8 @@ public class AdminSessionService : IAdminSessionService
         Guid? bankIntegrationId,
         Guid adminUserId)
     {
-        var session = await _userSessionRepository.GetByIdAsync(sessionId);
+        var session =
+            await _userSessionRepository.GetByIdAsync(sessionId);
 
         if (session == null)
         {
@@ -446,8 +451,8 @@ public class AdminSessionService : IAdminSessionService
         session.ResolutionSummary = request.ResolutionSummary;
         session.ResolutionSubmittedAt = DateTime.UtcNow;
 
-        // The analyst submits a recommendation for manager review.
-        // The case is NOT resolved at this point.
+        // Submitting the report does not resolve the case.
+        // A manager must review the analyst's recommendation.
         session.CaseStatus = CaseStatus.Investigating;
         session.CaseResolvedAt = null;
         session.ResolvedByAdminUserId = null;
@@ -455,11 +460,11 @@ public class AdminSessionService : IAdminSessionService
         session.ManagerReviewStatus =
             ManagerReviewStatus.PendingReview;
 
-        // Clear any previous manager decision when the analyst
-        // submits or resubmits the report.
+        // A resubmission creates a new pending review.
+        // Previous return feedback remains preserved in AlertActions.
         session.ManagerReviewedByAdminUserId = null;
         session.ManagerReviewedAt = null;
-        session.ManagerReviewNotes = null;
+        session.ManagerReviewNotes = string.Empty;
 
         session.UpdatedAt = DateTime.UtcNow;
 
@@ -477,7 +482,6 @@ public class AdminSessionService : IAdminSessionService
         };
 
         await _userSessionRepository.AddActionAsync(action);
-
         await _unitOfWork.SaveChangesAsync();
 
         await _auditService.LogAsync(
@@ -501,7 +505,8 @@ public class AdminSessionService : IAdminSessionService
         Guid? bankIntegrationId,
         Guid managerAdminUserId)
     {
-        var session = await _userSessionRepository.GetByIdAsync(sessionId);
+        var session =
+            await _userSessionRepository.GetByIdAsync(sessionId);
 
         if (session == null)
         {
@@ -523,17 +528,27 @@ public class AdminSessionService : IAdminSessionService
             return null;
         }
 
+        // Returning a report requires actionable feedback.
+        if (request.ReviewStatus == ManagerReviewStatus.Rejected &&
+            string.IsNullOrWhiteSpace(request.ReviewNotes))
+        {
+            return null;
+        }
+
         if (session.ManagerReviewStatus !=
             ManagerReviewStatus.PendingReview)
         {
             return null;
         }
 
+        var cleanedReviewNotes =
+            request.ReviewNotes?.Trim() ?? string.Empty;
+
         session.ManagerReviewStatus = request.ReviewStatus;
         session.ManagerReviewedByAdminUserId =
             managerAdminUserId;
         session.ManagerReviewedAt = DateTime.UtcNow;
-        session.ManagerReviewNotes = request.ReviewNotes;
+        session.ManagerReviewNotes = cleanedReviewNotes;
         session.UpdatedAt = DateTime.UtcNow;
 
         AlertActionType actionType;
@@ -551,15 +566,13 @@ public class AdminSessionService : IAdminSessionService
             actionType = AlertActionType.Resolved;
 
             actionNotes =
-                string.IsNullOrWhiteSpace(
-                    request.ReviewNotes)
+                string.IsNullOrWhiteSpace(cleanedReviewNotes)
                     ? "Manager approved the analyst report and resolved the case."
-                    : request.ReviewNotes;
+                    : cleanedReviewNotes;
         }
         else
         {
-            // Rejected reports go back to the analyst
-            // for further investigation.
+            // Returned reports go back to the analyst.
             session.CaseStatus = CaseStatus.Investigating;
             session.CaseResolvedAt = null;
             session.ResolvedByAdminUserId = null;
@@ -567,11 +580,7 @@ public class AdminSessionService : IAdminSessionService
             actionType =
                 AlertActionType.ReturnedForChanges;
 
-            actionNotes =
-                string.IsNullOrWhiteSpace(
-                    request.ReviewNotes)
-                    ? "Manager returned the report for further investigation."
-                    : request.ReviewNotes;
+            actionNotes = cleanedReviewNotes;
         }
 
         await _userSessionRepository.UpdateAsync(session);
@@ -587,7 +596,6 @@ public class AdminSessionService : IAdminSessionService
         };
 
         await _userSessionRepository.AddActionAsync(action);
-
         await _unitOfWork.SaveChangesAsync();
 
         await _auditService.LogAsync(
@@ -675,7 +683,7 @@ public class AdminSessionService : IAdminSessionService
                 session.ResolutionSubmittedAt,
 
             ManagerReviewedAt =
-                session.ManagerReviewedAt,
+                session.ManagerReviewedAt
         };
     }
 
@@ -753,65 +761,52 @@ public class AdminSessionService : IAdminSessionService
 
             NotificationAttemptCount =
                 session.Alerts
-                    .SelectMany(
-                        a => a.NotificationAttempts)
+                    .SelectMany(a => a.NotificationAttempts)
                     .Count(),
 
             HighestSeverity =
                 session.Alerts.Any()
-                    ? session.Alerts.Max(
-                        a => a.Severity)
+                    ? session.Alerts.Max(a => a.Severity)
                     : RiskLevel.Low,
 
             LastLocationAt =
                 session.LocationEvents
-                    .OrderByDescending(
-                        l => l.CapturedAt)
-                    .Select(
-                        l => (DateTime?)l.CapturedAt)
+                    .OrderByDescending(l => l.CapturedAt)
+                    .Select(l => (DateTime?)l.CapturedAt)
                     .FirstOrDefault(),
 
             LastAlertAt =
                 session.Alerts
-                    .OrderByDescending(
-                        a => a.CreatedAt)
-                    .Select(
-                        a => (DateTime?)a.CreatedAt)
+                    .OrderByDescending(a => a.CreatedAt)
+                    .Select(a => (DateTime?)a.CreatedAt)
                     .FirstOrDefault(),
 
             AccountsFrozen =
                 session.User?.BankAccounts
-                    .Any(
-                        a =>
-                            a.Status ==
-                            AccountStatus.Frozen)
+                    .Any(a => a.Status == AccountStatus.Frozen)
                 ?? false,
 
             Alerts =
                 session.Alerts
-                    .OrderByDescending(
-                        a => a.CreatedAt)
+                    .OrderByDescending(a => a.CreatedAt)
                     .Select(MapToAlertLog)
                     .ToList(),
 
             Transactions =
                 session.Transactions
-                    .OrderByDescending(
-                        t => t.CreatedAt)
+                    .OrderByDescending(t => t.CreatedAt)
                     .Select(MapToTransaction)
                     .ToList(),
 
             Locations =
                 session.LocationEvents
-                    .OrderByDescending(
-                        l => l.CapturedAt)
+                    .OrderByDescending(l => l.CapturedAt)
                     .Select(MapToLocation)
                     .ToList(),
 
             Actions =
                 session.AlertActions
-                    .OrderByDescending(
-                        a => a.CreatedAt)
+                    .OrderByDescending(a => a.CreatedAt)
                     .Select(MapToAction)
                     .ToList()
         };
@@ -832,10 +827,8 @@ public class AdminSessionService : IAdminSessionService
 
             NotificationAttempts =
                 alert.NotificationAttempts
-                    .OrderByDescending(
-                        n => n.CreatedAt)
-                    .Select(
-                        MapToNotificationAttempt)
+                    .OrderByDescending(n => n.CreatedAt)
+                    .Select(MapToNotificationAttempt)
                     .ToList()
         };
     }

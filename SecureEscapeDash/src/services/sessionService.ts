@@ -13,7 +13,22 @@ import {
   validateOptionalNotes,
 } from "../utils/validation";
 
-async function handleError(response: Response, fallbackMessage: string) {
+export interface SessionEvidenceItem {
+  id: string;
+  userSessionId: string;
+  bankTransactionId: string | null;
+  evidenceType: string;
+  fileName: string;
+  contentType: string;
+  fileSizeBytes: number;
+  capturedAt: string;
+  createdAt: string;
+}
+
+async function handleError(
+  response: Response,
+  fallbackMessage: string,
+) {
   let details = "";
 
   try {
@@ -22,7 +37,9 @@ async function handleError(response: Response, fallbackMessage: string) {
     details = "";
   }
 
-  throw new Error(`${fallbackMessage} Status: ${response.status}. ${details}`);
+  throw new Error(
+    `${fallbackMessage} Status: ${response.status}. ${details}`,
+  );
 }
 
 function getHeaders() {
@@ -32,13 +49,30 @@ function getHeaders() {
   };
 }
 
-export async function getDuressSessions(): Promise<DuressSessionSummary[]> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/admin/duress-sessions`, {
-    headers: getHeaders(),
-  });
+function getEvidenceHeaders() {
+  return {
+    Accept: "application/json",
+    Authorization: `Bearer ${getToken()}`,
+  };
+}
+
+export async function getDuressSessions(): Promise<
+  DuressSessionSummary[]
+> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/admin/duress-sessions`,
+    {
+      headers: getHeaders(),
+    },
+  );
+
   if (!response.ok) {
-    await handleError(response, "Failed to load duress sessions.");
+    await handleError(
+      response,
+      "Failed to load duress sessions.",
+    );
   }
+
   return response.json();
 }
 
@@ -47,10 +81,61 @@ export async function getDuressSessionById(
 ): Promise<DuressSessionDetail> {
   const response = await fetch(
     `${API_BASE_URL}/api/v1/admin/duress-sessions/${id}`,
-    { headers: getHeaders() },
+    {
+      headers: getHeaders(),
+    },
   );
-  if (!response.ok) throw new Error("Failed to load session.");
+
+  if (!response.ok) {
+    throw new Error("Failed to load session.");
+  }
+
   return response.json();
+}
+
+export async function getSessionEvidence(
+  sessionId: string,
+): Promise<SessionEvidenceItem[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/admin/duress-sessions/${sessionId}/evidence`,
+    {
+      headers: getEvidenceHeaders(),
+    },
+  );
+
+  if (!response.ok) {
+    await handleError(
+      response,
+      "Failed to load session evidence.",
+    );
+  }
+
+  return response.json();
+}
+
+export async function getSessionEvidenceFile(
+  sessionId: string,
+  evidenceId: string,
+): Promise<string> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/admin/duress-sessions/${sessionId}/evidence/${evidenceId}/file`,
+    {
+      headers: {
+        Authorization: `Bearer ${getToken()}`,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    await handleError(
+      response,
+      "Failed to load evidence file.",
+    );
+  }
+
+  const blob = await response.blob();
+
+  return URL.createObjectURL(blob);
 }
 
 export async function updateCaseStatus(
@@ -59,8 +144,10 @@ export async function updateCaseStatus(
   notes: string,
 ): Promise<DuressSessionDetail> {
   const cleanedNotes = cleanText(notes);
+
   const validationError =
-    validateCaseStatus(caseStatus) || validateOptionalNotes(cleanedNotes);
+    validateCaseStatus(caseStatus) ||
+    validateOptionalNotes(cleanedNotes);
 
   if (validationError) {
     throw new Error(validationError);
@@ -71,10 +158,17 @@ export async function updateCaseStatus(
     {
       method: "PATCH",
       headers: getHeaders(),
-      body: JSON.stringify({ caseStatus, notes: cleanedNotes }),
+      body: JSON.stringify({
+        caseStatus,
+        notes: cleanedNotes,
+      }),
     },
   );
-  if (!response.ok) throw new Error("Failed to update case status.");
+
+  if (!response.ok) {
+    throw new Error("Failed to update case status.");
+  }
+
   return response.json();
 }
 
@@ -84,8 +178,10 @@ export async function addCaseAction(
   notes: string,
 ): Promise<DuressSessionDetail> {
   const cleanedNotes = cleanText(notes);
+
   const validationError =
-    validateActionType(actionType) || validateOptionalNotes(cleanedNotes);
+    validateActionType(actionType) ||
+    validateOptionalNotes(cleanedNotes);
 
   if (validationError) {
     throw new Error(validationError);
@@ -96,10 +192,17 @@ export async function addCaseAction(
     {
       method: "POST",
       headers: getHeaders(),
-      body: JSON.stringify({ actionType, notes: cleanedNotes }),
+      body: JSON.stringify({
+        actionType,
+        notes: cleanedNotes,
+      }),
     },
   );
-  if (!response.ok) throw new Error("Failed to add action.");
+
+  if (!response.ok) {
+    throw new Error("Failed to add action.");
+  }
+
   return response.json();
 }
 
@@ -114,7 +217,9 @@ export async function freezeSessionAccounts(
     },
   );
 
-  if (!response.ok) throw new Error("Failed to freeze accounts.");
+  if (!response.ok) {
+    throw new Error("Failed to freeze accounts.");
+  }
 
   return response.json();
 }
@@ -130,8 +235,11 @@ export async function dispatchSessionNotifications(
     },
   );
 
-  if (!response.ok)
-    throw new Error("Failed to dispatch session notifications.");
+  if (!response.ok) {
+    throw new Error(
+      "Failed to dispatch session notifications.",
+    );
+  }
 
   return response.json();
 }
@@ -146,10 +254,17 @@ export async function assignCase(
     {
       method: "PATCH",
       headers: getHeaders(),
-      body: JSON.stringify({ adminUserId, notes: cleanText(notes) }),
+      body: JSON.stringify({
+        adminUserId,
+        notes: cleanText(notes),
+      }),
     },
   );
-  if (!response.ok) throw new Error("Failed to assign case.");
+
+  if (!response.ok) {
+    throw new Error("Failed to assign case.");
+  }
+
   return response.json();
 }
 
@@ -164,12 +279,20 @@ export async function submitCaseReport(
       method: "PATCH",
       headers: getHeaders(),
       body: JSON.stringify({
-        investigationSummary: cleanText(investigationSummary),
-        resolutionSummary: cleanText(resolutionSummary),
+        investigationSummary:
+          cleanText(investigationSummary),
+        resolutionSummary:
+          cleanText(resolutionSummary),
       }),
     },
   );
-  if (!response.ok) throw new Error("Failed to submit case report.");
+
+  if (!response.ok) {
+    throw new Error(
+      "Failed to submit case report.",
+    );
+  }
+
   return response.json();
 }
 
@@ -189,19 +312,36 @@ export async function managerReviewCase(
       }),
     },
   );
-  if (!response.ok) throw new Error("Failed to submit manager review.");
+
+  if (!response.ok) {
+    throw new Error(
+      "Failed to submit manager review.",
+    );
+  }
+
   return response.json();
 }
 
-export async function getAnalysts(): Promise<AdminUserSummary[]> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/admin/users/analysts`, {
-    headers: getHeaders(),
-  });
-  if (!response.ok) throw new Error("Failed to load analysts.");
+export async function getAnalysts(): Promise<
+  AdminUserSummary[]
+> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/admin/users/analysts`,
+    {
+      headers: getHeaders(),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to load analysts.");
+  }
+
   return response.json();
 }
 
-export async function claimSession(id: string): Promise<DuressSessionDetail> {
+export async function claimSession(
+  id: string,
+): Promise<DuressSessionDetail> {
   const response = await fetch(
     `${API_BASE_URL}/api/v1/admin/duress-sessions/${id}/claim`,
     {
@@ -210,7 +350,9 @@ export async function claimSession(id: string): Promise<DuressSessionDetail> {
     },
   );
 
-  if (!response.ok) throw new Error("Failed to claim session.");
+  if (!response.ok) {
+    throw new Error("Failed to claim session.");
+  }
 
   return response.json();
 }
@@ -225,11 +367,16 @@ export async function assignSession(
     {
       method: "PATCH",
       headers: getHeaders(),
-      body: JSON.stringify({ adminUserId, notes }),
+      body: JSON.stringify({
+        adminUserId,
+        notes,
+      }),
     },
   );
 
-  if (!response.ok) throw new Error("Failed to assign session.");
+  if (!response.ok) {
+    throw new Error("Failed to assign session.");
+  }
 
   return response.json();
 }
