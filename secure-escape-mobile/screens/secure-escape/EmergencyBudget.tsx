@@ -522,7 +522,7 @@ export default function EmergencyBudgetScreen() {
           activeOpacity={0.8}
         >
           <LinearGradient
-            colors={["#7C6EF7", "#4A6CF7"]}
+            colors={["#25145F", "#25145F"]}
             style={styles.gradientButton}
           >
             <Text style={styles.buttonText}>Continue</Text>
@@ -776,7 +776,7 @@ export default function EmergencyBudgetScreen() {
                   <LinearGradient
                     colors={
                       modalAgreed && !isSaving
-                        ? ["#7C6EF7", "#4A6CF7"]
+                        ? ["#25145F", "#25145F"]
                         : ["#ccc", "#ccc"]
                     }
                     style={styles.modalGradientButton}

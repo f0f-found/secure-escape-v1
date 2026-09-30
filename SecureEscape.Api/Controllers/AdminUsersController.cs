@@ -6,7 +6,7 @@ using SecureEscape.Api.Interfaces;
 namespace SecureEscape.Api.Controllers;
 
 [ApiController]
-[Authorize(Roles = "FraudManager,SystemAdmin")]
+[Authorize]
 [Route("api/v1/admin/users")]
 public class AdminUsersController : ControllerBase
 {
@@ -25,7 +25,23 @@ public class AdminUsersController : ControllerBase
     public async Task<ActionResult<List<AdminUserSummaryResponseDto>>> GetAnalysts()
     {
         var currentAdmin = _currentAdminService.GetCurrentAdmin();
-        var analysts = await _adminUserService.GetAnalystsAsync(currentAdmin.BankIntegrationId);
+
+        var allowedRoles = new[]
+        {
+            "FraudManager",
+            "SystemAdmin",
+            "SecureEscapeAdmin"
+        };
+
+        if (!allowedRoles.Contains(currentAdmin.AdminRole))
+        {
+            return Forbid();
+        }
+
+        var analysts = await _adminUserService.GetAnalystsAsync(
+            currentAdmin.BankIntegrationId
+        );
+
         return Ok(analysts);
     }
 }

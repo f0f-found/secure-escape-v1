@@ -586,7 +586,7 @@ export default function OnceOffTransfer() {
                 onPress={confirmPayment}
               >
                 <LinearGradient
-                  colors={["#7C6EF7", "#4A6CF7"]}
+                  colors={["#25145F", "#25145F"]}
                   style={styles.gradientConfirm}
                 >
                   <Text style={styles.confirmButtonText}>

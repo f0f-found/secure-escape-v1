@@ -742,8 +742,8 @@ export default function CreateTransfer() {
               >
                 <LinearGradient
                   colors={[
-                    "#7C6EF7",
-                    "#4A6CF7",
+                    "#25145F",
+                    "#25145F",
                   ]}
                   style={
                     styles.gradientConfirm

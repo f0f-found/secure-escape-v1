@@ -624,7 +624,7 @@ export default function EmergencyContact() {
               <LinearGradient
                 colors={
                   validContactAdded && !isSaving
-                    ? ["#7C6EF7", "#4A6CF7"]
+                    ? ["#25145F", "#25145F"]
                     : ["#ccc", "#ccc"]
                 }
                 style={styles.gradientButton}

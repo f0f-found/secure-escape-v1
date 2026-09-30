@@ -38,7 +38,7 @@ export default function PinLogin() {
         </View>
         <TextInput style={styles.pinInput} secureTextEntry maxLength={6} keyboardType="numeric" value={pin} onChangeText={setPin} placeholder="••••••" placeholderTextColor="#ccc" />
         <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <LinearGradient colors={['#7C6EF7', '#4A6CF7']} style={styles.gradientButton}>
+          <LinearGradient colors={['#25145F', '#25145F']} style={styles.gradientButton}>
             <Text style={styles.submitText}>Submit</Text>
           </LinearGradient>
         </TouchableOpacity>

@@ -8,7 +8,9 @@ namespace SecureEscape.Api.Middleware;
 public class ActiveSessionMiddleware
 {
     private readonly RequestDelegate _next;
-    private static readonly TimeSpan InactivityTimeout = TimeSpan.FromMinutes(1);
+
+    private static readonly TimeSpan InactivityTimeout =
+        TimeSpan.FromMinutes(15);
 
     public ActiveSessionMiddleware(RequestDelegate next)
     {
@@ -25,7 +27,8 @@ public class ActiveSessionMiddleware
             return;
         }
 
-        var sessionClaim = httpContext.User.FindFirst("userSessionId")?.Value;
+        var sessionClaim = httpContext.User
+            .FindFirst("userSessionId")?.Value;
 
         // Admin tokens do not use customer sessions.
         if (string.IsNullOrWhiteSpace(sessionClaim))
@@ -46,11 +49,11 @@ public class ActiveSessionMiddleware
 
         var session = await dbContext.UserSessions
             .FirstOrDefaultAsync(
-            session =>
-            session.Id == sessionId &&
-            session.UserId == userId &&
-            session.Status == SessionStatus.Active,
-            httpContext.RequestAborted);
+                session =>
+                    session.Id == sessionId &&
+                    session.UserId == userId &&
+                    session.Status == SessionStatus.Active,
+                httpContext.RequestAborted);
 
         if (session == null)
         {
@@ -66,7 +69,9 @@ public class ActiveSessionMiddleware
             session.EndedAt = now;
             session.UpdatedAt = now;
 
-            await dbContext.SaveChangesAsync(httpContext.RequestAborted);
+            await dbContext.SaveChangesAsync(
+                httpContext.RequestAborted);
+
             await RejectRequestAsync(httpContext);
             return;
         }
@@ -74,18 +79,22 @@ public class ActiveSessionMiddleware
         session.LastActivityAt = now;
         session.UpdatedAt = now;
 
-        await dbContext.SaveChangesAsync(httpContext.RequestAborted);
+        await dbContext.SaveChangesAsync(
+            httpContext.RequestAborted);
 
         await _next(httpContext);
     }
 
-    private static async Task RejectRequestAsync(HttpContext httpContext)
+    private static async Task RejectRequestAsync(
+        HttpContext httpContext)
     {
-        httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        httpContext.Response.StatusCode =
+            StatusCodes.Status401Unauthorized;
 
         await httpContext.Response.WriteAsJsonAsync(new
         {
-            message = "Your session is no longer active. Please sign in again."
+            message =
+                "Your session is no longer active. Please sign in again."
         });
     }
 }

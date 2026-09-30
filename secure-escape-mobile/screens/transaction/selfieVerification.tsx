@@ -282,7 +282,7 @@ export default function SelfieVerification() {
             onPress={requestPermission}
           >
             <LinearGradient
-              colors={["#7C6EF7", "#4A6CF7"]}
+              colors={["#25145F", "#25145F"]}
               style={styles.gradientButton}
             >
               <Text style={styles.buttonText}>
@@ -504,7 +504,7 @@ export default function SelfieVerification() {
                 <LinearGradient
                   colors={
                     capturedImage
-                      ? ["#7C6EF7", "#4A6CF7"]
+                      ? ["#25145F", "#25145F"]
                       : ["#CBD5E1", "#CBD5E1"]
                   }
                   style={styles.gradientButton}

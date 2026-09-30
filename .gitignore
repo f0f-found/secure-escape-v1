@@ -1,0 +1,27 @@
+# .NET
+bin/
+obj/
+
+# Environment / secrets
+.env
+.env.*
+SecureEscape.Api/appsettings.json
+
+# Publish output
+publish/
+publish-release/
+
+# Expo
+.expo/
+
+# Node
+node_modules/
+
+# IDE
+.vs/
+
+SecureEscape.Api/App_Data/
+SecureEscape.Api/publish/
+SecureEscape.Api/publish-release/
+# Test results
+TestResults/

@@ -9,9 +9,19 @@ import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useEffect, useState } from "react";
-import { getAuthToken, isSessionExpired } from "@/services/tokenStore";
-import { ActivityIndicator, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  clearAuthToken,
+  getAuthToken,
+  isSessionExpired,
+  setLastActivityNow,
+} from "@/services/tokenStore";
+import {
+  ActivityIndicator,
+  AppState,
+  AppStateStatus,
+  View,
+} from "react-native";
 import * as Notifications from "expo-notifications";
 
 Notifications.setNotificationHandler({
@@ -36,6 +46,8 @@ export default function RootLayout() {
 
   const [isLoading, setIsLoading] = useState(true);
 
+  const appState = useRef<AppStateStatus>(AppState.currentState);
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -49,6 +61,10 @@ export default function RootLayout() {
             router.replace("/(tabs)");
           }
         } else {
+          if (token && expired) {
+            await clearAuthToken();
+          }
+
           if (!inAuthGroup) {
             router.replace("/(auth)");
           }
@@ -62,6 +78,60 @@ export default function RootLayout() {
 
     checkAuth();
   }, [currentSegment, router]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener(
+      "change",
+      async (nextAppState) => {
+        try {
+          const previousState = appState.current;
+          appState.current = nextAppState;
+
+          const token = await getAuthToken();
+
+          if (!token) {
+            return;
+          }
+
+          // The customer has left the app or locked/minimized the phone.
+          // Record the beginning of the inactivity period.
+          if (
+            nextAppState === "background" ||
+            nextAppState === "inactive"
+          ) {
+            await setLastActivityNow();
+            return;
+          }
+
+          // The customer has returned to Secure Escape.
+          // Check how long the app was inactive.
+          if (
+            nextAppState === "active" &&
+            (previousState === "background" ||
+              previousState === "inactive")
+          ) {
+            const expired = await isSessionExpired();
+
+            if (expired) {
+              await clearAuthToken();
+              router.replace("/(auth)");
+              return;
+            }
+
+            // They returned within the allowed inactivity window.
+            // Refresh the activity timestamp for the next inactivity period.
+            await setLastActivityNow();
+          }
+        } catch (error) {
+          console.log("Session inactivity check error:", error);
+        }
+      }
+    );
+
+    return () => {
+      subscription.remove();
+    };
+  }, [router]);
 
   if (isLoading) {
     return (

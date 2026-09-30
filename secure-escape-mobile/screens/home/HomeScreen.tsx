@@ -674,7 +674,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 60,
   },
 
   header: {

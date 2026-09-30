@@ -28,7 +28,7 @@ interface LoginScreenProps {
 }
 
 export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
-  const [email, setEmail] = useState("thabo.nkosi@email.co.za");
+  const [email, setEmail] = useState("");
   const [pin, setPin] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [biometricsEnabled, setBiometricsEnabled] = useState(false);
@@ -386,11 +386,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       </View>
 
       <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>
-          Global
-          <Text style={styles.logoO}>O</Text>
-          ne
-        </Text>
+        <Text style={styles.logoText}>Secure Escape</Text>
       </View>
 
       {biometricOption.available && (
@@ -469,7 +465,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           disabled={!isFormValid() || isSubmitting}
         >
           <LinearGradient
-            colors={["#7C6EF7", "#4A6CF7"]}
+            colors={[colors.primary, colors.primary]}
             style={styles.gradientButton}
           >
             {isSubmitting ? (

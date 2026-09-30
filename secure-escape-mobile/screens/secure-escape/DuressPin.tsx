@@ -400,7 +400,7 @@ export default function DuressPinScreen() {
           <LinearGradient
             colors={
               isFormValid && !isSaving
-                ? ["#7C6EF7", "#4A6CF7"]
+                ? ["#25145F", "#25145F"]
                 : ["#B8BEC9", "#B8BEC9"]
             }
             style={styles.gradientButton}
@@ -572,7 +572,7 @@ export default function DuressPinScreen() {
                   <LinearGradient
                     colors={
                       modalAgreed && !isSaving
-                        ? ["#7C6EF7", "#4A6CF7"]
+                        ? ["#25145F", "#25145F"]
                         : ["#B8BEC9", "#B8BEC9"]
                     }
                     style={styles.modalGradientButton}
