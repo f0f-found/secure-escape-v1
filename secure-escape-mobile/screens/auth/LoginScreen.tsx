@@ -87,38 +87,39 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const getLoginContext = async () => {
     console.log("[LOGIN] Starting location collection");
 
+    let latitude: number | undefined;
+    let longitude: number | undefined;
+    let accuracyMeters: number | undefined;
+
     console.log("[LOGIN] Requesting foreground location permission");
 
     const permission = await Location.requestForegroundPermissionsAsync();
     if (permission.status === "granted") {
+      console.log("[LOGIN] Requesting current GPS position");
+
       const position = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
+
+      console.log("[LOGIN] GPS position received", {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracyMeters: position.coords.accuracy,
+      });
+
       latitude = position.coords.latitude;
       longitude = position.coords.longitude;
       accuracyMeters = position.coords.accuracy ?? undefined;
     }
-
-    console.log("[LOGIN] Requesting current GPS position");
-
-    const position = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
-    });
-
-    console.log("[LOGIN] GPS position received", {
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude,
-      accuracyMeters: position.coords.accuracy,
-    });
 
     return {
       deviceInfo: `${Platform.OS} • ${
         Constants.deviceName ?? "Unknown device"
       } • Expo mobile app`,
       ipAddress: "",
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude,
-      accuracyMeters: position.coords.accuracy ?? undefined,
+      latitude,
+      longitude,
+      accuracyMeters,
     };
   };
 
