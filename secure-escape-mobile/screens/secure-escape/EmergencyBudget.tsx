@@ -65,9 +65,12 @@ export default function EmergencyBudgetScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
-  // Keep the recommendation exact for now. A future product rule can cap it below R1,000.
+  // Recommend 7% of the available balance, bounded between R200 and R50,000.
   const recommendedAmount = mainAccount
-    ? Math.round(mainAccount.availableBalance * 0.07 * 100) / 100
+    ? Math.min(
+        50000,
+        Math.max(200, Math.round(mainAccount.availableBalance * 0.07 * 100) / 100),
+      )
     : 0;
 
   useEffect(() => {
@@ -437,8 +440,8 @@ export default function EmergencyBudgetScreen() {
                 {formatCurrency(recommendedAmount)}
               </Text>
               <Text style={styles.recommendationText}>
-                Based on 7% of the available balance in your main account. You
-                can change this amount later in Secure Escape settings.
+                Based on 7% of the available balance in your main account, You can change this
+                amount later in Secure Escape settings.
               </Text>
               <TouchableOpacity
                 style={styles.recommendedButton}

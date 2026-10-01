@@ -6,6 +6,7 @@ const SESSION_MODE_KEY = "secure_escape_session_mode";
 const USER_SESSION_ID_KEY = "secure_escape_user_session_id";
 const USER_ID_KEY = "secure_escape_user_id";
 const LAST_ACTIVITY_KEY = "secure_escape_last_activity";
+export const SESSION_TIMEOUT_MS = 10 * 60 * 1000;
 
 async function setItem(key: string, value: string) {
   if (Platform.OS === "web") {
@@ -90,8 +91,8 @@ export async function clearAuthToken() {
   ]);
 }
 
-export async function setLastActivityNow() {
-  await setItem(LAST_ACTIVITY_KEY, Date.now().toString());
+export async function setLastActivityNow(timestamp = Date.now()) {
+  await setItem(LAST_ACTIVITY_KEY, timestamp.toString());
 }
 
 export async function getLastActivity() {
@@ -107,6 +108,5 @@ export async function isSessionExpired() {
   }
 
   // Keep the session alive for 10 minutes after the last recorded activity.
-  const inActivityBoundary = 10 * 60 * 1000;
-  return Date.now() - lastActivity > inActivityBoundary;
+  return Date.now() - lastActivity >= SESSION_TIMEOUT_MS;
 }

@@ -22,6 +22,7 @@ import { AccountResponse } from "@/types/account";
 import { TransactionResponse } from "@/types/transaction";
 import { colors } from "@/utils/theme";
 import VerifyPinModal from "@/components/VerifyPinModal";
+import SuccessModal from "@/components/SuccessModal";
 
 // Validation helpers
 const validateDescription = (desc: string): string => {
@@ -114,8 +115,8 @@ export default function CreateTransfer() {
     }
 
     if (selectedAccount && !isNaN(numeric) && numeric > selectedAccount.availableBalance) {
-      setAmount("");
-      setAmountError(`Amount exceeds available balance of R ${selectedAccount.availableBalance.toLocaleString()}`);
+      setAmount(cleaned);
+      setAmountError(`Insufficient Funds. Your available balance is R${selectedAccount.availableBalance.toLocaleString("en-ZA", { minimumFractionDigits: 2 })}. This transfer exceeds your available balance.`);
       clearError();
       return;
     }
@@ -136,7 +137,7 @@ export default function CreateTransfer() {
       return false;
     }
     if (selectedAccount && numeric > selectedAccount.availableBalance) {
-      setAmountError(`Exceeds balance of R ${selectedAccount.availableBalance.toLocaleString()}`);
+      setAmountError(`Insufficient Funds. Your available balance is R${selectedAccount.availableBalance.toLocaleString("en-ZA", { minimumFractionDigits: 2 })}. This transfer exceeds your available balance.`);
       return false;
     }
     setAmountError("");
@@ -175,7 +176,7 @@ export default function CreateTransfer() {
     const balance = selectedAccount?.availableBalance || 0;
 
     // Check if amount > 80% of balance → go to selfie verification
-    if (numericAmount > 0.8 * balance) {
+    if (!selectedAccount?.isDecoyView && numericAmount > 0.8 * balance) {
       router.push({
         pathname: "/transactions/selfie-verification",
         params: {
@@ -220,6 +221,7 @@ export default function CreateTransfer() {
       }
 
       setCreatedTransaction(transaction);
+      await loadAccounts();
     } catch (err) {
       showError(err instanceof Error ? err.message : "Please try again.");
     } finally {
@@ -356,28 +358,7 @@ export default function CreateTransfer() {
             </TouchableOpacity>
           )}
 
-          {createdTransaction ? (
-            <View style={styles.successBox}>
-              <Text style={styles.successTitle}>Payment successful</Text>
-              <Text style={styles.successText}>
-                Your payment has been completed successfully.
-              </Text>
-              <Text style={styles.successText}>
-                Bank reference: {createdTransaction.bankReference}
-              </Text>
-              {!!createdTransaction.secureEscapeCode && (
-                <Text style={styles.successText}>
-                  Secure Escape code: {createdTransaction.secureEscapeCode}
-                </Text>
-              )}
-              <TouchableOpacity
-                style={styles.doneButton}
-                onPress={() => router.replace("/(tabs)")}
-              >
-                <Text style={styles.doneButtonText}>Done</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
+          {!createdTransaction && (
             <TouchableOpacity
               style={[
                 styles.submitButton,
@@ -466,6 +447,44 @@ export default function CreateTransfer() {
           </View>
         </View>
       </Modal>
+
+      {/* Pending transaction warning */}
+      <Modal
+        transparent
+        animationType="fade"
+        visible={createdTransaction?.status === "Pending"}
+        onRequestClose={() => undefined}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.verificationModal}>
+            <View style={styles.verificationIconCircle}>
+              <Ionicons name="warning-outline" size={34} color="#B45309" />
+            </View>
+            <Text style={styles.verificationTitle}>Verification Required</Text>
+            <Text style={styles.verificationMessage}>
+              For your security, this transaction requires additional verification.
+              Please wait while we confirm the details.
+            </Text>
+            <TouchableOpacity
+              style={styles.verificationButton}
+              onPress={() => router.replace("/(tabs)")}
+            >
+              <Text style={styles.verificationButtonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <SuccessModal
+        visible={!!createdTransaction && createdTransaction.status !== "Pending"}
+        title="Payment complete"
+        message={`You paid R ${Number(amount).toLocaleString("en-ZA", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })} to ${beneficiaryName || "your beneficiary"}.`}
+        primaryLabel="Done"
+        onPrimaryPress={() => router.replace("/(tabs)")}
+      />
 
       <VerifyPinModal
         visible={verifyVisible}
@@ -708,16 +727,44 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalButtonText: { color: "#fff", fontWeight: "800", fontSize: 15 },
-  successBox: {
-    marginTop: 22,
-    backgroundColor: "#F0FDF4",
-    borderRadius: 16,
-    padding: 16,
+  verificationModal: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: "#BBF7D0",
+    borderColor: "#E2E8F0",
+    padding: 24,
+    alignItems: "center",
   },
-  successTitle: { fontSize: 16, fontWeight: "800", color: "#166534" },
-  successText: { marginTop: 4, fontSize: 13, color: "#3F6212" },
-  doneButton: { marginTop: 14, backgroundColor: colors.primary, borderRadius: 50, paddingVertical: 13, alignItems: "center" },
-  doneButtonText: { color: "#fff", fontWeight: "800" },
+  verificationIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#FEF3C7",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  verificationTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: colors.navy,
+    textAlign: "center",
+  },
+  verificationMessage: {
+    marginTop: 10,
+    color: colors.textSub,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center",
+  },
+  verificationButton: {
+    marginTop: 20,
+    width: "100%",
+    backgroundColor: colors.primary,
+    borderRadius: 50,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  verificationButtonText: { color: "#fff", fontWeight: "800", fontSize: 15 },
 });

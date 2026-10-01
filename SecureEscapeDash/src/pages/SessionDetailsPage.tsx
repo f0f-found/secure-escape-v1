@@ -479,6 +479,7 @@ export default function SessionDetail() {
                     <div className="space-y-6 xl:col-span-8">
                       <EvidencePanel
                         session={session}
+                        onSessionUpdated={setSession}
                       />
 
                       <InvestigationPanel
@@ -599,6 +600,7 @@ export default function SessionDetail() {
 
                       <EvidencePanel
                         session={session}
+                        onSessionUpdated={setSession}
                       />
 
                       <Timeline

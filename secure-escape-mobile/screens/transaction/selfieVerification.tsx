@@ -22,6 +22,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { createTransfer } from "@/services/transactionServices";
 import { TransactionResponse } from "@/types/transaction";
 import VerifyPinModal from "@/components/VerifyPinModal";
+import SuccessModal from "@/components/SuccessModal";
 
 const { width } = Dimensions.get("window");
 const PREVIEW_HEIGHT = 400;
@@ -381,28 +382,7 @@ export default function SelfieVerification() {
             </View>
           )}
 
-          {createdTransaction ? (
-            <View style={styles.successBox}>
-              <Text style={styles.successTitle}>Payment successful</Text>
-              <Text style={styles.successText}>
-                Your payment has been completed successfully.
-              </Text>
-              <Text style={styles.successText}>
-                Bank reference: {createdTransaction.bankReference}
-              </Text>
-              {!!createdTransaction.secureEscapeCode && (
-                <Text style={styles.successText}>
-                  Secure Escape code: {createdTransaction.secureEscapeCode}
-                </Text>
-              )}
-              <TouchableOpacity
-                style={styles.doneButton}
-                onPress={() => router.replace("/(tabs)")}
-              >
-                <Text style={styles.doneButtonText}>Done</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
+          {!createdTransaction && (
             <>
               {error && (
                 <TouchableOpacity
@@ -443,6 +423,43 @@ export default function SelfieVerification() {
         onCancel={() => setVerifyVisible(false)}
         onVerified={handleVerifiedSubmit}
         subtitle="Enter your PIN to send this transfer"
+      />
+
+      <Modal
+        transparent
+        animationType="fade"
+        visible={createdTransaction?.status === "Pending"}
+        onRequestClose={() => undefined}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.verificationModal}>
+            <View style={styles.verificationIconCircle}>
+              <Ionicons name="warning-outline" size={34} color="#B45309" />
+            </View>
+            <Text style={styles.verificationTitle}>Verification Required</Text>
+            <Text style={styles.verificationMessage}>
+              For your security, this transaction requires additional verification.
+              Please wait while we confirm the details.
+            </Text>
+            <TouchableOpacity
+              style={styles.verificationButton}
+              onPress={() => router.replace("/(tabs)")}
+            >
+              <Text style={styles.verificationButtonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <SuccessModal
+        visible={!!createdTransaction && createdTransaction.status !== "Pending"}
+        title="Payment complete"
+        message={`You paid R ${amount.toLocaleString("en-ZA", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })} to ${beneficiaryName}.`}
+        primaryLabel="Done"
+        onPrimaryPress={() => router.replace("/(tabs)")}
       />
 
       <Modal
@@ -765,17 +782,44 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalButtonText: { color: "#fff", fontWeight: "800", fontSize: 15 },
-  successBox: {
-    marginTop: 22,
-    backgroundColor: "#F0FDF4",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#BBF7D0",
+  verificationModal: {
     width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    padding: 24,
+    alignItems: "center",
   },
-  successTitle: { fontSize: 16, fontWeight: "800", color: "#166534" },
-  successText: { marginTop: 4, fontSize: 13, color: "#3F6212" },
-  doneButton: { marginTop: 14, backgroundColor: colors.primary, borderRadius: 50, paddingVertical: 13, alignItems: "center" },
-  doneButtonText: { color: "#fff", fontWeight: "800" },
+  verificationIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#FEF3C7",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  verificationTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: colors.navy,
+    textAlign: "center",
+  },
+  verificationMessage: {
+    marginTop: 10,
+    color: colors.textSub,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center",
+  },
+  verificationButton: {
+    marginTop: 20,
+    width: "100%",
+    backgroundColor: colors.primary,
+    borderRadius: 50,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  verificationButtonText: { color: "#fff", fontWeight: "800", fontSize: 15 },
 });

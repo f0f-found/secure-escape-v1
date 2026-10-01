@@ -38,6 +38,9 @@ namespace SecureEscape.Api.Models
         public DateTime? UpdatedAt { get; set; }
         public DateTime? LastPaidAt { get; set; }
 
+        // Internal provenance: successful payments never clear this marker.
+        public bool CreatedUnderDuress { get; set; }
+
         public User? User { get; set; }
 
         public ICollection<BankTransaction> Transactions { get; set; } = new List<BankTransaction>();

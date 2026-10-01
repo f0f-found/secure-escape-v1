@@ -9,6 +9,8 @@ import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useSessionActivity } from "@/hooks/use-session-activity";
+
 import { useEffect, useState } from "react";
 import { getAuthToken, isSessionExpired } from "@/services/tokenStore";
 import { ActivityIndicator, View } from "react-native";
@@ -23,6 +25,7 @@ export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
   const currentSegment = segments[0] ?? "";
+  const recordActivity = useSessionActivity(segments.join("/"));
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -69,6 +72,7 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+      <View style={{ flex: 1 }} onTouchStart={recordActivity} onTouchMove={recordActivity}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
@@ -85,6 +89,7 @@ export default function RootLayout() {
       </Stack>
 
       <StatusBar style="auto" />
+      </View>
     </ThemeProvider>
   );
 }

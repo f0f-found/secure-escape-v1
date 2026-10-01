@@ -21,6 +21,13 @@ public class DecoyProfileRepository : IDecoyProfileRepository
             .FirstOrDefaultAsync(x => x.UserId == userId && x.IsActive);
     }
 
+    public async Task<DecoyProfile?> GetLatestByUserIdAsync(Guid userId)
+    {
+        return await _context.DecoyProfiles
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefaultAsync(x => x.UserId == userId);
+    }
+
     public async Task<DecoyProfile?> GetByIdForUserAsync(Guid decoyProfileId, Guid userId)
     {
         return await _context.DecoyProfiles

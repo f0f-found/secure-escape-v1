@@ -1,13 +1,34 @@
 import StatusBadge from "../StatusBadge";
+import { useState } from "react";
+import { getDuressSessionById, reviewPendingTransfer } from "../../services/sessionService";
+import { getAdminUser } from "../../utils/tokenStore";
 import type { DuressSessionDetail } from "../../types/session";
 
 interface EvidencePanelProps {
   session: DuressSessionDetail;
+  onSessionUpdated?: (session: DuressSessionDetail) => void;
 }
 
 export default function EvidencePanel({
   session,
+  onSessionUpdated,
 }: EvidencePanelProps) {
+  const [reviewing, setReviewing] = useState<string | null>(null);
+  const [reviewError, setReviewError] = useState("");
+  const admin = getAdminUser();
+  const canReview = admin?.adminRole === "SystemAdmin" || admin?.adminRole === "FraudManager" ||
+    (admin?.adminRole === "FraudAnalyst" && session.assignedAdminUserId === admin.adminUserId);
+  const review = async (transactionId: string, approve: boolean) => {
+    if (!window.confirm(approve ? "Approve and pay this pending transfer?" : "Reject this pending transfer?")) return;
+    setReviewing(transactionId);
+    setReviewError("");
+    try {
+      await reviewPendingTransfer(session.id, transactionId, approve);
+      onSessionUpdated?.(await getDuressSessionById(session.id));
+    } catch (error) {
+      setReviewError(error instanceof Error ? error.message : "Could not review this transfer.");
+    } finally { setReviewing(null); }
+  };
   const isLiveSession = session.status === "Active";
 
   const sortedLocations = [...session.locations].sort(
@@ -186,6 +207,14 @@ export default function EvidencePanel({
                     />
                   </div>
 
+                  {tx.status === "Pending" && tx.transactionType === "Transfer" && canReview && (
+                    <div className="mt-4 flex gap-3">
+                      <button className="rounded bg-blue-700 px-3 py-2 text-sm text-white" disabled={reviewing !== null}
+                        onClick={() => review(tx.id, true)}>Approve transfer</button>
+                      <button className="rounded border border-red-300 px-3 py-2 text-sm text-red-700" disabled={reviewing !== null}
+                        onClick={() => review(tx.id, false)}>Reject transfer</button>
+                    </div>
+                  )}
                   <div className="mt-4">
                     <h3 className="text-2xl font-bold tracking-tight text-[#102A43]">
                       R{" "}
@@ -263,6 +292,7 @@ export default function EvidencePanel({
 
   return (
     <div className="space-y-6">
+      {reviewError && <p role="alert" className="text-sm text-red-700">{reviewError}</p>}
       {isLiveSession ? (
         <>
           {locationHistoryBlock}
