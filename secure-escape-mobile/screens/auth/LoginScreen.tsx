@@ -43,10 +43,14 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
   const [emailError, setEmailError] = useState<string | null>(null);
   const [pinError, setPinError] = useState<string | null>(null);
+
   const [biometricOption, setBiometricOption] = useState<{
     available: boolean;
     label: string | null;
-  }>({ available: false, label: null });
+  }>({
+    available: false,
+    label: null,
+  });
 
   React.useEffect(() => {
     isBiometricLoginAvailable().then(setBiometricOption);
@@ -76,13 +80,14 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     if (missingFields.length === 0) return null;
     if (missingFields.length === 1) return `Please enter your ${missingFields[0]}.`;
     const lastField = missingFields.pop();
+
     return `Please enter your ${missingFields.join(", ")} and ${lastField}.`;
   };
 
   const getLoginContext = async () => {
-    let latitude: number | undefined;
-    let longitude: number | undefined;
-    let accuracyMeters: number | undefined;
+    console.log("[LOGIN] Starting location collection");
+
+    console.log("[LOGIN] Requesting foreground location permission");
 
     const permission = await Location.requestForegroundPermissionsAsync();
     if (permission.status === "granted") {
@@ -94,12 +99,26 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       accuracyMeters = position.coords.accuracy ?? undefined;
     }
 
+    console.log("[LOGIN] Requesting current GPS position");
+
+    const position = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Balanced,
+    });
+
+    console.log("[LOGIN] GPS position received", {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      accuracyMeters: position.coords.accuracy,
+    });
+
     return {
-      deviceInfo: `${Platform.OS} • ${Constants.deviceName ?? "Unknown device"} • Expo mobile app`,
+      deviceInfo: `${Platform.OS} • ${
+        Constants.deviceName ?? "Unknown device"
+      } • Expo mobile app`,
       ipAddress: "",
-      latitude,
-      longitude,
-      accuracyMeters,
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      accuracyMeters: position.coords.accuracy ?? undefined,
     };
   };
 
@@ -137,10 +156,12 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
     const validationMessage = getValidationMessage();
     if (validationMessage) {
+      console.log("[LOGIN] Validation failed:", validationMessage);
       showError(validationMessage);
       return;
     }
     if (emailError || pinError) {
+      console.log("[LOGIN] Field validation errors present");
       showError("Please fix the highlighted fields before submitting.");
       return;
     }
@@ -148,8 +169,15 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     try {
       setIsSubmitting(true);
       clearError();
+
+      console.log("[LOGIN] Getting login context");
+
       const loginContext = await getLoginContext();
       const response = await login({ email, pin, ...loginContext });
+
+      console.log("[LOGIN] Backend login succeeded");
+
+      console.log("[LOGIN] Saving authentication session");
 
       await saveAuthSession({
         token: response.token,
@@ -159,14 +187,22 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       });
       await setLastLoginEmail(email);
 
+      console.log("[LOGIN] Authentication session saved");
+
       if (biometricsEnabled) {
+        console.log("[LOGIN] Enabling biometric login");
+
         await enableBiometricLogin({
           token: response.token,
           sessionMode: response.sessionMode,
           userSessionId: response.userSessionId,
           userId: response.userId,
         });
+
+        console.log("[LOGIN] Biometric login enabled");
       }
+
+      console.log("[LOGIN] Calling login success navigation");
 
       onLoginSuccess?.();
     } catch (err) {
@@ -186,39 +222,48 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
         showError(getFriendlyErrorMessage(err));
       }
     } finally {
+      console.log("[LOGIN] Submit flow finished");
       setIsSubmitting(false);
     }
   };
 
   const validateEmail = (value: string) => {
     const trimmed = value.trim();
+
     if (!trimmed) {
       setEmailError("Email is required.");
       return false;
     }
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
     if (!emailRegex.test(trimmed)) {
       setEmailError("Please enter a valid email address.");
       return false;
     }
+
     setEmailError(null);
     return true;
   };
 
   const validatePin = (value: string) => {
     const trimmed = value.trim();
+
     if (!trimmed) {
       setPinError("PIN is required.");
       return false;
     }
+
     if (!/^\d+$/.test(trimmed)) {
       setPinError("PIN must contain only digits.");
       return false;
     }
+
     if (trimmed.length !== 4) {
       setPinError("PIN must be exactly 4 digits.");
       return false;
     }
+
     setPinError(null);
     return true;
   };
@@ -228,6 +273,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
   const handleEmailChange = (value: string) => {
     setEmail(value);
+
     if (emailError) {
       const trimmed = value.trim();
       if (trimmed && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) setEmailError(null);
@@ -237,7 +283,9 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
   const handlePinChange = (value: string) => {
     const numericValue = value.replace(/[^0-9]/g, "");
+
     setPin(numericValue);
+
     if (pinError) {
       if (numericValue.length === 4) setPinError(null);
       else if (numericValue.length === 0) setPinError("PIN is required.");
@@ -406,6 +454,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
               {loginLocked ? "Sign-in temporarily locked" : "Could not sign in"}
             </Text>
             <Text style={styles.modalMessage}>{error}</Text>
+
             <TouchableOpacity
               style={styles.modalButton}
               activeOpacity={0.85}
@@ -479,6 +528,7 @@ const styles = StyleSheet.create({
     color: colors.navy ?? T.textPrimary,
     letterSpacing: -0.5,
   },
+
   logoO: {
     color: colors.primary,
   },
@@ -522,14 +572,17 @@ const styles = StyleSheet.create({
     color: colors.navy ?? T.textPrimary,
     backgroundColor: T.surface,
   },
+
   pinInput: {
     letterSpacing: 4,
     fontWeight: "600",
   },
+
   inputError: {
     borderColor: T.danger,
     borderWidth: 1.5,
   },
+
   fieldError: {
     marginTop: T.sp8,
     fontSize: 12,
@@ -582,6 +635,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     lineHeight: 14,
   },
+
   errorBannerText: {
     flex: 1,
     color: T.dangerText,
@@ -598,6 +652,7 @@ const styles = StyleSheet.create({
     padding: T.sp16,
     backgroundColor: T.surface,
   },
+
   biometricsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -621,6 +676,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: T.sp12,
   },
+
   checkbox: {
     width: 20,
     height: 20,
@@ -631,6 +687,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   checkboxChecked: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
@@ -678,6 +735,7 @@ const styles = StyleSheet.create({
     padding: T.sp24,
     alignItems: "center",
   },
+
   modalIconCircle: {
     width: 52,
     height: 52,
@@ -693,12 +751,14 @@ const styles = StyleSheet.create({
     fontSize: 22,
     lineHeight: 26,
   },
+
   modalTitle: {
     fontSize: 17,
     fontWeight: "700",
     color: colors.navy ?? T.textPrimary,
     textAlign: "center",
   },
+
   modalMessage: {
     marginTop: T.sp8,
     color: T.textMuted,
@@ -706,6 +766,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: "center",
   },
+
   modalButton: {
     marginTop: T.sp24,
     width: "100%",
@@ -715,6 +776,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   modalButtonText: {
     color: "#FFFFFF",
     fontWeight: "700",

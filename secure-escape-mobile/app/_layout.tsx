@@ -1,16 +1,20 @@
 import { Stack, ThemeProvider, useRouter, useSegments } from "expo-router";
 
-import { StatusBar } from "expo-status-bar";
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
+} from "expo-router/react-navigation";
 
+import { Stack, useRouter, useSegments } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useSessionActivity } from "@/hooks/use-session-activity";
 
 import { useEffect, useState } from "react";
-
 import { getAuthToken, isSessionExpired } from "@/services/tokenStore";
-
 import { ActivityIndicator, View } from "react-native";
 
 export const unstable_settings = {
@@ -71,15 +75,11 @@ export default function RootLayout() {
 
         const inAuthGroup = currentSegment === "(auth)";
 
-        // User is authenticated
         if (token && !expired) {
           if (inAuthGroup) {
             router.replace("/(tabs)");
           }
-        }
-
-        // User is NOT authenticated
-        else {
+        } else {
           if (!inAuthGroup) {
             router.replace("/(auth)");
           }
@@ -94,7 +94,6 @@ export default function RootLayout() {
     checkAuth();
   }, [currentSegment, router]);
 
-  // Loading screen while checking auth
   if (isLoading) {
     return (
       <View
