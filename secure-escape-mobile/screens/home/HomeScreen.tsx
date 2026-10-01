@@ -18,7 +18,7 @@ import { getProfileMe } from "@/services/profileService";
 import { ProfileMeResponse } from "@/types/profile";
 import { useRouter } from "expo-router";
 import { logout } from "@/services/authService";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router";
 // BottomNav is provided by the (tabs) layout now.
 
 const { width } = Dimensions.get("window");
