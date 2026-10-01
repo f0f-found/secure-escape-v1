@@ -1,15 +1,30 @@
 # Duress transaction tiers
 
-Both Low Profile and Realistic Decoy use the same transaction policy. At duress
-PIN login the API creates a `DuressBudgets` record for that session. It selects
-the first active Cheque account (ordered by account name), falling back to the
-first active account, and calculates 7% of its available funds, rounded to cents
-and clamped to R200–R50,000. Other accounts display zero in that session.
-The saved profile's older tier sliders do not override this policy.
+At duress PIN login the API creates a `DuressBudgets` record for that session.
+It selects the first active Cheque account (ordered by account name), falling
+back to the first active account. Other accounts display zero in that session.
+
+The modes now use different persona policies:
+
+- **Low Profile:** the decoy balance is 7% of available funds, rounded to cents
+   and clamped to R200–R50,000. Its cumulative spending limit is the full decoy
+   balance, and a new-beneficiary transfer above 50% of the original decoy
+   balance requires verification.
+- **Realistic Decoy:** the decoy balance is 20% of available funds, rounded to
+   cents. Its cumulative spending limit is 30% of that original decoy balance,
+   and a new-beneficiary transfer above 30% of the original decoy balance
+   requires verification. The 20% balance is a believable account view; it is
+   not the amount the customer can spend under duress.
+
+Configured setup amounts are capped at the real account balance. The older tier
+fields remain in the profile contract for compatibility, but session budgets use
+the mode-specific policy above.
 
 `OriginalBalance` is fixed for the session; `RemainingBalance` decreases only
-on an approved payment. A missing budget fails closed: accounts show zero and
-transfers are rejected. Real balances never replace the decoy in responses.
+on an approved payment. `OriginalSpendingLimit` and
+`RemainingSpendingLimit` track the separate cumulative duress spending cap.
+A missing budget fails closed: accounts show zero and transfers are rejected.
+Real balances never replace the decoy in responses.
 If actual funds are below the R200 display floor, the API still prevents an
 overdraft and returns a generic processing failure without revealing funds.
 
@@ -22,14 +37,18 @@ controls the tier decision. The marker is not returned to the customer app.
 
 Order of evaluation:
 
-1. Above the remaining decoy funds: fail with a normal insufficient-funds
-   message containing only the decoy amount. This applies to both modes and
-   to cash sends as well as transfers.
-2. New beneficiary and above 50% of the original decoy: remain `Pending`,
-   with the normal verification message. No funds are reserved or debited.
-3. Otherwise pay immediately and debit both actual funds and remaining decoy
-   funds. Cash sends have no beneficiary and retain their immediate processing
-   within the remaining limit.
+1. Above the remaining decoy funds or actual account funds: fail with a normal
+   insufficient-funds or generic processing message. This applies to both modes
+   and to cash sends as well as transfers.
+2. Every transaction during duress above the mode's pending threshold remains
+   `Pending`, with a security verification message. This includes existing
+   beneficiaries, beneficiaries created during duress, transfers, and cash
+   sends. No funds are reserved or debited.
+3. Otherwise, the transaction must fit within `RemainingSpendingLimit`; if it
+   does not, it fails without debiting funds.
+4. Otherwise pay immediately and debit actual funds, remaining decoy funds,
+   and remaining spending limit. Cash sends follow the same threshold and
+   cumulative-cap rules as transfers.
 
 There is no timer or automatic release for pending transfers. A customer may
 submit a smaller transfer while an earlier one remains pending. These are

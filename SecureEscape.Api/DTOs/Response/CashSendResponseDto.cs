@@ -18,6 +18,8 @@ public class CashSendResponseDto
 
     public TransactionStatus Status { get; set; }
 
+    public string? StatusReason { get; set; }
+
     public DateTime VoucherExpiresAt { get; set; }
 
     public bool VoucherRedeemed { get; set; }

@@ -7,16 +7,16 @@ public class UpsertDecoyProfileRequestDto
 {
     public DecoyProfileType ProfileType { get; set; } = DecoyProfileType.LowProfile;
 
-    [Range(0, 1_000_000)]
+    [Range(0, 100_000_000)]
     public decimal DisplayBalance { get; set; }
 
-    [Range(0, 1_000_000)]
+    [Range(0, 100_000_000)]
     public decimal EmergencyBudget { get; set; }
 
-    [Range(0, 1_000_000)]
+    [Range(0, 100_000_000)]
     public decimal Tier1Limit { get; set; }
 
-    [Range(0, 1_000_000)]
+    [Range(0, 100_000_000)]
     public decimal Tier2Limit { get; set; }
 
     [Range(0, 168)]

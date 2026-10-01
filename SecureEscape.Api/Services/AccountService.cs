@@ -73,7 +73,8 @@ public class AccountService : IAccountService
         if (isDecoyView)
         {
             availableBalance = budget?.BankAccountId == account.Id
-                ? Math.Max(0, budget.RemainingBalance) : 0;
+                ? Math.Max(0, budget.RemainingBalance)
+                : 0;
             currentBalance = availableBalance;
         }
 

@@ -140,7 +140,7 @@ public class TransactionServiceTests
     };
 
     [Fact]
-    public async Task CreateAsync_DuressSession_AmountWithinDecoyBudget_ApprovesAsDecoyAndDecrementsBudget()
+    public async Task CreateAsync_DuressSession_AmountWithinDecoyBudget_AboveThresholdIsPending()
     {
         // Arrange — R18,500 available, but the decoy profile's emergency budget (R2,000)
         // is the real ceiling in a duress session, per Math.Min(EmergencyBudget, AvailableBalance).
@@ -172,11 +172,11 @@ public class TransactionServiceTests
         var result = await service.CreateAsync(request);
 
         // Assert
-        result.Status.Should().Be(TransactionStatus.Approved);
+        result.Status.Should().Be(TransactionStatus.Pending);
         result.SecureEscapeCode.Should().BeNull();
-        _budget.RemainingBalance.Should().Be(500m);
+        _budget.RemainingBalance.Should().Be(2000m);
         _budget.OriginalBalance.Should().Be(2000m);
-        account.AvailableBalance.Should().Be(17_000m);  // 18500 - 1500, real balance still moves
+        account.AvailableBalance.Should().Be(18_500m);
     }
 
     [Fact]
@@ -212,7 +212,7 @@ public class TransactionServiceTests
 
         // Assert
         result.Status.Should().Be(TransactionStatus.Failed);
-        result.StatusReason.Should().StartWith("Insufficient Funds.");
+        result.StatusReason.Should().StartWith("Insufficient protected spending balance.");
         result.SecureEscapeCode.Should().BeNullOrEmpty();
         decoyProfile.EmergencyBudget.Should().Be(2_000m); // untouched — nothing should be deducted on failure
         account.AvailableBalance.Should().Be(18_500m);    // untouched

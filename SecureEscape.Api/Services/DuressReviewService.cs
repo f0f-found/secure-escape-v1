@@ -22,8 +22,9 @@ public class DuressReviewService(AppDbContext db)
         var transaction = await db.BankTransactions.Include(x => x.BankAccount).Include(x => x.Beneficiary)
             .SingleOrDefaultAsync(x => x.Id == transactionId && x.UserSessionId == sessionId && x.UserId == session.UserId);
         if (transaction == null) return false;
-        if (transaction.Status != TransactionStatus.Pending || transaction.TransactionType != TransactionType.Transfer)
-            throw new InvalidOperationException("Only pending transfers can be reviewed.");
+        if (transaction.Status != TransactionStatus.Pending ||
+            transaction.TransactionType is not (TransactionType.Transfer or TransactionType.CashVoucher))
+            throw new InvalidOperationException("Only pending duress transactions can be reviewed.");
 
         if (approve)
         {
