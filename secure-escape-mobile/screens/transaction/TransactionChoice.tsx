@@ -43,7 +43,7 @@ export default function TransactionChoice() {
           activeOpacity={0.85}
           onPress={() =>
             router.push({
-              pathname: "/transactions/create-transfer",
+              pathname: "/beneficiaries/beneficiary-list",
               params: transferParams,
             })
           }

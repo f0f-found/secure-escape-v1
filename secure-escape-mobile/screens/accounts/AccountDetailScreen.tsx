@@ -244,6 +244,7 @@ export default function AccountDetail() {
             placeholderTextColor="#aaa"
             value={searchQuery}
             onChangeText={setSearchQuery}
+            maxLength={25}
           />
           {!!searchQuery && (
             <TouchableOpacity onPress={() => setSearchQuery("")}>

@@ -358,10 +358,12 @@ export default function CreateTransfer() {
 
           {createdTransaction ? (
             <View style={styles.successBox}>
-              <Text style={styles.successTitle}>Transfer submitted</Text>
+              <Text style={styles.successTitle}>Payment successful</Text>
               <Text style={styles.successText}>
-                Status: {createdTransaction.status} • Ref:{" "}
-                {createdTransaction.bankReference}
+                Your payment has been completed successfully.
+              </Text>
+              <Text style={styles.successText}>
+                Bank reference: {createdTransaction.bankReference}
               </Text>
               {!!createdTransaction.secureEscapeCode && (
                 <Text style={styles.successText}>

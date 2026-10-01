@@ -91,6 +91,20 @@ export async function upsertDecoyProfile(
   return response.json();
 }
 
+export async function completeDecoyProfile(): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/secure-escape/complete`, {
+    method: "POST",
+    headers: await getAuthorizedHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response, "Failed to complete Secure Escape setup."),
+    );
+  }
+
+}
+
 export async function setDuressPin(
   request: SetDuressPinRequest,
 ): Promise<{ message: string }> {
