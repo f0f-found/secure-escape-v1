@@ -11,10 +11,13 @@ import {
   ActivityIndicator,
   Platform,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { colors } from "@/utils/theme";
 import { login } from "@/services/authService";
-import { saveAuthSession } from "@/services/tokenStore";
+import {
+  getLastLoginEmail,
+  saveAuthSession,
+  setLastLoginEmail,
+} from "@/services/tokenStore";
 import * as Location from "expo-location";
 import Constants from "expo-constants";
 import {
@@ -35,6 +38,8 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showErrorModal, setShowErrorModal] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [loginLocked, setLoginLocked] = useState(false);
 
   const [emailError, setEmailError] = useState<string | null>(null);
   const [pinError, setPinError] = useState<string | null>(null);
@@ -48,20 +53,10 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   });
 
   React.useEffect(() => {
-    const checkBiometrics = async () => {
-      try {
-        const result = await isBiometricLoginAvailable();
-        setBiometricOption(result);
-      } catch (error) {
-        console.warn("[LOGIN] Biometric availability check failed:", error);
-        setBiometricOption({
-          available: false,
-          label: null,
-        });
-      }
-    };
-
-    checkBiometrics();
+    isBiometricLoginAvailable().then(setBiometricOption);
+    getLastLoginEmail().then((lastEmail) => {
+      if (lastEmail) setEmail(lastEmail);
+    });
   }, []);
 
   const showError = (message: string) => {
@@ -75,26 +70,15 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   };
 
   const getValidationMessage = () => {
-    const missingFields: string[] = [];
-
-    if (!email.trim()) {
-      missingFields.push("email");
-    }
-
+    const missingFields = [];
+    if (!email.trim()) missingFields.push("email");
     if (!pin.trim()) {
       missingFields.push("PIN");
     } else if (pin.length !== 4) {
       return "Please enter exactly 4 digits for your app PIN.";
     }
-
-    if (missingFields.length === 0) {
-      return null;
-    }
-
-    if (missingFields.length === 1) {
-      return `Please enter your ${missingFields[0]}.`;
-    }
-
+    if (missingFields.length === 0) return null;
+    if (missingFields.length === 1) return `Please enter your ${missingFields[0]}.`;
     const lastField = missingFields.pop();
 
     return `Please enter your ${missingFields.join(", ")} and ${lastField}.`;
@@ -106,13 +90,13 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     console.log("[LOGIN] Requesting foreground location permission");
 
     const permission = await Location.requestForegroundPermissionsAsync();
-
-    console.log("[LOGIN] Location permission:", permission.status);
-
-    if (permission.status !== "granted") {
-      throw new Error(
-        "Location permission is required to sign in to Secure Escape.",
-      );
+    if (permission.status === "granted") {
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      latitude = position.coords.latitude;
+      longitude = position.coords.longitude;
+      accuracyMeters = position.coords.accuracy ?? undefined;
     }
 
     console.log("[LOGIN] Requesting current GPS position");
@@ -139,61 +123,43 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   };
 
   const getFriendlyErrorMessage = (error: unknown): string => {
-    if (!error) {
-      return "An unexpected error occurred. Please try again.";
+    if (!error) return "An unexpected error occurred. Please try again.";
+
+    const classify = (msg: string) => {
+      const lower = msg.toLowerCase();
+      if (lower.includes("network") || lower.includes("connection") || lower.includes("timeout"))
+        return "Network error. Please check your connection.";
+      if (lower.includes("invalid") || lower.includes("credentials") || lower.includes("incorrect"))
+        return "Invalid email or PIN. Please try again.";
+      if (lower.includes("server") || lower.includes("internal") || lower.includes("500"))
+        return "Something went wrong. Please try again later.";
+      return null;
+    };
+
+    if (typeof error === "string") {
+      return classify(error) ?? "Unable to sign in. Please try again.";
     }
+    if (error instanceof Error) {
+      return classify(error.message) ?? "Unable to sign in. Please try again.";
+    }
+    return "An unexpected error occurred. Please try again.";
+  };
 
-    const message =
-      typeof error === "string"
-        ? error
-        : error instanceof Error
-          ? error.message
-          : "";
-
+  const isInvalidLoginError = (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error ?? "");
     const lower = message.toLowerCase();
-
-    if (lower.includes("location permission")) {
-      return "Location access is required to use Secure Escape. Please enable location access and try again.";
-    }
-
-    if (
-      lower.includes("network") ||
-      lower.includes("connection") ||
-      lower.includes("timeout")
-    ) {
-      return "Network error. Please check your connection.";
-    }
-
-    if (
-      lower.includes("invalid") ||
-      lower.includes("credentials") ||
-      lower.includes("incorrect")
-    ) {
-      return "Invalid email or PIN. Please try again.";
-    }
-
-    if (
-      lower.includes("server") ||
-      lower.includes("internal") ||
-      lower.includes("500")
-    ) {
-      return "Something went wrong. Please try again later.";
-    }
-
-    return "Unable to sign in. Please try again.";
+    return lower.includes("invalid") || lower.includes("credentials") || lower.includes("incorrect");
   };
 
   const handleSubmit = async () => {
-    console.log("[LOGIN] Submit pressed");
+    if (loginLocked) return;
 
     const validationMessage = getValidationMessage();
-
     if (validationMessage) {
       console.log("[LOGIN] Validation failed:", validationMessage);
       showError(validationMessage);
       return;
     }
-
     if (emailError || pinError) {
       console.log("[LOGIN] Field validation errors present");
       showError("Please fix the highlighted fields before submitting.");
@@ -207,14 +173,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       console.log("[LOGIN] Getting login context");
 
       const loginContext = await getLoginContext();
-
-      console.log("[LOGIN] Calling backend login");
-
-      const response = await login({
-        email: email.trim(),
-        pin: pin.trim(),
-        ...loginContext,
-      });
+      const response = await login({ email, pin, ...loginContext });
 
       console.log("[LOGIN] Backend login succeeded");
 
@@ -226,6 +185,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
         userSessionId: response.userSessionId,
         userId: response.userId,
       });
+      await setLastLoginEmail(email);
 
       console.log("[LOGIN] Authentication session saved");
 
@@ -245,14 +205,22 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       console.log("[LOGIN] Calling login success navigation");
 
       onLoginSuccess?.();
+    } catch (err) {
+      if (isInvalidLoginError(err)) {
+        const nextAttempt = failedAttempts + 1;
+        setFailedAttempts(nextAttempt);
 
-      console.log("[LOGIN] Login flow completed");
-    } catch (error) {
-      console.error("[LOGIN] FAILED:", error);
-
-      const friendlyMessage = getFriendlyErrorMessage(error);
-
-      showError(friendlyMessage);
+        if (nextAttempt >= 3) {
+          setLoginLocked(true);
+          showError(
+            "For your security, sign-in has been temporarily locked after three unsuccessful attempts. Please contact your bank for assistance."
+          );
+        } else {
+          showError(getFriendlyErrorMessage(err));
+        }
+      } else {
+        showError(getFriendlyErrorMessage(err));
+      }
     } finally {
       console.log("[LOGIN] Submit flow finished");
       setIsSubmitting(false);
@@ -300,25 +268,16 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     return true;
   };
 
-  const handleEmailBlur = () => {
-    validateEmail(email);
-  };
-
-  const handlePinBlur = () => {
-    validatePin(pin);
-  };
+  const handleEmailBlur = () => validateEmail(email);
+  const handlePinBlur = () => validatePin(pin);
 
   const handleEmailChange = (value: string) => {
     setEmail(value);
 
     if (emailError) {
       const trimmed = value.trim();
-
-      if (trimmed && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-        setEmailError(null);
-      } else if (!trimmed) {
-        setEmailError("Email is required.");
-      }
+      if (trimmed && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) setEmailError(null);
+      else if (!trimmed) setEmailError("Email is required.");
     }
   };
 
@@ -328,198 +287,158 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     setPin(numericValue);
 
     if (pinError) {
-      if (numericValue.length === 4) {
-        setPinError(null);
-      } else if (numericValue.length === 0) {
-        setPinError("PIN is required.");
-      } else {
-        setPinError("PIN must be exactly 4 digits.");
-      }
+      if (numericValue.length === 4) setPinError(null);
+      else if (numericValue.length === 0) setPinError("PIN is required.");
+      else setPinError("PIN must be exactly 4 digits.");
     }
   };
 
   const isFormValid = () => {
     const trimmedEmail = email.trim();
     const trimmedPin = pin.trim();
-
-    const emailValid =
-      trimmedEmail.length > 0 &&
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
-
-    const pinValid = /^\d{4}$/.test(trimmedPin);
-
-    return emailValid && pinValid;
+    const emailValid = trimmedEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
+    const pinValid = trimmedPin && /^\d{4}$/.test(trimmedPin);
+    return Boolean(emailValid && pinValid);
   };
 
   const handleBiometricLogin = async () => {
-    try {
-      console.log("[LOGIN] Starting biometric login");
-
-      const session = await loginWithBiometrics();
-
-      if (!session) {
-        console.log("[LOGIN] Biometric login cancelled or unavailable");
-        return;
-      }
-
-      await saveAuthSession(session);
-
-      console.log("[LOGIN] Biometric session restored");
-
-      onLoginSuccess?.();
-    } catch (error) {
-      console.error("[LOGIN] Biometric login failed:", error);
-      showError("Unable to use biometric login. Please sign in with your PIN.");
-    }
+    const session = await loginWithBiometrics();
+    if (!session) return;
+    await saveAuthSession(session);
+    onLoginSuccess?.();
   };
 
+  const canSubmit = isFormValid() && !isSubmitting;
+
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.topBar}>
-        <View style={{ width: 24 }} />
-        <View style={{ width: 24 }} />
-      </View>
-
-      <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>
-          Global
-          <Text style={styles.logoO}>O</Text>
-          ne
-        </Text>
-      </View>
-
-      {biometricOption.available && (
-        <TouchableOpacity
-          style={styles.biometricLoginButton}
-          onPress={handleBiometricLogin}
-        >
-          <Text style={styles.biometricLoginText}>
-            Log in with {biometricOption.label}
+    <View style={styles.root}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Brand */}
+        <View style={styles.brandBlock}>
+          <Text style={styles.logoText}>
+            Secure<Text style={styles.logoO}>E</Text>scape
           </Text>
-        </TouchableOpacity>
-      )}
-
-      <View style={styles.pinArea}>
-        <View style={styles.pinLabelRow}>
-          <Text style={styles.pinLabel}>
-            Email <Text style={styles.required}></Text>
-          </Text>
+          <Text style={styles.brandSubtitle}>Secure banking, simply.</Text>
         </View>
 
-        <TextInput
-          style={[styles.textInput, emailError && styles.inputError]}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={handleEmailChange}
-          onBlur={handleEmailBlur}
-          placeholder="Enter your email"
-          placeholderTextColor="#ccc"
-          maxLength={40}
-        />
-
-        {emailError && <Text style={styles.fieldError}>{emailError}</Text>}
-
-        <View style={[styles.pinLabelRow, { marginTop: 16 }]}>
-          <Text style={styles.pinLabel}>
-            Enter app PIN <Text style={styles.required}></Text>
-          </Text>
-
-          <TouchableOpacity>
-            <Text style={styles.forgotPin}>Forgot PIN</Text>
-          </TouchableOpacity>
-        </View>
-
-        <TextInput
-          style={[styles.pinInput, pinError && styles.inputError]}
-          secureTextEntry
-          maxLength={4}
-          keyboardType="numeric"
-          value={pin}
-          onChangeText={handlePinChange}
-          onBlur={handlePinBlur}
-          placeholder="• • • •"
-          placeholderTextColor="#ccc"
-        />
-
-        {pinError && <Text style={styles.fieldError}>{pinError}</Text>}
-
-        {error && !emailError && !pinError && (
+        {/* Biometric quick login (only when available) */}
+        {biometricOption.available && (
           <TouchableOpacity
-            style={styles.errorBanner}
-            activeOpacity={0.8}
-            onPress={() => setShowErrorModal(true)}
+            style={styles.biometricLoginButton}
+            onPress={handleBiometricLogin}
+            activeOpacity={0.85}
           >
-            <Text style={styles.errorIcon}>!</Text>
-            <Text style={styles.errorBannerText}>{error}</Text>
+            <Text style={styles.biometricLoginText}>
+              Log in with {biometricOption.label}
+            </Text>
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            (!isFormValid() || isSubmitting) && styles.disabledButton,
-          ]}
-          onPress={handleSubmit}
-          disabled={!isFormValid() || isSubmitting}
-        >
-          <LinearGradient
-            colors={["#7C6EF7", "#4A6CF7"]}
-            style={styles.gradientButton}
+        {/* Form */}
+        <View style={styles.formArea}>
+          <View style={styles.field}>
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={[styles.input, emailError ? styles.inputError : null]}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              value={email}
+              onChangeText={handleEmailChange}
+              editable={!loginLocked}
+              onBlur={handleEmailBlur}
+              placeholder="Enter your email"
+              placeholderTextColor="#9CA3AF"
+              maxLength={40}
+            />
+            {emailError ? <Text style={styles.fieldError}>{emailError}</Text> : null}
+          </View>
+
+          <View style={styles.field}>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Enter app PIN</Text>
+              <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={styles.inlineLink}>Forgot PIN</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={[styles.input, styles.pinInput, pinError ? styles.inputError : null]}
+              secureTextEntry
+              maxLength={4}
+              keyboardType="numeric"
+              value={pin}
+              onChangeText={handlePinChange}
+              editable={!loginLocked}
+              onBlur={handlePinBlur}
+              placeholder="4-digit PIN"
+              placeholderTextColor="#9CA3AF"
+            />
+            {pinError ? <Text style={styles.fieldError}>{pinError}</Text> : null}
+          </View>
+
+          {/* Inline error banner */}
+          {error && !emailError && !pinError ? (
+            <TouchableOpacity
+              style={styles.errorBanner}
+              activeOpacity={0.85}
+              onPress={() => setShowErrorModal(true)}
+            >
+              <View style={styles.errorBadge}>
+                <Text style={styles.errorBadgeText}>!</Text>
+              </View>
+              <Text style={styles.errorBannerText}>{error}</Text>
+            </TouchableOpacity>
+          ) : null}
+
+          <TouchableOpacity
+            style={[styles.primaryButton, !canSubmit && styles.primaryButtonDisabled]}
+            onPress={handleSubmit}
+            disabled={!canSubmit || loginLocked}
+            activeOpacity={0.85}
           >
             {isSubmitting ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.submitText}>Submit</Text>
+              <Text style={styles.primaryButtonText}>Submit</Text>
             )}
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.biometricsSection}>
-        <View style={styles.biometricsRow}>
-          <View style={styles.biometricsText}>
-            <Text style={styles.biometricsTitle}>Biometrics</Text>
-
-            <Text style={styles.biometricsSubtitle}>
-              Sign in and authenticate with fingerprint or facial recognition
-            </Text>
-          </View>
-
-          <Switch
-            value={biometricsEnabled}
-            onValueChange={setBiometricsEnabled}
-            trackColor={{
-              false: colors.greyLine,
-              true: colors.primary,
-            }}
-            thumbColor="#fff"
-          />
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={styles.dontShowRow}
-          onPress={() => setDontShowAgain(!dontShowAgain)}
-          activeOpacity={0.7}
-        >
-          <View
-            style={[
-              styles.checkbox,
-              dontShowAgain && styles.checkboxChecked,
-            ]}
-          >
-            {dontShowAgain && <Text style={styles.checkmark}>✓</Text>}
+        {/* Biometrics enrolment */}
+        <View style={styles.biometricsCard}>
+          <View style={styles.biometricsRow}>
+            <View style={styles.biometricsText}>
+              <Text style={styles.biometricsTitle}>Biometrics</Text>
+              <Text style={styles.biometricsSubtitle}>
+                Sign in and authenticate with fingerprint or facial recognition
+              </Text>
+            </View>
+            <Switch
+              value={biometricsEnabled}
+              onValueChange={setBiometricsEnabled}
+              trackColor={{ false: "#D6D9E0", true: colors.primary }}
+              thumbColor="#FFFFFF"
+            />
           </View>
 
-          <Text style={styles.dontShowText}>Don&apos;t show me this again</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={styles.checkboxRow}
+            onPress={() => setDontShowAgain(!dontShowAgain)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.checkbox, dontShowAgain && styles.checkboxChecked]}>
+              {dontShowAgain ? <Text style={styles.checkmark}>✓</Text> : null}
+            </View>
+            <Text style={styles.checkboxLabel}>Don&apos;t show me this again</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
 
+      {/* Error modal */}
       <Modal
         transparent
         visible={showErrorModal && !!error}
@@ -527,13 +446,13 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
         onRequestClose={() => setShowErrorModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.errorModal}>
+          <View style={styles.modalCard}>
             <View style={styles.modalIconCircle}>
-              <Text style={styles.modalIcon}>!</Text>
+              <Text style={styles.modalIconText}>!</Text>
             </View>
-
-            <Text style={styles.modalTitle}>Could not sign in</Text>
-
+            <Text style={styles.modalTitle}>
+              {loginLocked ? "Sign-in temporarily locked" : "Could not sign in"}
+            </Text>
             <Text style={styles.modalMessage}>{error}</Text>
 
             <TouchableOpacity
@@ -546,222 +465,225 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           </View>
         </View>
       </Modal>
-
-      <View style={styles.bottomSpacer} />
-    </ScrollView>
+    </View>
   );
 }
 
+/* -------------------------------------------------------------------------- */
+/*  Design tokens used here — all values should be promoted to utils/theme    */
+/*  Colours come from the existing `colors` import where possible.            */
+/*  Spacing / radii / heights below are the shared scale for the whole app.   */
+/* -------------------------------------------------------------------------- */
+
+const T = {
+  // spacing scale
+  sp4: 4,
+  sp8: 8,
+  sp12: 12,
+  sp16: 16,
+  sp20: 20,
+  sp24: 24,
+  sp32: 32,
+  sp40: 40,
+  // radii — deliberately restrained
+  radiusSm: 6,
+  radiusMd: 8,
+  radiusLg: 12,
+  // control heights
+  inputH: 52,
+  buttonH: 52,
+  // neutral surfaces
+  surface: "#FFFFFF",
+  surfaceMuted: "#F7F8FA",
+  border: "#E4E6EC",
+  borderStrong: "#D6D9E0",
+  // text
+  textPrimary: "#0F172A", // fallback if colors.navy is not the same tone
+  textMuted: "#64748B",
+  // states
+  danger: "#DC2626",
+  dangerBg: "#FEF2F2",
+  dangerBorder: "#FECACA",
+  dangerText: "#991B1B",
+};
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.white,
-  },
+  root: { flex: 1, backgroundColor: T.surface },
 
+  container: { flex: 1, backgroundColor: T.surface },
   scrollContent: {
-    paddingBottom: 40,
+    paddingHorizontal: T.sp24,
+    paddingTop: Platform.OS === "ios" ? 72 : 56,
+    paddingBottom: T.sp40,
   },
 
-  topBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  /* Brand */
+  brandBlock: {
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 75,
-    marginBottom: 20,
+    marginBottom: T.sp32,
   },
-
-  logoContainer: {
-    alignItems: "center",
-    marginTop: 20,
-    marginBottom: 40,
-  },
-
   logoText: {
-    fontSize: 42,
+    fontSize: 34,
     fontWeight: "800",
-    color: colors.navy,
-    letterSpacing: -1,
+    color: colors.navy ?? T.textPrimary,
+    letterSpacing: -0.5,
   },
 
   logoO: {
-    borderWidth: 4,
-    borderColor: colors.gradientEnd,
-    borderRadius: 38,
-    width: 42,
-    height: 42,
-    textAlign: "center",
-    lineHeight: 36,
-    marginHorizontal: 2,
-    fontSize: 36,
-    fontWeight: "800",
-    color: colors.navy,
+    color: colors.primary,
+  },
+  brandSubtitle: {
+    marginTop: T.sp8,
+    fontSize: 14,
+    color: T.textMuted,
   },
 
-  pinArea: {
-    paddingHorizontal: 24,
-    marginBottom: 30,
+  /* Form */
+  formArea: {
+    marginBottom: T.sp24,
   },
-
-  pinLabelRow: {
+  field: {
+    marginBottom: T.sp16,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.navy ?? T.textPrimary,
+    marginBottom: T.sp8,
+  },
+  labelRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 8,
+    alignItems: "center",
+    marginBottom: T.sp8,
   },
-
-  pinLabel: {
-    fontSize: 14,
-    color: colors.textSub,
-  },
-
-  required: {
-    color: "#DC2626",
-    fontWeight: "700",
-  },
-
-  forgotPin: {
+  inlineLink: {
     fontSize: 13,
-    color: colors.gradientEnd,
-    textDecorationLine: "underline",
+    fontWeight: "600",
+    color: colors.primary,
   },
-
-  textInput: {
-    borderWidth: 1.5,
-    borderColor: colors.greyLine,
-    borderRadius: 16,
-    padding: 14,
-    fontSize: 16,
-    backgroundColor: "#FAFAFA",
-    marginBottom: 4,
+  input: {
+    height: T.inputH,
+    borderWidth: 1,
+    borderColor: T.borderStrong,
+    borderRadius: T.radiusMd,
+    paddingHorizontal: T.sp16,
+    fontSize: 15,
+    color: colors.navy ?? T.textPrimary,
+    backgroundColor: T.surface,
   },
 
   pinInput: {
-    borderWidth: 1.5,
-    borderColor: colors.greyLine,
-    borderRadius: 16,
-    padding: 14,
-    fontSize: 20,
-    letterSpacing: 8,
-    textAlign: "center",
-    backgroundColor: "#FAFAFA",
-    marginBottom: 4,
+    letterSpacing: 4,
+    fontWeight: "600",
   },
 
   inputError: {
-    borderColor: "#DC2626",
-    borderWidth: 2,
+    borderColor: T.danger,
+    borderWidth: 1.5,
   },
 
   fieldError: {
-    color: "#DC2626",
+    marginTop: T.sp8,
     fontSize: 12,
-    fontWeight: "600",
-    marginTop: 4,
-    marginBottom: 8,
+    fontWeight: "500",
+    color: T.danger,
   },
 
-  submitButton: {
-    marginTop: 28,
-    borderRadius: 50,
-    overflow: "hidden",
-  },
-
-  gradientButton: {
-    paddingVertical: 16,
+  /* Primary button — solid, flat, no gradient */
+  primaryButton: {
+    marginTop: T.sp8,
+    height: T.buttonH,
+    borderRadius: T.radiusMd,
+    backgroundColor: colors.primary,
     alignItems: "center",
+    justifyContent: "center",
   },
-
-  submitText: {
-    color: "#fff",
-    fontSize: 17,
+  primaryButtonDisabled: {
+    opacity: 0.5,
+  },
+  primaryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
     fontWeight: "700",
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
 
-  disabledButton: {
-    opacity: 0.6,
-  },
-
+  /* Inline error banner */
   errorBanner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginTop: 16,
-    backgroundColor: "#FEF2F2",
+    gap: T.sp12,
+    marginBottom: T.sp16,
+    backgroundColor: T.dangerBg,
     borderWidth: 1,
-    borderColor: "#FECACA",
-    borderRadius: 14,
-    padding: 12,
+    borderColor: T.dangerBorder,
+    borderRadius: T.radiusMd,
+    padding: T.sp12,
   },
-
-  errorIcon: {
+  errorBadge: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#DC2626",
-    color: "#fff",
-    textAlign: "center",
-    lineHeight: 20,
+    backgroundColor: T.danger,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  errorBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 12,
     fontWeight: "900",
+    lineHeight: 14,
   },
 
   errorBannerText: {
     flex: 1,
-    color: "#991B1B",
+    color: T.dangerText,
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "600",
     lineHeight: 18,
   },
 
-  biometricsSection: {
-    marginHorizontal: 20,
-    backgroundColor: "#F8F9FC",
-    borderRadius: 20,
-    padding: 18,
+  /* Biometrics enrolment card */
+  biometricsCard: {
     borderWidth: 1,
-    borderColor: colors.greyLine,
-    marginTop: 10,
+    borderColor: T.border,
+    borderRadius: T.radiusMd,
+    padding: T.sp16,
+    backgroundColor: T.surface,
   },
 
   biometricsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: T.sp16,
   },
-
-  biometricsText: {
-    flex: 1,
-    marginRight: 12,
-  },
-
+  biometricsText: { flex: 1, marginRight: T.sp12 },
   biometricsTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "700",
-    color: colors.navy,
-    marginBottom: 4,
+    color: colors.navy ?? T.textPrimary,
+    marginBottom: T.sp4,
   },
-
   biometricsSubtitle: {
     fontSize: 13,
-    color: colors.textSub,
+    color: T.textMuted,
     lineHeight: 18,
   },
-
-  dontShowRow: {
+  checkboxRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginTop: 8,
+    gap: T.sp12,
   },
 
   checkbox: {
-    width: 22,
-    height: 22,
-    borderWidth: 2,
-    borderColor: colors.greyLine,
-    borderRadius: 6,
-    backgroundColor: "#fff",
+    width: 20,
+    height: 20,
+    borderWidth: 1.5,
+    borderColor: T.borderStrong,
+    borderRadius: 4,
+    backgroundColor: T.surface,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -770,102 +692,93 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
-
   checkmark: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "800",
+    lineHeight: 14,
   },
-
-  dontShowText: {
+  checkboxLabel: {
     fontSize: 13,
-    color: colors.textSub,
+    color: T.textMuted,
   },
 
-  bottomSpacer: {
-    height: 30,
+  /* Biometric quick login (top) */
+  biometricLoginButton: {
+    marginBottom: T.sp24,
+    height: T.buttonH,
+    borderRadius: T.radiusMd,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: T.surface,
+  },
+  biometricLoginText: {
+    color: colors.primary,
+    fontWeight: "700",
+    fontSize: 15,
   },
 
+  /* Modal */
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(15, 23, 42, 0.45)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
+    padding: T.sp24,
   },
-
-  errorModal: {
+  modalCard: {
     width: "100%",
-    backgroundColor: "#fff",
-    borderRadius: 24,
-    padding: 22,
+    backgroundColor: T.surface,
+    borderRadius: T.radiusLg,
+    padding: T.sp24,
     alignItems: "center",
   },
 
   modalIconCircle: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: "#FEF2F2",
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    backgroundColor: T.dangerBg,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
+    marginBottom: T.sp16,
   },
-
-  modalIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#DC2626",
-    color: "#fff",
-    textAlign: "center",
-    lineHeight: 30,
+  modalIconText: {
+    color: T.danger,
     fontWeight: "900",
-    fontSize: 18,
+    fontSize: 22,
+    lineHeight: 26,
   },
 
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: colors.navy,
+    fontSize: 17,
+    fontWeight: "700",
+    color: colors.navy ?? T.textPrimary,
     textAlign: "center",
   },
 
   modalMessage: {
-    marginTop: 8,
-    color: colors.textSub,
+    marginTop: T.sp8,
+    color: T.textMuted,
     fontSize: 14,
     lineHeight: 20,
     textAlign: "center",
   },
 
   modalButton: {
-    marginTop: 20,
+    marginTop: T.sp24,
     width: "100%",
+    height: 48,
+    borderRadius: T.radiusMd,
     backgroundColor: colors.primary,
-    borderRadius: 50,
-    paddingVertical: 14,
     alignItems: "center",
+    justifyContent: "center",
   },
 
   modalButtonText: {
-    color: "#fff",
-    fontWeight: "800",
-    fontSize: 15,
-  },
-
-  biometricLoginButton: {
-    marginHorizontal: 24,
-    marginBottom: 20,
-    paddingVertical: 14,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    alignItems: "center",
-  },
-
-  biometricLoginText: {
-    color: colors.primary,
+    color: "#FFFFFF",
     fontWeight: "700",
     fontSize: 15,
   },

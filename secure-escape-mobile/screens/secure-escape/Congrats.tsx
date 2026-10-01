@@ -157,7 +157,7 @@ export default function Congrats() {
       showsVerticalScrollIndicator={false}
     >
       <LinearGradient
-        colors={["#5B8DEF", "#6C63FF"]}
+        colors={[colors.primary, colors.primary]}
         style={styles.gradientHeader}
       >
         <Text style={styles.backArrow} onPress={() => router.back()}>
@@ -263,10 +263,10 @@ const styles = StyleSheet.create({
   whiteCard: {
     flex: 1,
     backgroundColor: "#fff",
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
     padding: 24,
-    marginTop: -20,
+    marginTop: 0,
     alignItems: "center",
   },
   iconWrapper: {
@@ -286,14 +286,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 6,
   },
   messageBox: {
-    backgroundColor: "#F8F9FC",
-    borderRadius: 24,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: 12,
     padding: 24,
     marginVertical: 20,
     width: "100%",

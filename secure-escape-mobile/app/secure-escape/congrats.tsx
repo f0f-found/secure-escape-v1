@@ -1,363 +1,642 @@
-// app/secure-escape/congrats.tsx
-import React, { useEffect, useRef, useState } from "react";
+
+import React, { useEffect, useRef } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   Animated,
   ScrollView,
-  Dimensions,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "@/utils/theme";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const { width } = Dimensions.get("window");
+import { colors } from "@/utils/theme";
+
+const PURPLE = "#25145F";
+const WHITE = "#FFFFFF";
+const BACKGROUND = "#F7F6FB";
+const LINE = "#E8E6F0";
+const PALE_PURPLE = "#EFEBFC";
+const MUTED_PURPLE = "#DCD5F5";
+const GREEN = "#178456";
+const PALE_GREEN = "#EAF7F0";
 
 export default function Congrats() {
   const router = useRouter();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.6)).current;
-  const lockShake = useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
 
-  const [confettiItems] = useState(() => {
-    const items = [];
-    const icons = ["✨", "⭐", "🌟", "💫", "⚡", "🔒"];
-    const angles = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330];
-    for (let i = 0; i < 12; i++) {
-      const angle = angles[i % angles.length];
-      const rad = (angle * Math.PI) / 180;
-      const radius = 60 + Math.random() * 20;
-      const startX = Math.cos(rad) * radius;
-      const startY = Math.sin(rad) * radius;
-      items.push({
-        id: i,
-        icon: icons[Math.floor(Math.random() * icons.length)],
-        size: 16 + Math.random() * 8,
-        startX,
-        startY,
-        delay: i * 100,
-        duration: 800,
-        angle,
-      });
-    }
-    return items;
-  });
+  const compact = height < 740;
 
-  const [animations] = useState(() =>
-    confettiItems.map(() => ({
-      translateX: new Animated.Value(0),
-      translateY: new Animated.Value(0),
-      opacity: new Animated.Value(0),
-    }))
-  );
+  const entrance = useRef(
+    new Animated.Value(0)
+  ).current;
+
+  const checkScale = useRef(
+    new Animated.Value(0.88)
+  ).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-      Animated.spring(scaleAnim, { toValue: 1, friction: 4, tension: 60, useNativeDriver: true }),
-    ]).start();
+    const animation = Animated.parallel([
+      Animated.timing(entrance, {
+        toValue: 1,
+        duration: 450,
+        useNativeDriver: true,
+      }),
 
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(lockShake, { toValue: 4, duration: 50, useNativeDriver: true }),
-        Animated.timing(lockShake, { toValue: -4, duration: 50, useNativeDriver: true }),
-        Animated.timing(lockShake, { toValue: 2, duration: 50, useNativeDriver: true }),
-        Animated.timing(lockShake, { toValue: -2, duration: 50, useNativeDriver: true }),
-        Animated.timing(lockShake, { toValue: 0, duration: 50, useNativeDriver: true }),
-      ]),
-      { iterations: 3 }
-    ).start();
+      Animated.spring(checkScale, {
+        toValue: 1,
+        friction: 7,
+        tension: 85,
+        useNativeDriver: true,
+      }),
+    ]);
 
-    confettiItems.forEach((item, idx) => {
-      const anim = animations[idx];
-      const rad = (item.angle * Math.PI) / 180;
-      const outX = Math.cos(rad) * 100;
-      const outY = Math.sin(rad) * 100;
-      Animated.sequence([
-        Animated.delay(item.delay),
-        Animated.parallel([
-          Animated.timing(anim.translateX, {
-            toValue: outX,
-            duration: item.duration,
-            useNativeDriver: true,
-          }),
-          Animated.timing(anim.translateY, {
-            toValue: outY,
-            duration: item.duration,
-            useNativeDriver: true,
-          }),
-          Animated.timing(anim.opacity, {
-            toValue: 1,
-            duration: 100,
-            useNativeDriver: true,
-          }),
-          Animated.timing(anim.opacity, {
-            toValue: 0,
-            duration: 200,
-            delay: item.duration - 200,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]).start();
-    });
-  }, []);
+    animation.start();
+
+    void Haptics.notificationAsync(
+      Haptics.NotificationFeedbackType.Success
+    ).catch(() => {});
+
+    return () => {
+      animation.stop();
+    };
+  }, [entrance, checkScale]);
 
   const handleGoHome = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    void Haptics.impactAsync(
+      Haptics.ImpactFeedbackStyle.Light
+    ).catch(() => {});
+
     router.replace("/(tabs)");
   };
 
-  const shakeInterpolate = lockShake.interpolate({
-    inputRange: [-4, 4],
-    outputRange: ["-4deg", "4deg"],
-  });
-
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: "#fff" }}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-    >
-      <LinearGradient colors={["#5B8DEF", "#6C63FF"]} style={styles.gradientHeader}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Protection Active</Text>
-      </LinearGradient>
+    <View style={styles.screen}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={PURPLE}
+      />
 
-      <View style={styles.whiteCard}>
-        {/* Shield + confetti */}
-        <View style={styles.iconWrapper}>
+      {/* COMPLETED ONBOARDING HEADER */}
+
+      <View
+        style={[
+          styles.header,
+          {
+            paddingTop: insets.top + 4,
+          },
+        ]}
+      >
+        <View style={styles.topBar}>
+          <View style={styles.topBarSpacer} />
+
+          <Text style={styles.topBarTitle}>
+            Secure Escape
+          </Text>
+
+          <View style={styles.topBarSpacer} />
+        </View>
+
+        <View
+          style={[
+            styles.headerContent,
+            compact && styles.headerContentCompact,
+          ]}
+        >
+          <View style={styles.stepRow}>
+            <View style={styles.stepPill}>
+              <Ionicons
+                name="checkmark"
+                size={12}
+                color={WHITE}
+              />
+
+              <Text style={styles.stepPillText}>
+                SETUP COMPLETE
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.headerTitle}>
+            Protection active
+          </Text>
+
+          <Text style={styles.headerDescription}>
+            Your Secure Escape setup is complete.
+          </Text>
+        </View>
+      </View>
+
+      {/* MAIN CONTENT */}
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          compact && styles.scrollContentCompact,
+        ]}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        <Animated.View
+          style={[
+            styles.successSection,
+            {
+              opacity: entrance,
+              transform: [
+                {
+                  translateY:
+                    entrance.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [10, 0],
+                    }),
+                },
+              ],
+            },
+          ]}
+        >
+          {/* SUCCESS SYMBOL */}
+
           <Animated.View
             style={[
-              styles.illustration,
+              styles.successIconOuter,
+              compact && styles.successIconOuterCompact,
               {
-                transform: [{ scale: scaleAnim }, { rotate: shakeInterpolate }],
+                transform: [
+                  { scale: checkScale },
+                ],
               },
             ]}
           >
-            <LinearGradient colors={["#EDE9FE", "#DBEAFE"]} style={styles.iconCircle}>
-              <Ionicons name="shield-checkmark" size={64} color={colors.primary} />
-            </LinearGradient>
+            <View style={styles.successIconInner}>
+              <Ionicons
+                name="shield-checkmark"
+                size={compact ? 37 : 43}
+                color={PURPLE}
+              />
+            </View>
+
+            <View style={styles.successCheck}>
+              <Ionicons
+                name="checkmark"
+                size={17}
+                color={WHITE}
+              />
+            </View>
           </Animated.View>
 
-          {confettiItems.map((item, idx) => (
-            <Animated.Text
-              key={item.id}
-              style={[
-                styles.confettiIcon,
-                {
-                  fontSize: item.size,
-                  left: width / 2 - 60 + item.startX,
-                  top: 60 + item.startY,
-                  transform: [
-                    { translateX: animations[idx].translateX },
-                    { translateY: animations[idx].translateY },
-                  ],
-                  opacity: animations[idx].opacity,
-                },
-              ]}
-            >
-              {item.icon}
-            </Animated.Text>
-          ))}
+          <Text style={styles.successTitle}>
+            You&apos;re Protected
+          </Text>
+
+          <Text style={styles.greeting}>
+            Congratulations!
+          </Text>
+
+          <Text style={styles.message}>
+            Your Silent Lifeline is ready – and
+            it&apos;s completely invisible to
+            everyone but you.
+          </Text>
+
+          {/* GUARANTEE BADGE */}
+
+          <View style={styles.guaranteeBadge}>
+            <Ionicons
+              name="checkmark-circle"
+              size={17}
+              color={GREEN}
+            />
+
+            <Text style={styles.guaranteeText}>
+              Bank-guaranteed protection
+            </Text>
+          </View>
+        </Animated.View>
+
+        {/* USEFUL NEXT STEPS */}
+
+        <View
+          style={[
+            styles.tipsCard,
+            compact && styles.tipsCardCompact,
+          ]}
+        >
+          <View style={styles.tipsHeading}>
+            <View style={styles.tipsHeadingIcon}>
+              <Ionicons
+                name="information-circle-outline"
+                size={19}
+                color={PURPLE}
+              />
+            </View>
+
+            <Text style={styles.tipsTitle}>
+              Remember
+            </Text>
+          </View>
+
+          <View style={styles.tipRow}>
+            <View style={styles.tipIcon}>
+              <Ionicons
+                name="key-outline"
+                size={18}
+                color={PURPLE}
+              />
+            </View>
+
+            <Text style={styles.tipText}>
+              If you&apos;re ever forced to
+              transact, stay calm. Enter your
+              duress PIN and let the system work.
+            </Text>
+          </View>
+
+          <View style={styles.tipDivider} />
+
+          <View style={styles.tipRow}>
+            <View style={styles.tipIcon}>
+              <Ionicons
+                name="shield-outline"
+                size={18}
+                color={PURPLE}
+              />
+            </View>
+
+            <Text style={styles.tipText}>
+              After you&apos;re safe, contact
+              your bank with a police case
+              number to get your protection
+              amount refunded.
+            </Text>
+          </View>
         </View>
 
-        {/* Main content – clean and celebratory */}
-        <Animated.View style={{ opacity: fadeAnim, width: "100%", alignItems: "center" }}>
-          <Text style={styles.mainTitle}>You&apos;re Protected</Text>
+        <View style={styles.privacyNote}>
+          <Ionicons
+            name="lock-closed-outline"
+            size={15}
+            color={colors.textSub}
+          />
 
-          <View style={styles.divider} />
+          <Text style={styles.privacyText}>
+            Your normal banking remains unchanged.
+            No one will know you&apos;re protected.
+          </Text>
+        </View>
+      </ScrollView>
 
-          <Text style={styles.greeting}>Congratulations!</Text>
-          <Text style={styles.message}>
-            Your Silent Lifeline is ready – and it&apos;s completely invisible to everyone but you.
+      {/* FIXED HOME ACTION */}
+
+      <View
+        style={[
+          styles.bottomArea,
+          {
+            paddingBottom: Math.max(
+              insets.bottom,
+              14
+            ),
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.homeButton}
+          onPress={handleGoHome}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Go to Home"
+        >
+          <Text style={styles.homeButtonText}>
+            Go to Home
           </Text>
 
-          {/* Security badge – trust signal */}
-          <View style={styles.badgeContainer}>
-            <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
-            <Text style={styles.badgeText}>Bank‑guaranteed protection</Text>
-          </View>
+          <Ionicons
+            name="arrow-forward"
+            size={18}
+            color={WHITE}
+          />
+        </TouchableOpacity>
 
-          {/* Tips – what you already liked */}
-          <View style={styles.tipsContainer}>
-            <View style={styles.tipRow}>
-              <Ionicons name="bulb-outline" size={22} color={colors.primary} />
-              <Text style={styles.tipText}>
-                If you&apos;re ever forced to transact, stay calm. Enter your duress PIN and let the system work.
-              </Text>
-            </View>
-            <View style={[styles.tipRow, { marginTop: 12 }]}>
-              <Ionicons name="shield-outline" size={22} color={colors.primary} />
-              <Text style={styles.tipText}>
-                After you&apos;re safe, contact your bank with a police case number to get your protection amount refunded.
-              </Text>
-            </View>
-          </View>
-
-          <Text style={styles.footerText}>
-            Your normal banking remains unchanged. No one will know you&apos;re protected.
-          </Text>
-
-          <TouchableOpacity style={styles.okButton} onPress={handleGoHome}>
-            <LinearGradient colors={["#7C6EF7", "#4A6CF7"]} style={styles.gradientButton}>
-              <Text style={styles.buttonText}>Go to Home</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </Animated.View>
+        <Text style={styles.bottomNote}>
+          Secure Escape setup complete
+        </Text>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  gradientHeader: {
-    paddingTop: 100,
-    paddingHorizontal: 20,
-    paddingBottom: 30,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#fff",
-  },
-  whiteCard: {
+  screen: {
     flex: 1,
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 24,
-    marginTop: -20,
-    alignItems: "center",
+    backgroundColor: BACKGROUND,
   },
-  iconWrapper: {
-    position: "relative",
-    alignItems: "center",
-    justifyContent: "center",
-    marginVertical: 8,
+
+  // HEADER
+
+  header: {
+    backgroundColor: PURPLE,
+    borderBottomLeftRadius: 22,
+    borderBottomRightRadius: 22,
+    overflow: "hidden",
   },
-  illustration: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  iconCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  mainTitle: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: colors.primary,
-    textAlign: "center",
-    marginTop: 4,
-  },
-  divider: {
-    width: 60,
-    height: 3,
-    backgroundColor: colors.primary,
-    borderRadius: 2,
-    marginVertical: 12,
-  },
-  greeting: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: colors.navy || "#1A202C",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  message: {
-    fontSize: 15,
-    color: colors.textSub || "#718096",
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 16,
-    paddingHorizontal: 8,
-  },
-  badgeContainer: {
+
+  topBar: {
+    height: 42,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F0FDF4",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginBottom: 20,
-    gap: 8,
+    paddingHorizontal: 20,
   },
-  badgeText: {
+
+  topBarSpacer: {
+    width: 44,
+  },
+
+  topBarTitle: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 15,
+    fontWeight: "700",
+    color: WHITE,
+  },
+
+  headerContent: {
+    paddingHorizontal: 22,
+    paddingTop: 9,
+    paddingBottom: 19,
+  },
+
+  headerContentCompact: {
+    paddingTop: 6,
+    paddingBottom: 14,
+  },
+
+  stepRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 9,
+  },
+
+  stepPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor:
+      "rgba(255,255,255,0.14)",
+    borderRadius: 7,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+
+  stepPillText: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+    color: WHITE,
+  },
+
+  headerTitle: {
+    fontSize: 25,
+    fontWeight: "800",
+    letterSpacing: -0.5,
+    lineHeight: 31,
+    color: WHITE,
+  },
+
+  headerDescription: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: "#E4E1FF",
+    marginTop: 5,
+  },
+
+  // CONTENT
+
+  scrollView: {
+    flex: 1,
+  },
+
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 18,
+    paddingTop: 23,
+    paddingBottom: 17,
+  },
+
+  scrollContentCompact: {
+    paddingTop: 13,
+    paddingBottom: 9,
+  },
+
+  // SUCCESS
+
+  successSection: {
+    alignItems: "center",
+  },
+
+  successIconOuter: {
+    width: 106,
+    height: 106,
+    borderRadius: 53,
+    backgroundColor: PALE_PURPLE,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 15,
+  },
+
+  successIconOuterCompact: {
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    marginBottom: 10,
+  },
+
+  successIconInner: {
+    width: "76%",
+    height: "76%",
+    borderRadius: 999,
+    backgroundColor: WHITE,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  successCheck: {
+    position: "absolute",
+    right: 1,
+    bottom: 4,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: GREEN,
+    borderWidth: 3,
+    borderColor: BACKGROUND,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  successTitle: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: colors.navy,
+    letterSpacing: -0.5,
+    textAlign: "center",
+  },
+
+  greeting: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#22C55E",
+    fontWeight: "700",
+    color: PURPLE,
+    textAlign: "center",
+    marginTop: 5,
   },
-  tipsContainer: {
-    backgroundColor: "#F8F9FC",
+
+  message: {
+    fontSize: 12,
+    lineHeight: 19,
+    color: colors.textSub,
+    textAlign: "center",
+    marginTop: 9,
+    maxWidth: 320,
+  },
+
+  guaranteeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: PALE_GREEN,
+    borderRadius: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 7,
+    marginTop: 15,
+  },
+
+  guaranteeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: GREEN,
+  },
+
+  // TIPS
+
+  tipsCard: {
+    backgroundColor: WHITE,
+    borderWidth: 1,
+    borderColor: LINE,
     borderRadius: 16,
     padding: 16,
-    marginVertical: 12,
-    width: "100%",
-    borderWidth: 1,
-    borderColor: colors.greyLine || "#E2E8F0",
+    marginTop: 24,
   },
+
+  tipsCardCompact: {
+    marginTop: 15,
+    padding: 13,
+  },
+
+  tipsHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    marginBottom: 14,
+  },
+
+  tipsHeadingIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: PALE_PURPLE,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  tipsTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: colors.navy,
+  },
+
   tipRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 12,
+    gap: 11,
   },
-  tipText: {
-    fontSize: 14,
-    color: colors.textSub || "#718096",
-    lineHeight: 20,
-    flex: 1,
-  },
-  footerText: {
-    fontSize: 13,
-    color: colors.textSub || "#718096",
-    textAlign: "center",
-    fontStyle: "italic",
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  okButton: {
-    marginTop: 16,
-    borderRadius: 50,
-    overflow: "hidden",
-    width: "80%",
-    marginBottom: 20,
-    alignSelf: "center",
-  },
-  gradientButton: {
-    paddingVertical: 16,
+
+  tipIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    backgroundColor: BACKGROUND,
     alignItems: "center",
+    justifyContent: "center",
   },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
+
+  tipText: {
+    flex: 1,
+    fontSize: 11,
+    lineHeight: 17,
+    color: colors.textSub,
+  },
+
+  tipDivider: {
+    height: 1,
+    backgroundColor: LINE,
+    marginVertical: 12,
+    marginLeft: 41,
+  },
+
+  // PRIVACY NOTE
+
+  privacyNote: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "center",
+    gap: 7,
+    marginTop: 16,
+    paddingHorizontal: 6,
+  },
+
+  privacyText: {
+    flexShrink: 1,
+    fontSize: 10,
+    lineHeight: 16,
+    textAlign: "center",
+    color: colors.textSub,
+  },
+
+  // FIXED BOTTOM ACTION
+
+  bottomArea: {
+    backgroundColor: BACKGROUND,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: LINE,
+  },
+
+  homeButton: {
+    minHeight: 50,
+    borderRadius: 13,
+    backgroundColor: PURPLE,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+
+  homeButtonText: {
+    fontSize: 14,
     fontWeight: "700",
-    letterSpacing: 0.5,
+    color: WHITE,
   },
-  confettiIcon: {
-    position: "absolute",
-    textShadowColor: "rgba(0,0,0,0.1)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-    zIndex: 10,
+
+  bottomNote: {
+    fontSize: 11,
+    color: colors.textSub,
+    textAlign: "center",
+    marginTop: 9,
   },
 });

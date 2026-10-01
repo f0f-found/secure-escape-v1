@@ -67,6 +67,26 @@ export async function createTransfer(
   return response.json();
 }
 
+export async function requiresAdditionalVerification(
+  bankAccountId: string,
+  amount: number,
+): Promise<boolean> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/transactions/preflight`, {
+    method: "POST",
+    headers: await getAuthorizedHeaders(),
+    body: JSON.stringify({ bankAccountId, amount }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Unable to verify this transaction. Please try again.");
+  }
+
+  const result = (await response.json()) as {
+    requiresAdditionalVerification?: boolean;
+  };
+  return result.requiresAdditionalVerification === true;
+}
+
 export async function createCashSend(
   request: CreateCashSendRequest,
 ): Promise<CashSendResponse> {

@@ -148,7 +148,7 @@ export default function Screen_cashHistory() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={["#5B8DEF", "#6C63FF"]} style={styles.header}>
+      <LinearGradient colors={[colors.primary, colors.primary]} style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backBtn}
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center", // center tabs
     backgroundColor: "#f0f0f5",
-    borderRadius: 30,
+    borderRadius: 12,
     padding: 4,
     marginBottom: 20,
     alignSelf: "center", // center the pill
@@ -226,15 +226,11 @@ const styles = StyleSheet.create({
   tab: {
     paddingVertical: 8,
     paddingHorizontal: 24,
-    borderRadius: 30,
+    borderRadius: 12,
   },
   activeTab: {
     backgroundColor: "#fff",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
   },
   tabText: { fontSize: 14, fontWeight: "600", color: "#888" },
   activeTabText: { color: colors.primary },
@@ -273,7 +269,7 @@ const styles = StyleSheet.create({
     color: "#999",
   },
   historyStatus: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "500",
   },
   historyRight: {

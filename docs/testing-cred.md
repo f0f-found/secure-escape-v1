@@ -150,12 +150,4 @@ CaseManagement.tsx
 Timeline.tsx
 Finally, the new SessionDetail.tsx
 
-Authorization: Basic QUEyRDE2RDZFNjc3NEY3MEEwMkQxNjI2OTBGMDRGQkEtMDEtMjpfR3lrSUltb0R1RVFvakc1QVZ3ZCp4T0NVVUlIZA==
-
-
-tokenID
-AA2D16D6E6774F70A02D162690F04FBA-01-2
-
-
-token secret
-_GykIImoDuEQojG5AVwd*xOCUUIHd
+Do not commit API credentials or token secrets here. Store them in the provider's secret manager and document only the secret name and retrieval procedure.

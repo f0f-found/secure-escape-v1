@@ -1,105 +1,166 @@
-import { useRouter, usePathname } from "expo-router";
+import React from "react";
 import {
+  StyleSheet,
+  Text,
   TouchableOpacity,
   View,
-  Text,
-  StyleSheet,
-  Animated,
-  SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "@/utils/theme";
-import { useEffect, useRef } from "react";
+import {
+  usePathname,
+  useRouter,
+} from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const PURPLE = "#25145F";
+const WHITE = "#FFFFFF";
+const TEXT_MUTED = "#8C8B96";
+const BORDER = "#ECEBF1";
+const TRANSACT_BG = "#F2EEFF";
 
 const tabs = [
-  { name: "Home", path: "/(tabs)", icon: "home-outline" },
-  { name: "Cards", path: "/(tabs)/cards", icon: "card-outline" },
-  { name: "Transact", path: "/(tabs)/transact", icon: "swap-horizontal-outline" },
-  { name: "Messages", path: "/(tabs)/messages", icon: "chatbubble-outline" },
-  { name: "Settings", path: "/(tabs)/settings", icon: "settings-outline" },
+  {
+    name: "Home",
+    path: "/(tabs)",
+    icon: "home-outline",
+    activeIcon: "home",
+  },
+  {
+    name: "Cards",
+    path: "/(tabs)/cards",
+    icon: "card-outline",
+    activeIcon: "card",
+  },
+  {
+    name: "Transact",
+    path: "/(tabs)/transact",
+    icon: "swap-horizontal",
+    activeIcon: "swap-horizontal",
+    primary: true,
+  },
+  {
+    name: "Messages",
+    path: "/(tabs)/messages",
+    icon: "chatbubble-outline",
+    activeIcon: "chatbubble",
+  },
+  {
+    name: "Settings",
+    path: "/(tabs)/settings",
+    icon: "settings-outline",
+    activeIcon: "settings",
+  },
 ] as const;
 
 export default function BottomNav() {
   const router = useRouter();
   const pathname = usePathname();
+  const insets = useSafeAreaInsets();
 
-  const getTabBase = (path: string) => {
-    if (path === "/(tabs)") return "/";
-    return path.replace("/(tabs)", "").replace(/\/$/, "");
-  };
+  const normalized =
+    pathname.replace(/\/$/, "") || "/";
 
-  const isActive = (path: string) => {
-    const base = getTabBase(path);
-    const normalizedPath = pathname.replace(/\/$/, "");
-    
-    // Check both stripped base and full group path
-    if (normalizedPath === base || normalizedPath === path) return true;
-    
-    // Special case for Home
-    if (base === "/") {
+  const isActive = (
+    tabPath: (typeof tabs)[number]["path"]
+  ) => {
+    if (tabPath === "/(tabs)") {
       return (
-        normalizedPath === "/" ||
-        normalizedPath === "" ||
-        normalizedPath === "/(tabs)" ||
-        normalizedPath === "/(tabs)/index"
+        normalized === "/" ||
+        normalized === "/(tabs)" ||
+        normalized === "/(tabs)/index"
       );
     }
-    return false;
+
+    const destination =
+      tabPath.replace("/(tabs)", "");
+
+    return (
+      normalized === tabPath ||
+      normalized === destination
+    );
   };
 
-  const scaleAnims = useRef<Record<string, Animated.Value>>(
-    tabs.reduce((acc, tab) => {
-      acc[tab.path] = new Animated.Value(1);
-      return acc;
-    }, {} as Record<string, Animated.Value>)
-  ).current;
-
-  useEffect(() => {
-    tabs.forEach((tab) => {
-      const active = isActive(tab.path);
-      const anim = scaleAnims[tab.path];
-      Animated.spring(anim, {
-        toValue: active ? 1.2 : 1,
-        friction: 4,
-        tension: 200,
-        useNativeDriver: true,
-      }).start();
-    });
-  }, [pathname]);
-
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View
+      style={[
+        styles.safeArea,
+        {
+          paddingBottom: Math.max(
+            insets.bottom,
+            6
+          ),
+        },
+      ]}
+    >
       <View style={styles.container}>
         {tabs.map((tab) => {
           const active = isActive(tab.path);
-          const iconName = active
-            ? (tab.icon.replace("-outline", "") as keyof typeof Ionicons.glyphMap)
-            : (tab.icon as keyof typeof Ionicons.glyphMap);
+
+          const primary =
+            "primary" in tab && tab.primary;
+
+          const iconName = (
+            active
+              ? tab.activeIcon
+              : tab.icon
+          ) as keyof typeof Ionicons.glyphMap;
 
           return (
             <TouchableOpacity
               key={tab.path}
               style={styles.tab}
-              onPress={() => router.push(tab.path)}
               activeOpacity={0.7}
+              accessibilityRole="tab"
+              accessibilityState={{
+                selected: active,
+              }}
+              accessibilityLabel={tab.name}
+              onPress={() => {
+                if (!active) {
+                  router.push(tab.path);
+                }
+              }}
             >
-              <Animated.View
-                style={[
-                  styles.iconWrapper,
-                  active && styles.activeIconWrapper,
-                  { transform: [{ scale: scaleAnims[tab.path] }] },
-                ]}
-              >
-                <Ionicons
-                  name={iconName}
-                  size={24}
-                  color={active ? colors.primary : colors.textSub}
-                />
-              </Animated.View>
+              {primary ? (
+                <View
+                  style={[
+                    styles.transactButton,
+                    active &&
+                      styles.transactButtonActive,
+                  ]}
+                >
+                  <Ionicons
+                    name={iconName}
+                    size={23}
+                    color={
+                      active
+                        ? WHITE
+                        : PURPLE
+                    }
+                  />
+                </View>
+              ) : (
+                <View style={styles.iconWrapper}>
+                  <Ionicons
+                    name={iconName}
+                    size={22}
+                    color={
+                      active
+                        ? PURPLE
+                        : TEXT_MUTED
+                    }
+                  />
+                </View>
+              )}
+
               <Text
+                numberOfLines={1}
                 style={[
                   styles.label,
-                  active && styles.activeLabel,
+                  active &&
+                    styles.activeLabel,
+                  primary &&
+                    styles.primaryLabel,
                 ]}
               >
                 {tab.name}
@@ -108,56 +169,76 @@ export default function BottomNav() {
           );
         })}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: WHITE,
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.035,
+    shadowRadius: 8,
+
+    elevation: 6,
   },
+
   container: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#E2E8F0",
-    paddingVertical: 8,
-    paddingBottom: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 4,
+    alignItems: "flex-end",
+    minHeight: 68,
+    paddingHorizontal: 8,
+    paddingTop: 8,
   },
+
   tab: {
+    flex: 1,
+    minHeight: 58,
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingBottom: 5,
+  },
+
+  iconWrapper: {
+    height: 31,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    minWidth: 56,
   },
-  iconWrapper: {
-    padding: 4,
-    borderRadius: 20,
-    marginBottom: 2,
+
+  transactButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: TRANSACT_BG,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 1,
   },
-  activeIconWrapper: {
-    backgroundColor: colors.primary + "15",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 20,
+
+  transactButtonActive: {
+    backgroundColor: PURPLE,
   },
+
   label: {
     fontSize: 10,
     fontWeight: "500",
-    color: colors.textSub || "#718096",
-    marginTop: 1,
-    letterSpacing: 0.3,
+    color: TEXT_MUTED,
+    marginTop: 3,
   },
+
   activeLabel: {
-    color: colors.primary || "#3B82F6",
+    color: PURPLE,
     fontWeight: "700",
+  },
+
+  primaryLabel: {
+    marginTop: 3,
   },
 });

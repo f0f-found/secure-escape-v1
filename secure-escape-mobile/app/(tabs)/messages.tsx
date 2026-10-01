@@ -1,75 +1,89 @@
-// app/(tabs)/messages.tsx
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   FlatList,
   Modal,
+  Platform,
   ScrollView,
-  Alert,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "@/utils/theme";
 import { useRouter } from "expo-router";
 
-// Sample messages – all use the same icon
+import { colors } from "@/utils/theme";
+
+// Local design values so this screen does not depend
+// on extra theme exports.
+const PURPLE = "#25145F";
+const WHITE = "#FFFFFF";
+const LINE = "#E9E8F0";
+const PALE_PURPLE = "#F3F0FF";
+
 const initialMessages = [
   {
     id: "1",
     title: "Transfer Successful",
-    body: "Your transfer of R500.00 to John Doe (ref: PAY-1234) was completed successfully. It will reflect in their account within 2 hours.",
+    body:
+      "Your transfer of R500.00 to John Doe (ref: PAY-1234) was completed successfully. It will reflect in their account within 2 hours.",
     timestamp: new Date(Date.now() - 1000 * 60 * 5),
     read: false,
   },
   {
     id: "2",
     title: "Security Alert",
-    body: "We detected a login attempt from a new device (iPhone 14, Johannesburg) at 2:13 AM. If this wasn't you, please tap here to secure your account immediately.",
+    body:
+      "We detected a login attempt from a new device (iPhone 14, Johannesburg) at 2:13 AM. If this wasn't you, please tap here to secure your account immediately.",
     timestamp: new Date(Date.now() - 1000 * 60 * 30),
     read: false,
   },
   {
     id: "3",
     title: "Monthly Fee Deducted",
-    body: "Your monthly account maintenance fee of R12.00 was deducted from your main account (ending 3067).",
+    body:
+      "Your monthly account maintenance fee of R12.00 was deducted from your main account (ending 3067).",
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
     read: false,
   },
   {
     id: "4",
     title: "Cashback Offer",
-    body: "Use your virtual card at any participating retailer and get 10% cashback on your next purchase. Valid until 31 August 2026.",
+    body:
+      "Use your virtual card at any participating retailer and get 10% cashback on your next purchase. Valid until 31 August 2026.",
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
     read: true,
   },
   {
     id: "5",
     title: "Card Frozen – Suspicious Activity",
-    body: "Your card (ending 3067) was temporarily frozen due to suspicious activity. To unfreeze, please verify your identity in the app or call our support line.",
+    body:
+      "Your card (ending 3067) was temporarily frozen due to suspicious activity. To unfreeze, please verify your identity in the app or call our support line.",
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48),
     read: true,
   },
   {
     id: "6",
     title: "Salary Deposited",
-    body: "Your salary of R15,000.00 has been deposited into your main account (ending 3067). You can now access your funds.",
+    body:
+      "Your salary of R15,000.00 has been deposited into your main account (ending 3067). You can now access your funds.",
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 72),
     read: true,
   },
   {
     id: "7",
     title: "Payment Reminder",
-    body: "Your payment of R1,200.00 to ABC Insurance is due in 2 days. Ensure you have sufficient funds to avoid penalties.",
+    body:
+      "Your payment of R1,200.00 to ABC Insurance is due in 2 days. Ensure you have sufficient funds to avoid penalties.",
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 96),
     read: true,
   },
   {
     id: "8",
     title: "New Feature: PayShap",
-    body: "You can now send money instantly using PayShap. No beneficiary needed – just the recipient's cellphone number. Try it today.",
+    body:
+      "You can now send money instantly using PayShap. No beneficiary needed – just the recipient's cellphone number. Try it today.",
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 120),
     read: true,
   },
@@ -77,11 +91,77 @@ const initialMessages = [
 
 type Message = (typeof initialMessages)[0];
 
+const getMessageMeta = (title: string) => {
+  const normalized = title.toLowerCase();
+
+  if (
+    normalized.includes("security") ||
+    normalized.includes("frozen") ||
+    normalized.includes("suspicious")
+  ) {
+    return {
+      icon: "shield-checkmark-outline" as const,
+      bg: "#FFF4E8",
+      color: "#A85B00",
+    };
+  }
+
+  if (
+    normalized.includes("successful") ||
+    normalized.includes("deposited")
+  ) {
+    return {
+      icon: "checkmark-circle-outline" as const,
+      bg: "#EAF7F0",
+      color: "#168452",
+    };
+  }
+
+  if (
+    normalized.includes("payment") ||
+    normalized.includes("fee")
+  ) {
+    return {
+      icon: "receipt-outline" as const,
+      bg: "#F5F2FF",
+      color: PURPLE,
+    };
+  }
+
+  if (
+    normalized.includes("cashback") ||
+    normalized.includes("feature")
+  ) {
+    return {
+      icon: "sparkles-outline" as const,
+      bg: "#F3F0FF",
+      color: PURPLE,
+    };
+  }
+
+  return {
+    icon: "mail-outline" as const,
+    bg: PALE_PURPLE,
+    color: PURPLE,
+  };
+};
+
 export default function Messages() {
   const router = useRouter();
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
-  const [modalVisible, setModalVisible] = useState(false);
+
+  const [messages, setMessages] =
+    useState<Message[]>(initialMessages);
+
+  const [selectedMessage, setSelectedMessage] =
+    useState<Message | null>(null);
+
+  const [modalVisible, setModalVisible] =
+    useState(false);
+
+  const unreadCount = useMemo(
+    () => messages.filter((message) => !message.read).length,
+    [messages]
+  );
 
   const formatTimestamp = (date: Date) => {
     const now = new Date();
@@ -95,315 +175,867 @@ export default function Messages() {
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays === 1) return "Yesterday";
     if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
+
+    return date.toLocaleDateString("en-ZA", {
+      day: "numeric",
+      month: "short",
+    });
   };
+
+  const formatFullTimestamp = (date: Date) =>
+    date.toLocaleString("en-ZA", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
 
   const toggleRead = (id: string) => {
     setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === id ? { ...msg, read: !msg.read } : msg
+      prev.map((message) =>
+        message.id === id
+          ? {
+              ...message,
+              read: !message.read,
+            }
+          : message
       )
     );
   };
 
   const markAllAsRead = () => {
     setMessages((prev) =>
-      prev.map((msg) => ({ ...msg, read: true }))
+      prev.map((message) => ({
+        ...message,
+        read: true,
+      }))
     );
-    Alert.alert("All messages marked as read");
-  };
 
-  const handleMessagePress = (message: Message) => {
-    setSelectedMessage(message);
-    setModalVisible(true);
-    if (!message.read) {
-      toggleRead(message.id);
+    if (selectedMessage) {
+      setSelectedMessage({
+        ...selectedMessage,
+        read: true,
+      });
     }
   };
 
-  const renderItem = ({ item }: { item: Message }) => (
-    <TouchableOpacity
-      style={[styles.messageItem, !item.read && styles.unreadItem]}
-      activeOpacity={0.7}
-      onPress={() => handleMessagePress(item)}
-    >
-      <View style={styles.iconWrapper}>
-        <Ionicons name="mail-outline" size={24} color={colors.primary} />
-      </View>
-      <View style={styles.messageContent}>
-        <View style={styles.messageHeader}>
-          <Text style={styles.messageTitle} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <Text style={styles.timestamp}>{formatTimestamp(item.timestamp)}</Text>
+  const handleMessagePress = (message: Message) => {
+    const updatedMessage = {
+      ...message,
+      read: true,
+    };
+
+    setSelectedMessage(updatedMessage);
+    setModalVisible(true);
+
+    if (!message.read) {
+      setMessages((prev) =>
+        prev.map((item) =>
+          item.id === message.id
+            ? updatedMessage
+            : item
+        )
+      );
+    }
+  };
+
+  const handleToggleSelectedRead = () => {
+    if (!selectedMessage) return;
+
+    const newReadState = !selectedMessage.read;
+
+    setMessages((prev) =>
+      prev.map((item) =>
+        item.id === selectedMessage.id
+          ? {
+              ...item,
+              read: newReadState,
+            }
+          : item
+      )
+    );
+
+    setSelectedMessage({
+      ...selectedMessage,
+      read: newReadState,
+    });
+  };
+
+  const renderItem = ({
+    item,
+  }: {
+    item: Message;
+  }) => {
+    const meta = getMessageMeta(item.title);
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.messageRow,
+          !item.read && styles.unreadRow,
+        ]}
+        activeOpacity={0.7}
+        onPress={() => handleMessagePress(item)}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.title}. ${
+          item.read ? "Read" : "Unread"
+        }`}
+      >
+        <View
+          style={[
+            styles.messageIcon,
+            { backgroundColor: meta.bg },
+          ]}
+        >
+          <Ionicons
+            name={meta.icon}
+            size={21}
+            color={meta.color}
+          />
         </View>
-        <Text style={styles.messagePreview} numberOfLines={2}>
-          {item.body}
-        </Text>
-      </View>
-      {!item.read && <View style={styles.unreadDot} />}
-    </TouchableOpacity>
-  );
+
+        <View style={styles.messageContent}>
+          <View style={styles.messageHeader}>
+            <Text
+              style={[
+                styles.messageTitle,
+                !item.read &&
+                  styles.unreadMessageTitle,
+              ]}
+              numberOfLines={1}
+            >
+              {item.title}
+            </Text>
+
+            <Text style={styles.timestamp}>
+              {formatTimestamp(item.timestamp)}
+            </Text>
+          </View>
+
+          <Text
+            style={[
+              styles.messagePreview,
+              !item.read &&
+                styles.unreadMessagePreview,
+            ]}
+            numberOfLines={2}
+          >
+            {item.body}
+          </Text>
+        </View>
+
+        <View style={styles.messageRight}>
+          {!item.read && (
+            <View style={styles.unreadDot} />
+          )}
+
+          <Ionicons
+            name="chevron-forward"
+            size={15}
+            color={colors.textSub}
+          />
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={["#5B8DEF", "#6C63FF"]} style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Messages</Text>
-        <TouchableOpacity
-          style={styles.markAllButton}
-          onPress={markAllAsRead}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="checkmark-done" size={22} color="#fff" />
-        </TouchableOpacity>
-      </LinearGradient>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={PURPLE}
+      />
 
-      <View style={styles.whiteCard}>
+      {/* PURPLE HEADER */}
+
+      <View style={styles.header}>
+        <View style={styles.appBar}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <Ionicons
+              name="arrow-back"
+              size={22}
+              color={WHITE}
+            />
+          </TouchableOpacity>
+
+          <Text style={styles.appBarTitle}>
+            Messages
+          </Text>
+
+          <TouchableOpacity
+            style={[
+              styles.markAllButton,
+              unreadCount === 0 &&
+                styles.markAllButtonDisabled,
+            ]}
+            onPress={markAllAsRead}
+            disabled={unreadCount === 0}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Mark all messages as read"
+          >
+            <Ionicons
+              name="checkmark-done-outline"
+              size={20}
+              color={WHITE}
+            />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.headerContent}>
+          <Text style={styles.headerEyebrow}>
+            INBOX
+          </Text>
+
+          <Text style={styles.headerHeading}>
+            Your messages
+          </Text>
+
+          <Text style={styles.headerDescription}>
+            Account updates, payment alerts and
+            important security notices.
+          </Text>
+        </View>
+
+        <View style={styles.headerDivider} />
+
+        <View style={styles.headerFooter}>
+          <View style={styles.headerFooterIcon}>
+            <Ionicons
+              name="mail-outline"
+              size={16}
+              color="#E4E1FF"
+            />
+          </View>
+
+          <Text style={styles.headerFooterText}>
+            {unreadCount === 0
+              ? "You're all caught up"
+              : `${unreadCount} unread ${
+                  unreadCount === 1
+                    ? "message"
+                    : "messages"
+                }`}
+          </Text>
+        </View>
+      </View>
+
+      {/* MESSAGE LIST */}
+
+      <View style={styles.content}>
+        <View style={styles.sectionHeader}>
+          <View>
+            <Text style={styles.sectionTitle}>
+              Recent messages
+            </Text>
+
+            <Text style={styles.sectionDescription}>
+              Tap a message to read the full update.
+            </Text>
+          </View>
+
+          <View style={styles.countBadge}>
+            <Text style={styles.countText}>
+              {messages.length}
+            </Text>
+          </View>
+        </View>
+
         <FlatList
           data={messages}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          contentContainerStyle={[
+            styles.listContent,
+            messages.length === 0 &&
+              styles.emptyListContent,
+          ]}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No messages</Text>
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <Ionicons
+                  name="mail-open-outline"
+                  size={28}
+                  color={PURPLE}
+                />
+              </View>
+
+              <Text style={styles.emptyTitle}>
+                No messages
+              </Text>
+
+              <Text style={styles.emptyDescription}>
+                New account updates and notifications
+                will appear here.
+              </Text>
+            </View>
           }
         />
       </View>
 
-      {/* Detail Modal */}
+      {/* MESSAGE DETAIL BOTTOM SHEET */}
+
       <Modal
         animationType="slide"
         transparent
         visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
+        statusBarTranslucent
+        onRequestClose={() =>
+          setModalVisible(false)
+        }
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setModalVisible(false)}
-        >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() =>
+              setModalVisible(false)
+            }
+          />
+
           <View style={styles.modalContent}>
             <View style={styles.modalHandle} />
-            {selectedMessage && (
-              <>
-                <View style={styles.modalHeader}>
-                  <View style={styles.modalIconWrapper}>
-                    <Ionicons name="mail-outline" size={28} color={colors.primary} />
+
+            {selectedMessage && (() => {
+              const meta = getMessageMeta(
+                selectedMessage.title
+              );
+
+              return (
+                <>
+                  <View style={styles.modalHeader}>
+                    <View
+                      style={[
+                        styles.modalIcon,
+                        {
+                          backgroundColor: meta.bg,
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={meta.icon}
+                        size={23}
+                        color={meta.color}
+                      />
+                    </View>
+
+                    <View style={styles.modalTitleGroup}>
+                      <Text style={styles.modalEyebrow}>
+                        MESSAGE
+                      </Text>
+
+                      <Text style={styles.modalTitle}>
+                        {selectedMessage.title}
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={styles.modalClose}
+                      onPress={() =>
+                        setModalVisible(false)
+                      }
+                      accessibilityRole="button"
+                      accessibilityLabel="Close message"
+                    >
+                      <Ionicons
+                        name="close"
+                        size={20}
+                        color={colors.navy}
+                      />
+                    </TouchableOpacity>
                   </View>
-                  <Text style={styles.modalTitle}>{selectedMessage.title}</Text>
-                  <TouchableOpacity
-                    style={styles.modalClose}
-                    onPress={() => setModalVisible(false)}
+
+                  <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={
+                      styles.modalScrollContent
+                    }
                   >
-                    <Ionicons name="close" size={24} color={colors.navy} />
-                  </TouchableOpacity>
-                </View>
-                <ScrollView showsVerticalScrollIndicator={false}>
-                  <Text style={styles.modalTimestamp}>
-                    {formatTimestamp(selectedMessage.timestamp)}
-                  </Text>
-                  <Text style={styles.modalBody}>{selectedMessage.body}</Text>
-                  <TouchableOpacity
-                    style={styles.modalReadToggle}
-                    onPress={() => {
-                      toggleRead(selectedMessage.id);
-                      setSelectedMessage((prev) =>
-                        prev ? { ...prev, read: !prev.read } : null
-                      );
-                    }}
-                  >
-                    <Ionicons
-                      name={selectedMessage.read ? "checkbox" : "square-outline"}
-                      size={20}
-                      color={colors.primary}
-                    />
-                    <Text style={styles.modalReadToggleText}>
-                      {selectedMessage.read ? "Mark as unread" : "Mark as read"}
+                    <View style={styles.modalDateRow}>
+                      <Ionicons
+                        name="time-outline"
+                        size={14}
+                        color={colors.textSub}
+                      />
+
+                      <Text style={styles.modalTimestamp}>
+                        {formatFullTimestamp(
+                          selectedMessage.timestamp
+                        )}
+                      </Text>
+                    </View>
+
+                    <View style={styles.modalDivider} />
+
+                    <Text style={styles.modalBody}>
+                      {selectedMessage.body}
                     </Text>
-                  </TouchableOpacity>
-                </ScrollView>
-              </>
-            )}
+
+                    <View style={styles.modalDivider} />
+
+                    <TouchableOpacity
+                      style={styles.readToggle}
+                      onPress={handleToggleSelectedRead}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                    >
+                      <View style={styles.readToggleIcon}>
+                        <Ionicons
+                          name={
+                            selectedMessage.read
+                              ? "mail-unread-outline"
+                              : "checkmark-circle-outline"
+                          }
+                          size={19}
+                          color={PURPLE}
+                        />
+                      </View>
+
+                      <View style={styles.readToggleTextGroup}>
+                        <Text style={styles.readToggleTitle}>
+                          {selectedMessage.read
+                            ? "Mark as unread"
+                            : "Mark as read"}
+                        </Text>
+
+                        <Text style={styles.readToggleDescription}>
+                          {selectedMessage.read
+                            ? "Keep this message highlighted in your inbox."
+                            : "Remove the unread indicator from this message."}
+                        </Text>
+                      </View>
+
+                      <Ionicons
+                        name="chevron-forward"
+                        size={16}
+                        color={colors.textSub}
+                      />
+                    </TouchableOpacity>
+                  </ScrollView>
+                </>
+              );
+            })()}
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
     </View>
   );
 }
 
-// Styles remain exactly as before – no changes needed
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: {
+    flex: 1,
+    backgroundColor: WHITE,
+  },
+
+  // HEADER
+
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingTop: 70,
-    paddingHorizontal: 20,
-    paddingBottom: 24,
+    backgroundColor: PURPLE,
   },
-  backBtn: { padding: 4 },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#fff",
-    letterSpacing: 0.5,
-    flex: 1,
-    textAlign: "center",
-  },
-  markAllButton: {
-    padding: 4,
-  },
-  whiteCard: {
-    flex: 1,
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    marginTop: -20,
-  },
-  listContent: {
-    paddingBottom: 20,
-  },
-  messageItem: {
+
+  appBar: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    paddingTop:
+      Platform.OS === "android"
+        ? (StatusBar.currentHeight ?? 24) + 8
+        : 56,
+    paddingBottom: 8,
+    paddingHorizontal: 20,
   },
-  unreadItem: {
-    backgroundColor: "#F8F9FC",
-  },
-  iconWrapper: {
+
+  backButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: "#EDE9FE",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 14,
+    marginLeft: -8,
   },
+
+  appBarTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "700",
+    color: WHITE,
+    textAlign: "center",
+  },
+
+  markAllButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor:
+      "rgba(255,255,255,0.10)",
+  },
+
+  markAllButtonDisabled: {
+    opacity: 0.45,
+  },
+
+  headerContent: {
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 24,
+  },
+
+  headerEyebrow: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#E4E1FF",
+    letterSpacing: 0.7,
+    marginBottom: 10,
+  },
+
+  headerHeading: {
+    fontSize: 29,
+    fontWeight: "800",
+    color: WHITE,
+    letterSpacing: -0.6,
+    lineHeight: 36,
+  },
+
+  headerDescription: {
+    fontSize: 13,
+    color: "#E4E1FF",
+    lineHeight: 19,
+    marginTop: 8,
+    maxWidth: 310,
+  },
+
+  headerDivider: {
+    height: 1,
+    backgroundColor:
+      "rgba(255,255,255,0.20)",
+    marginHorizontal: 24,
+  },
+
+  headerFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    gap: 8,
+  },
+
+  headerFooterIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor:
+      "rgba(255,255,255,0.10)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  headerFooterText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#E4E1FF",
+  },
+
+  // CONTENT
+
+  content: {
+    flex: 1,
+    backgroundColor: WHITE,
+  },
+
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 12,
+    gap: 12,
+  },
+
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: colors.navy,
+    letterSpacing: -0.3,
+  },
+
+  sectionDescription: {
+    fontSize: 12,
+    color: colors.textSub,
+    marginTop: 5,
+  },
+
+  countBadge: {
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: colors.surfaceMuted,
+  },
+
+  countText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.textSub,
+  },
+
+  listContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+
+  emptyListContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+  },
+
+  // MESSAGE ROWS
+
+  messageRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 92,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: LINE,
+    gap: 12,
+  },
+
+  unreadRow: {
+    backgroundColor: "#FCFBFF",
+  },
+
+  messageIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
   messageContent: {
     flex: 1,
+    minWidth: 0,
   },
+
   messageHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 2,
+    justifyContent: "space-between",
+    gap: 10,
   },
+
   messageTitle: {
-    fontSize: 15,
+    flex: 1,
+    fontSize: 14,
     fontWeight: "600",
     color: colors.navy,
-    flex: 1,
-    marginRight: 8,
   },
+
+  unreadMessageTitle: {
+    fontWeight: "800",
+  },
+
   timestamp: {
-    fontSize: 11,
+    fontSize: 10,
     color: colors.textSub,
-    fontWeight: "400",
   },
+
   messagePreview: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textSub,
     lineHeight: 18,
+    marginTop: 5,
   },
+
+  unreadMessagePreview: {
+    color: colors.navy,
+  },
+
+  messageRight: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: 18,
+    gap: 9,
+  },
+
   unreadDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
     backgroundColor: colors.primary,
-    marginLeft: 8,
   },
-  separator: {
-    height: 1,
-    backgroundColor: "#F0F0F0",
-    marginVertical: 2,
+
+  // EMPTY STATE
+
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 30,
   },
-  emptyText: {
-    textAlign: "center",
-    marginTop: 40,
+
+  emptyIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: PALE_PURPLE,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 15,
+  },
+
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.navy,
+  },
+
+  emptyDescription: {
+    fontSize: 13,
     color: colors.textSub,
+    textAlign: "center",
+    lineHeight: 19,
+    marginTop: 6,
   },
-  // Modal styles
+
+  // MESSAGE DETAIL SHEET
+
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.3)",
     justifyContent: "flex-end",
   },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 24,
-    paddingTop: 12,
-    minHeight: 300,
-    maxHeight: "80%",
+
+  modalBackdrop: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor:
+      "rgba(15,23,42,0.52)",
   },
+
+  modalContent: {
+    maxHeight: "78%",
+    backgroundColor: WHITE,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 12,
+  },
+
   modalHandle: {
-    width: 40,
+    width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#ddd",
+    backgroundColor: LINE,
     alignSelf: "center",
-    marginBottom: 12,
+    marginBottom: 18,
   },
+
   modalHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    paddingHorizontal: 20,
+    gap: 12,
   },
-  modalIconWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#EDE9FE",
+
+  modalIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 14,
   },
-  modalTitle: {
+
+  modalTitleGroup: {
     flex: 1,
-    fontSize: 18,
+    minWidth: 0,
+  },
+
+  modalEyebrow: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: colors.textSub,
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: colors.navy,
+    lineHeight: 22,
+  },
+
+  modalClose: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.surfaceMuted,
+  },
+
+  modalScrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 34,
+  },
+
+  modalDateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+
+  modalTimestamp: {
+    fontSize: 11,
+    color: colors.textSub,
+  },
+
+  modalDivider: {
+    height: 1,
+    backgroundColor: LINE,
+    marginVertical: 18,
+  },
+
+  modalBody: {
+    fontSize: 14,
+    color: colors.navy,
+    lineHeight: 22,
+  },
+
+  readToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 11,
+  },
+
+  readToggleIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    backgroundColor: PALE_PURPLE,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  readToggleTextGroup: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  readToggleTitle: {
+    fontSize: 13,
     fontWeight: "700",
     color: colors.navy,
   },
-  modalClose: {
-    padding: 4,
-  },
-  modalTimestamp: {
-    fontSize: 12,
+
+  readToggleDescription: {
+    fontSize: 11,
     color: colors.textSub,
-    marginBottom: 12,
-  },
-  modalBody: {
-    fontSize: 15,
-    color: "#333",
-    lineHeight: 22,
-    marginBottom: 20,
-  },
-  modalReadToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    backgroundColor: "#F5F3FF",
-  },
-  modalReadToggleText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: colors.primary,
+    lineHeight: 16,
+    marginTop: 3,
   },
 });
