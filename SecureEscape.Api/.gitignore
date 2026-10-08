@@ -18,3 +18,5 @@ Thumbs.db
 .env
 *.env
 appsettings.Development.json
+# Published output
+publish/
